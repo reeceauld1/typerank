@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>typerank</title>
+    <script type="text/javascript">
+      // GitHub Pages has no server-side rewrites, so it serves this file for
+      // any path it doesn't recognize (e.g. a direct link to /profile).
+      // This re-encodes the path into a query string and redirects to the
+      // real index.html, which decodes it back (see the script in
+      // index.html) so React Router picks up where the user meant to land.
+      // https://github.com/rafgraph/spa-github-pages
+      //
+      // Set this to the number of segments in your base path — 1 for a
+      // GitHub Pages project page (username.github.io/repo-name/), or 0 if
+      // you're serving from the domain root (a custom domain, or a
+      // username.github.io user/org page).
+      var pathSegmentsToKeep = 1;
+
+      var l = window.location;
+      l.replace(
+        l.protocol +
+          '//' +
+          l.hostname +
+          (l.port ? ':' + l.port : '') +
+          l.pathname
+            .split('/')
+            .slice(0, 1 + pathSegmentsToKeep)
+            .join('/') +
+          '/?/' +
+          l.pathname
+            .slice(1)
+            .split('/')
+            .slice(pathSegmentsToKeep)
+            .join('/')
+            .replace(/&/g, '~and~') +
+          (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash
+      );
+    </script>
+  </head>
+  <body></body>
+</html>

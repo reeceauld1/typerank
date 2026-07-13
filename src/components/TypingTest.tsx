@@ -1,0 +1,491 @@
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import type { TestConfig } from '../types/index.js';
+import { generateText } from '../utils/words.js';
+import { useUser } from '../hooks/useUser.js';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface TypingTestProps {
+  config: TestConfig;
+  onComplete?: () => void;
+  onRestart?: () => void;
+  onTypingActiveChange?: (active: boolean) => void;
+}
+
+type CharStatus = 'pending' | 'correct' | 'incorrect' | 'extra' | 'missed';
+
+export default function TypingTest({ config, onComplete, onRestart, onTypingActiveChange }: TypingTestProps) {
+  const { addTestResult } = useUser();
+  // Home.tsx remounts this component (via a `key` bump) on every config
+  // change, so `config` is effectively fixed for this instance's lifetime —
+  // safe to seed the initial text lazily instead of via a mount effect.
+  const [text, setText] = useState(() => generateText(config.mode === 'words' ? config.value : 100));
+  const [input, setInput] = useState('');
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [isActive, setIsActive] = useState(false);
+  const [isFinished, setIsFinished] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [elapsedDisplay, setElapsedDisplay] = useState(0);
+  const [stats, setStats] = useState({ wpm: 0, accuracy: 0, rawWpm: 0 });
+  const inputRef = useRef<HTMLInputElement>(null);
+  const linesRef = useRef<HTMLDivElement>(null);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [lineHeight, setLineHeight] = useState(50);
+  const [scrollLine, setScrollLine] = useState(0);
+  const [caretPos, setCaretPos] = useState<{ left: number; top: number; char: string; instant: boolean } | null>(null);
+  const prevWordIndexRef = useRef(0);
+  const prevTopRef = useRef<number | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const prevInputRef = useRef('');
+  const totalKeystrokesRef = useRef(0);
+  const correctKeystrokesRef = useRef(0);
+
+  const words = text.split(' ');
+  const inputWords = input.split(' ');
+
+  const finishTestRef = useRef<() => void>(() => {});
+
+  const resetTest = () => {
+    const wordCount = config.mode === 'words' ? config.value : 100;
+    setText(generateText(wordCount));
+    setInput('');
+    setStartTime(null);
+    setIsActive(false);
+    setIsFinished(false);
+    setElapsedDisplay(0);
+    setCurrentWordIndex(0);
+    setScrollLine(0);
+    setCaretPos(null);
+    prevWordIndexRef.current = 0;
+    prevTopRef.current = null;
+    setIsPaused(false);
+    prevInputRef.current = '';
+    totalKeystrokesRef.current = 0;
+    correctKeystrokesRef.current = 0;
+    inputRef.current?.focus();
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const prevValue = prevInputRef.current;
+
+    if (!isActive && value.length > 0) {
+      setIsActive(true);
+      setStartTime(Date.now());
+    }
+
+    if (isPaused) {
+      setIsPaused(false);
+    }
+
+    // Only count forward-typed (appended) characters toward accuracy, so that
+    // fixing a mistake with backspace doesn't erase the fact it was ever wrong.
+    // Tracked per-word (not by raw flat-string index) so that one length
+    // mismatch (an overflow letter, or a word skipped early via space)
+    // doesn't throw off every keystroke typed afterward.
+    if (value.length > prevValue.length && value.startsWith(prevValue)) {
+      const priorWords = prevValue.split(' ');
+      let wIdx = priorWords.length - 1;
+      let cIdx = priorWords[wIdx].length;
+      const added = value.slice(prevValue.length);
+
+      for (const ch of added) {
+        if (ch === ' ') {
+          // Any letters left untyped in this word were skipped via spacebar —
+          // they count as missed (wrong) attempts even though never pressed.
+          const target = words[wIdx] ?? '';
+          for (let m = cIdx; m < target.length; m++) {
+            totalKeystrokesRef.current += 1;
+          }
+          totalKeystrokesRef.current += 1;
+          correctKeystrokesRef.current += 1;
+          wIdx += 1;
+          cIdx = 0;
+        } else {
+          totalKeystrokesRef.current += 1;
+          if (ch === words[wIdx]?.[cIdx]) {
+            correctKeystrokesRef.current += 1;
+          }
+          cIdx += 1;
+        }
+      }
+    }
+    prevInputRef.current = value;
+
+    setInput(value);
+
+    const currentWords = value.split(' ');
+    setCurrentWordIndex(currentWords.length - 1);
+  };
+
+  const finishTest = () => {
+    if (isFinished || !startTime) return;
+
+    setIsActive(false);
+    setIsFinished(true);
+
+    const timeElapsed = (Date.now() - startTime) / 1000;
+
+    let correctChars = 0;
+    let incorrectChars = 0;
+
+    inputWords.forEach((typedWord, w) => {
+      const targetWord = words[w] ?? '';
+      for (let i = 0; i < typedWord.length; i++) {
+        if (i < targetWord.length && typedWord[i] === targetWord[i]) {
+          correctChars++;
+        } else {
+          incorrectChars++;
+        }
+      }
+      if (w < inputWords.length - 1) {
+        // the space typed between words
+        correctChars++;
+      }
+    });
+
+    const totalChars = correctChars + incorrectChars;
+    const keystrokeTotal = totalKeystrokesRef.current;
+    const accuracy = keystrokeTotal > 0 ? (correctKeystrokesRef.current / keystrokeTotal) * 100 : 0;
+    const wpm = Math.round(correctChars / 5 / (timeElapsed / 60));
+    const rawWpm = Math.round(totalChars / 5 / (timeElapsed / 60));
+
+    const finalStats = {
+      wpm: Math.max(0, wpm),
+      accuracy: Math.round(accuracy),
+      rawWpm: Math.max(0, rawWpm),
+    };
+
+    setStats(finalStats);
+
+    void addTestResult({
+      mode: config.mode,
+      value: config.value,
+      wpm: finalStats.wpm,
+      accuracy: finalStats.accuracy,
+      rawWpm: finalStats.rawWpm,
+      correctChars,
+      incorrectChars,
+      timeElapsed,
+    });
+
+    onComplete?.();
+  };
+
+  useEffect(() => {
+    finishTestRef.current = finishTest;
+  });
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (isActive && config.mode === 'time') {
+      const timer = setInterval(() => {
+        const elapsed = (Date.now() - (startTime || Date.now())) / 1000;
+        setElapsedDisplay(elapsed);
+        if (elapsed >= config.value) {
+          finishTestRef.current();
+        }
+      }, 100);
+      return () => clearInterval(timer);
+    }
+  }, [isActive, startTime, config]);
+
+  useEffect(() => {
+    if (config.mode === 'words' && isActive) {
+      const lastWordIndex = words.length - 1;
+      const targetLastWord = words[lastWordIndex] ?? '';
+      const typedLastWord = inputWords[lastWordIndex] ?? '';
+      if (
+        targetLastWord.length > 0 &&
+        currentWordIndex >= lastWordIndex &&
+        typedLastWord.length >= targetLastWord.length
+      ) {
+        finishTestRef.current();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input, config, isActive, currentWordIndex]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || (e.key === 'Tab' && !e.shiftKey)) {
+        e.preventDefault();
+        resetTest();
+        onRestart?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const shouldHideCursor = isActive && isFocused && !isPaused;
+    document.body.classList.toggle('is-typing', shouldHideCursor);
+    return () => document.body.classList.remove('is-typing');
+  }, [isActive, isFocused, isPaused]);
+
+  useEffect(() => {
+    onTypingActiveChange?.(isActive && isFocused && !isPaused);
+  }, [isActive, isFocused, isPaused, onTypingActiveChange]);
+
+  useEffect(() => {
+    const handleMouseMove = () => {
+      if (isActive && isFocused && !isPaused) {
+        setIsPaused(true);
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [isActive, isFocused, isPaused]);
+
+  useEffect(() => {
+    const handleWindowBlur = () => setIsFocused(false);
+    window.addEventListener('blur', handleWindowBlur);
+    return () => window.removeEventListener('blur', handleWindowBlur);
+  }, []);
+
+  useLayoutEffect(() => {
+    const linesEl = linesRef.current;
+    if (!linesEl) return;
+
+    const measuredLineHeight = parseFloat(getComputedStyle(linesEl).lineHeight);
+    if (measuredLineHeight && Math.abs(measuredLineHeight - lineHeight) > 0.5) {
+      setLineHeight(measuredLineHeight);
+    }
+
+    const wordEl = linesEl.querySelector<HTMLElement>(`[data-word-idx="${currentWordIndex}"]`);
+    if (!wordEl) return;
+
+    const typedLen = inputWords[currentWordIndex]?.length ?? 0;
+    const charEls = wordEl.querySelectorAll<HTMLElement>('[data-char-idx]');
+
+    let target: HTMLElement | null = null;
+    let atEnd = false;
+    if (typedLen < charEls.length) {
+      target = charEls[typedLen] ?? null;
+    } else if (charEls.length > 0) {
+      target = charEls[charEls.length - 1];
+      atEnd = true;
+    }
+
+    const left = target ? target.offsetLeft + (atEnd ? target.offsetWidth : 0) : wordEl.offsetLeft;
+    const top = target ? target.offsetTop : wordEl.offsetTop;
+    const char = target && !atEnd ? target.textContent ?? ' ' : ' ';
+
+    // Snap instantly on a new word or a new line — animating those larger
+    // jumps risks the caret still being mid-transition (and briefly visible
+    // in the wrong spot) if a keystroke lands before the previous move
+    // finished. Only glide smoothly for the common case: advancing one
+    // character within the same word.
+    const wordChanged = currentWordIndex !== prevWordIndexRef.current;
+    const lineChanged = prevTopRef.current !== null && prevTopRef.current !== top;
+    const instant = wordChanged || lineChanged || prevTopRef.current === null;
+    prevWordIndexRef.current = currentWordIndex;
+    prevTopRef.current = top;
+
+    setCaretPos({ left, top, char, instant });
+
+    if (measuredLineHeight) {
+      const currentLine = Math.round(top / measuredLineHeight);
+      setScrollLine(prev => {
+        // As soon as typing reaches the 3rd of the 4 visible lines, scroll up by
+        // one line so the first line is no longer visible.
+        if (currentLine >= prev + 2) return currentLine - 1;
+        if (currentLine < prev) return currentLine;
+        return prev;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input, currentWordIndex, text]);
+
+  const getWordChars = (wordIndex: number): { char: string; status: CharStatus }[] => {
+    const target = words[wordIndex] ?? '';
+    const typed = wordIndex <= currentWordIndex ? inputWords[wordIndex] ?? '' : '';
+    const isPastWord = wordIndex < currentWordIndex;
+    const length = Math.max(target.length, typed.length);
+    const chars: { char: string; status: CharStatus }[] = [];
+
+    for (let i = 0; i < length; i++) {
+      if (i < target.length) {
+        if (i < typed.length) {
+          chars.push({ char: target[i], status: typed[i] === target[i] ? 'correct' : 'incorrect' });
+        } else {
+          // Word was already left behind (space hit early) without this letter ever being typed.
+          chars.push({ char: target[i], status: isPastWord ? 'missed' : 'pending' });
+        }
+      } else {
+        chars.push({ char: typed[i], status: 'extra' });
+      }
+    }
+    return chars;
+  };
+
+  const charClass: Record<CharStatus, string> = {
+    pending: 'text-[var(--text-muted)]',
+    missed: 'text-[var(--text-muted)] underline decoration-2 decoration-[var(--text-incorrect)] underline-offset-[3px]',
+    correct: 'text-[var(--text-correct)]',
+    incorrect: 'text-[var(--text-incorrect)]',
+    extra: 'text-[var(--text-incorrect)]',
+  };
+  const mistakeUnderline = 'underline decoration-2 decoration-[var(--text-incorrect)] underline-offset-[3px]';
+
+  const timeRemaining = config.mode === 'time' ? Math.max(0, config.value - elapsedDisplay) : null;
+
+  let textOpacity = 1;
+  let textFilter = 'none';
+  if (!isFocused) {
+    textOpacity = 0.55;
+    textFilter = 'blur(1.5px)';
+  } else if (isPaused) {
+    textOpacity = 0.7;
+  }
+
+  return (
+    <div className="w-full flex flex-col items-center">
+      <div className="w-full flex justify-between items-center mb-6 h-8 px-1">
+        <div className="text-xl font-semibold text-[var(--accent)] tabular-nums">
+          {isActive
+            ? config.mode === 'time'
+              ? Math.ceil(timeRemaining ?? 0)
+              : `${Math.min(currentWordIndex + 1, config.value)}/${config.value}`
+            : ''}
+        </div>
+        {!isFinished && !isFocused && (
+          <div className="text-xs text-[var(--text-muted)] tracking-wide">click to focus</div>
+        )}
+        {!isFinished && isFocused && isPaused && (
+          <div className="text-xs text-[var(--text-muted)] tracking-wide">keep typing to resume</div>
+        )}
+      </div>
+
+      <div className="relative w-full">
+        <input
+          ref={inputRef}
+          type="text"
+          value={input}
+          onChange={handleInputChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          disabled={isFinished}
+          autoFocus
+          spellCheck={false}
+          autoComplete="off"
+          autoCapitalize="off"
+          className="absolute opacity-0 w-px h-px pointer-events-none"
+        />
+
+        <div
+          role="button"
+          tabIndex={-1}
+          onClick={() => inputRef.current?.focus()}
+          className="relative cursor-text select-none"
+        >
+          <AnimatePresence mode="wait">
+            {isFinished ? (
+              <motion.div
+                key="results"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-10 py-10"
+              >
+                <div className="grid grid-cols-3 gap-6 mb-8 text-center">
+                  <div>
+                    <div className="text-5xl font-semibold text-[var(--accent)] tabular-nums">{stats.wpm}</div>
+                    <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">wpm</div>
+                  </div>
+                  <div>
+                    <div className="text-5xl font-semibold text-[var(--text-correct)] tabular-nums">{stats.accuracy}%</div>
+                    <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">accuracy</div>
+                  </div>
+                  <div>
+                    <div className="text-5xl font-semibold text-[var(--text-secondary)] tabular-nums">{stats.rawWpm}</div>
+                    <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">raw</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    resetTest();
+                    onRestart?.();
+                  }}
+                  className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-3 rounded-lg font-semibold transition-all cursor-pointer"
+                >
+                  try again
+                </button>
+                <p className="text-center text-xs text-[var(--text-muted)] mt-4">press tab to restart instantly</p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="test"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: textOpacity }}
+                transition={{ duration: 0.2 }}
+                className="w-full overflow-hidden"
+                style={{ filter: textFilter, height: lineHeight * 4 }}
+              >
+                <div
+                  ref={linesRef}
+                  className="relative text-[28px] md:text-[32px] leading-[1.7] font-medium tracking-wide"
+                  style={{
+                    transform: `translateY(-${scrollLine * lineHeight}px)`,
+                    transition: 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
+                >
+                  {words.map((_word, wordIdx) => {
+                    const chars = getWordChars(wordIdx);
+                    const isPastWord = wordIdx < currentWordIndex;
+                    const wordHasMistake =
+                      isPastWord && chars.some(c => c.status === 'incorrect' || c.status === 'extra' || c.status === 'missed');
+                    return (
+                      <span key={wordIdx} data-word-idx={wordIdx} className="inline-block mr-[0.55ch]">
+                        {chars.map((c, charIdx) => (
+                          <span
+                            key={charIdx}
+                            data-char-idx={charIdx}
+                            className={
+                              wordHasMistake && c.status !== 'missed'
+                                ? `${charClass[c.status]} ${mistakeUnderline}`
+                                : charClass[c.status]
+                            }
+                          >
+                            {c.char}
+                          </span>
+                        ))}
+                      </span>
+                    );
+                  })}
+                  {caretPos && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-0 top-0 pointer-events-none whitespace-pre"
+                      style={{
+                        color: 'transparent',
+                        textDecorationLine: 'underline',
+                        textDecorationColor: 'var(--accent)',
+                        textDecorationThickness: '2px',
+                        textUnderlineOffset: '8px',
+                        textDecorationSkipInk: 'none',
+                        transform: `translate(${caretPos.left}px, ${caretPos.top}px)`,
+                        transition: caretPos.instant ? 'none' : 'transform 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
+                    >
+                      {caretPos.char}
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {!isFinished && (
+        <p className="text-xs text-[var(--text-muted)] mt-8 tracking-wide">esc / tab — restart</p>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,86 @@
+@import 'tailwindcss';
+
+:root {
+  --bg: #18181b;
+  --bg-elevated: #1f2023;
+  --surface: #222327;
+  --surface-hover: #2a2b30;
+  --border: #303136;
+  --text-muted: #5c5d64;
+  --text-secondary: #8c8d95;
+  --text-correct: #f6f5f1;
+  --text-incorrect: #e2554f;
+  --text-incorrect-dim: rgba(226, 85, 79, 0.5);
+  --accent: #5b9bd9;
+  --accent-soft: rgba(91, 155, 217, 0.14);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: dark;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    font-family: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    background: var(--bg);
+    color: var(--text-secondary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    position: relative;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse 80% 55% at 50% 38%, rgba(91, 155, 217, 0.06), transparent 70%);
+    z-index: 0;
+  }
+
+  #root {
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--text-correct);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--surface-hover);
+    border-radius: 999px;
+    border: 2px solid var(--bg);
+  }
+}
+
+body.is-typing,
+body.is-typing * {
+  cursor: none;
+}
