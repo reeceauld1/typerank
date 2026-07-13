@@ -1,5 +1,15 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth.js';
+import { supabase } from '../lib/supabase.js';
+
+const USERNAME_PATTERN = /^[A-Za-z0-9]+$/;
+
+function validateUsername(username: string): string | null {
+  if (username.length < 3) return 'Username must be at least 3 characters.';
+  if (username.length > 20) return 'Username must be 20 characters or fewer.';
+  if (!USERNAME_PATTERN.test(username)) return 'Username can only contain letters and numbers.';
+  return null;
+}
 
 export default function AuthForm() {
   const { signUp, signIn } = useAuth();
@@ -20,15 +30,35 @@ export default function AuthForm() {
 
     if (mode === 'signup') {
       const trimmedUsername = username.trim();
-      if (trimmedUsername.length < 3) {
-        setError('Username must be at least 3 characters.');
+      const usernameError = validateUsername(trimmedUsername);
+      if (usernameError) {
+        setError(usernameError);
         setSubmitting(false);
         return;
       }
 
+      if (supabase) {
+        const { data: available, error: checkError } = await supabase.rpc('is_username_available', {
+          p_username: trimmedUsername,
+        });
+        if (checkError) {
+          setError('Could not verify username availability. Try again.');
+          setSubmitting(false);
+          return;
+        }
+        if (!available) {
+          setError('That username is already taken.');
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const { error: signUpError } = await signUp(email, password, trimmedUsername);
       if (signUpError) {
-        setError(signUpError);
+        // Rare race: someone else claimed the username between the check
+        // above and this call. The DB rejects it, but Auth only surfaces a
+        // generic failure, so map it to something the user can act on.
+        setError(/database error/i.test(signUpError) ? 'That username was just taken — try another.' : signUpError);
         setSubmitting(false);
         return;
       }
@@ -59,7 +89,6 @@ export default function AuthForm() {
           <input
             type="text"
             required
-            minLength={3}
             maxLength={20}
             placeholder="username"
             value={username}

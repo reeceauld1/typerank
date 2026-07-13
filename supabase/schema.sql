@@ -3,8 +3,11 @@
 
 -- One row per user, holding aggregate stats. Individual test results live
 -- in test_history; these are the running totals used for level/profile display.
+-- The row (including username) is created at signup by the
+-- handle_new_user trigger below, not lazily on first test.
 create table public.user_stats (
   user_id uuid primary key references auth.users (id) on delete cascade,
+  username text not null check (username ~ '^[A-Za-z0-9]{3,20}$'),
   total_tests integer not null default 0,
   total_xp integer not null default 0,
   total_time_typed double precision not null default 0,
@@ -18,6 +21,9 @@ create table public.user_stats (
   best_wpm_words50 integer not null default 0,
   updated_at timestamptz not null default now()
 );
+
+-- Case-insensitive uniqueness (so "John" and "john" can't both be taken).
+create unique index user_stats_username_lower_idx on public.user_stats (lower(username));
 
 -- Append-only log of every completed test.
 create table public.test_history (
@@ -106,9 +112,8 @@ begin
     p_correct_chars, p_incorrect_chars, p_time_elapsed, p_xp_earned
   );
 
-  insert into public.user_stats (user_id) values (v_user_id)
-  on conflict (user_id) do nothing;
-
+  -- No upsert needed here: the user_stats row (with its required username)
+  -- is always created at signup by the handle_new_user trigger below.
   update public.user_stats set
     total_tests = total_tests + 1,
     total_xp = total_xp + p_xp_earned,
@@ -133,6 +138,45 @@ end;
 $$;
 
 grant execute on function public.record_test_result to authenticated;
+
+-- Creates the user_stats row (with username) the moment an account is
+-- created, using the username captured at signup time
+-- (supabase.auth.signUp({ options: { data: { username } } })). If it's
+-- missing, malformed, or already taken, this raises and the whole signup
+-- transaction — including the auth.users row itself — rolls back.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.user_stats (user_id, username)
+  values (new.id, new.raw_user_meta_data ->> 'username');
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Lets the signup form check availability before submitting, so a taken
+-- username shows a clear inline error instead of a failed signup.
+create or replace function public.is_username_available(p_username text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select not exists (
+    select 1 from public.user_stats where lower(username) = lower(p_username)
+  );
+$$;
+
+grant execute on function public.is_username_available to anon, authenticated;
 
 -- Claims today's daily challenge and awards its XP bonus exactly once.
 -- Returns true if this call was the one that claimed it, false if it was
@@ -170,47 +214,6 @@ end;
 $$;
 
 grant execute on function public.claim_daily_challenge to authenticated;
-
--- One-time import of a brand-new account's pre-existing localStorage stats
--- (only ever meaningful the moment a user_stats row doesn't exist yet).
-create or replace function public.import_local_stats(
-  p_total_tests integer,
-  p_total_xp integer,
-  p_total_time_typed double precision,
-  p_total_accuracy_sum double precision,
-  p_total_wpm_sum double precision,
-  p_best_wpm_time10 integer,
-  p_best_wpm_time30 integer,
-  p_best_wpm_time60 integer,
-  p_best_wpm_words10 integer,
-  p_best_wpm_words25 integer,
-  p_best_wpm_words50 integer
-) returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_user_id uuid := auth.uid();
-begin
-  if v_user_id is null then
-    raise exception 'not authenticated';
-  end if;
-
-  insert into public.user_stats (
-    user_id, total_tests, total_xp, total_time_typed, total_accuracy_sum, total_wpm_sum,
-    best_wpm_time10, best_wpm_time30, best_wpm_time60,
-    best_wpm_words10, best_wpm_words25, best_wpm_words50
-  ) values (
-    v_user_id, p_total_tests, p_total_xp, p_total_time_typed, p_total_accuracy_sum, p_total_wpm_sum,
-    p_best_wpm_time10, p_best_wpm_time30, p_best_wpm_time60,
-    p_best_wpm_words10, p_best_wpm_words25, p_best_wpm_words50
-  )
-  on conflict (user_id) do nothing;
-end;
-$$;
-
-grant execute on function public.import_local_stats to authenticated;
 
 -- Weekly challenge ("complete N tests this week").
 create table public.weekly_challenge_claims (
