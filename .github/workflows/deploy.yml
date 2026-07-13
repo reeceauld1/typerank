@@ -29,9 +29,10 @@ jobs:
 
       - name: Build
         env:
-          # Project-page base path, e.g. /typeSite/ — swap to "/" if you're
-          # deploying to a custom domain or a username.github.io root page.
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          # Serving from rotagenda.com (a custom domain), so the site sits at
+          # the root — no /repo-name/ subpath needed. Vite defaults to "/"
+          # when this isn't set, so it's omitted here.
+          #
           # Safe to store as plain repo Variables (not Secrets): this is the
           # publishable key, meant to ship in the client bundle. Set both
           # under Settings -> Secrets and variables -> Actions -> Variables.

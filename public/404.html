@@ -11,11 +11,10 @@
       // index.html) so React Router picks up where the user meant to land.
       // https://github.com/rafgraph/spa-github-pages
       //
-      // Set this to the number of segments in your base path — 1 for a
-      // GitHub Pages project page (username.github.io/repo-name/), or 0 if
-      // you're serving from the domain root (a custom domain, or a
-      // username.github.io user/org page).
-      var pathSegmentsToKeep = 1;
+      // 0 because rotagenda.com (a custom domain) serves from the root —
+      // no /repo-name/ subpath to preserve. Bump to 1 if this ever moves
+      // back to a plain GitHub Pages project page (username.github.io/repo-name/).
+      var pathSegmentsToKeep = 0;
 
       var l = window.location;
       l.replace(
