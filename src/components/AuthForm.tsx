@@ -11,10 +11,14 @@ function validateUsername(username: string): string | null {
   return null;
 }
 
-export default function AuthForm() {
+interface AuthFormProps {
+  initialMode?: 'signin' | 'signup';
+}
+
+export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {}) {
   const { signUp, signIn } = useAuth();
 
-  const [mode, setMode] = useState<'signin' | 'signup'>('signup');
+  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -133,9 +137,19 @@ export default function AuthForm() {
           setError(null);
           setInfo(null);
         }}
-        className="mt-4 w-full text-center text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer"
+        className="mt-6 -mb-8 h-16 w-full flex items-center justify-center border-t border-[var(--border)] text-center text-sm text-[var(--text-secondary)] hover:text-[var(--text-correct)] transition-colors cursor-pointer"
       >
-        {mode === 'signup' ? 'already have an account? sign in' : 'need an account? sign up'}
+        {mode === 'signup' ? (
+          <>
+            already have an account?
+            <span className="ml-1 text-[var(--accent)] font-semibold">sign in</span>
+          </>
+        ) : (
+          <>
+            need an account?
+            <span className="ml-1 text-[var(--accent)] font-semibold">sign up</span>
+          </>
+        )}
       </button>
     </div>
   );

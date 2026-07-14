@@ -33,6 +33,25 @@ function ProfileIcon() {
   );
 }
 
+function SettingsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1l-.3-2.5H9.9l-.3 2.5a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L5.6 11a7.6 7.6 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9a7.6 7.6 0 0 0 1.7 1l.3 2.5h4.2l.3-2.5a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5Z" />
+    </svg>
+  );
+}
+
+function TrophyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 5H4a3 3 0 0 0 3 5M17 5h3a3 3 0 0 1-3 5" />
+      <path d="M12 13v3M9 20h6M9 20c0-2 1-2 3-2s3 0 3 2" />
+    </svg>
+  );
+}
+
 function FriendsIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -98,6 +117,23 @@ export default function Navbar() {
           )}
           {user && (
             <Link
+              to="/leaderboard"
+              aria-label="Leaderboard"
+              title="Leaderboard"
+              className={`relative p-1 transition-colors ${
+                location.pathname === '/leaderboard'
+                  ? 'text-[var(--text-correct)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+              }`}
+            >
+              <TrophyIcon />
+              {location.pathname === '/leaderboard' && (
+                <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
+              )}
+            </Link>
+          )}
+          {user && (
+            <Link
               to="/friends"
               aria-label="Friends"
               title="Friends"
@@ -145,6 +181,21 @@ export default function Navbar() {
                 </motion.span>
               )}
             </AnimatePresence>
+          </Link>
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            title="Settings"
+            className={`relative p-1 transition-colors ${
+              location.pathname === '/settings'
+                ? 'text-[var(--text-correct)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+            }`}
+          >
+            <SettingsIcon />
+            {location.pathname === '/settings' && (
+              <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
+            )}
           </Link>
         </div>
       </div>

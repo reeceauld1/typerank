@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { TestConfig } from '../types/index.js';
 import TypingTest from '../components/TypingTest.js';
 import ModeSelector from '../components/ModeSelector.js';
+import OnScreenKeyboard from '../components/OnScreenKeyboard.js';
+import { useSettings } from '../hooks/useSettings.js';
 
 const CONFIG_KEY = 'testConfig';
 
@@ -20,6 +22,8 @@ export default function Home() {
   const [config, setConfig] = useState<TestConfig>(loadConfig);
   const [key, setKey] = useState(0);
   const [typingActive, setTypingActive] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const { showKeyboard } = useSettings();
 
   useEffect(() => {
     localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
@@ -51,9 +55,19 @@ export default function Home() {
         <TypingTest
           key={key}
           config={config}
-          onRestart={() => setKey(prev => prev + 1)}
+          onComplete={() => setFinished(true)}
+          onRestart={() => {
+            setKey(prev => prev + 1);
+            setFinished(false);
+          }}
           onTypingActiveChange={setTypingActive}
         />
+
+        {showKeyboard && !finished && (
+          <div className="mt-10">
+            <OnScreenKeyboard />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -67,6 +67,17 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.getModifierState) capsLockRef.current = e.getModifierState('CapsLock');
+
+    // Block spacebar as the first keypress of a word — otherwise spamming
+    // space with nothing typed skips through the whole test almost
+    // instantly, which (before this) still scored as fast, accurate typing.
+    if (e.key === ' ') {
+      const segments = input.split(' ');
+      const currentSegment = segments[segments.length - 1];
+      if (currentSegment.length === 0) {
+        e.preventDefault();
+      }
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,6 +156,13 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
       if (w < inputWords.length - 1) {
         // the space typed between words
         correctChars++;
+        // Letters left untyped when a word was skipped early (spacebar hit
+        // before finishing it) were never attempted — they still count
+        // against accuracy/raw WPM, same as the "missed" chars shown in the
+        // UI, so skipping through words doesn't read as flawless typing.
+        if (typedWord.length < targetWord.length) {
+          incorrectChars += targetWord.length - typedWord.length;
+        }
       }
     });
 
