@@ -101,7 +101,11 @@ export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {})
         {mode === 'signup' ? 'create account' : mode === 'forgot' ? 'reset password' : 'sign in'}
       </h2>
       <p className="text-[var(--text-muted)] text-sm mb-6">
-        {mode === 'signup' ? 'sync your stats across devices' : mode === 'forgot' ? "we'll email you a reset link" : 'welcome back'}
+        {mode === 'signup'
+          ? 'sign up to track your level, unlock cosmetics, add friends, and climb the leaderboard'
+          : mode === 'forgot'
+            ? "we'll email you a reset link"
+            : 'sign in to track your level, unlock cosmetics, add friends, and climb the leaderboard'}
       </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">

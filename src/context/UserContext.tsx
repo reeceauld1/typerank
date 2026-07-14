@@ -53,12 +53,29 @@ function startOfTodayIso(): string {
   return d.toISOString();
 }
 
+// Seeds the initial accent color from the same cache index.html's pre-paint
+// script reads, so this component's first render (and the effect that
+// applies --accent below) already matches what's on screen instead of
+// starting from the hardcoded "blue" default and briefly overwriting the
+// pre-paint script's color before the real fetch corrects it again.
+function loadInitialStats(): UserStats {
+  try {
+    const color = window.localStorage.getItem('accentColor');
+    if (color) {
+      return { ...defaultStats, equippedAccentColor: color, customAccentHex: window.localStorage.getItem('accentHex') };
+    }
+  } catch {
+    // ignore unavailable storage
+  }
+  return defaultStats;
+}
+
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const isAccountSynced = Boolean(user && supabase);
   const dailyChallenge: DailyChallenge | null = user ? getDailyChallenge(user.id) : null;
 
-  const [remoteStats, setRemoteStats] = useState<UserStats>(defaultStats);
+  const [remoteStats, setRemoteStats] = useState<UserStats>(loadInitialStats);
   const [loading, setLoading] = useState(false);
   const [lastXpGained, setLastXpGained] = useState<number | null>(null);
   const [claimedToday, setClaimedToday] = useState(false);
@@ -116,6 +133,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   useEffect(() => {
+    // Still resolving whether there's a session at all — leave the cached
+    // initial state alone rather than briefly resetting to defaultStats
+    // (blue) while we don't yet know if the user is actually signed in.
+    if (authLoading) return;
+
     if (!isAccountSynced) {
       // Signed out (or account sync unavailable): nothing is tracked, so
       // reset to a clean slate rather than showing stale/guest data.
@@ -129,9 +151,21 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
     setLoading(true);
     refreshRemoteStats().finally(() => setLoading(false));
-  }, [isAccountSynced, refreshRemoteStats]);
+  }, [authLoading, isAccountSynced, refreshRemoteStats]);
 
   useEffect(() => {
+    // Cache the equipped color so index.html's pre-paint script can apply it
+    // immediately on the next load, before React mounts and re-fetches the
+    // real value — otherwise a non-default color flashes the CSS default
+    // blue for a frame on every refresh.
+    try {
+      window.localStorage.setItem('accentColor', remoteStats.equippedAccentColor);
+      if (remoteStats.customAccentHex) window.localStorage.setItem('accentHex', remoteStats.customAccentHex);
+      else window.localStorage.removeItem('accentHex');
+    } catch {
+      // ignore unavailable storage
+    }
+
     const root = document.documentElement;
     if (isMonochromeAccent(remoteStats.equippedAccentColor)) {
       // Resolved in CSS instead ([data-accent-mono='true'], keyed off the

@@ -164,9 +164,6 @@ export default function Friends() {
   if (!user) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16">
-        <p className="text-[var(--text-muted)] text-sm text-center max-w-sm">
-          log in to add friends and compare stats.
-        </p>
         <AuthForm />
       </div>
     );

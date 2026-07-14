@@ -66,10 +66,6 @@ export default function Profile() {
         </>
       ) : isConfigured ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16">
-          <p className="text-[var(--text-muted)] text-sm text-center max-w-sm">
-            log in to track your stats — level, personal bests, and test history are only saved for signed-in accounts —
-            and unlock daily and weekly challenges.
-          </p>
           <AuthForm />
         </div>
       ) : (

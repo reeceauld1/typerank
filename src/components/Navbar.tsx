@@ -118,7 +118,7 @@ export default function Navbar() {
   const navItems: NavItem[] = [
     { to: '/', label: 'typing test', icon: KeyboardIcon, isActive: p => p === '/' },
     { to: '/challenges', label: 'challenges', icon: ChallengeIcon, isActive: p => p === '/challenges', requiresUser: true },
-    { to: '/leaderboard', label: 'leaderboard', icon: TrophyIcon, isActive: p => p === '/leaderboard', requiresUser: true },
+    { to: '/leaderboard', label: 'leaderboard', icon: TrophyIcon, isActive: p => p === '/leaderboard' },
     {
       to: '/friends',
       label: 'friends',
@@ -181,23 +181,21 @@ export default function Navbar() {
               )}
             </Link>
           )}
-          {user && (
-            <Link
-              to="/leaderboard"
-              aria-label="Leaderboard"
-              title="Leaderboard"
-              className={`relative p-1 transition-colors ${
-                location.pathname === '/leaderboard'
-                  ? 'text-[var(--text-correct)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-            >
-              <TrophyIcon />
-              {location.pathname === '/leaderboard' && (
-                <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
-              )}
-            </Link>
-          )}
+          <Link
+            to="/leaderboard"
+            aria-label="Leaderboard"
+            title="Leaderboard"
+            className={`relative p-1 transition-colors ${
+              location.pathname === '/leaderboard'
+                ? 'text-[var(--text-correct)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+            }`}
+          >
+            <TrophyIcon />
+            {location.pathname === '/leaderboard' && (
+              <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
+            )}
+          </Link>
           {user && (
             <Link
               to="/friends"

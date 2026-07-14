@@ -341,6 +341,12 @@ create policy "select own friendships" on public.friendships
 create policy "select any stats" on public.user_stats
   for select to authenticated using (true);
 
+-- The global leaderboard is open to signed-out visitors too (see
+-- schema_011_public_leaderboard.sql) — same non-sensitive data, just also
+-- granted to the anon role.
+create policy "select any stats anon" on public.user_stats
+  for select to anon using (true);
+
 -- Looks the target up by username and either creates a pending request or,
 -- if they'd already requested the caller, accepts it instead of leaving two
 -- one-directional rows around. Returns 'pending' or 'accepted'.

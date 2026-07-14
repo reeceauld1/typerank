@@ -68,7 +68,7 @@ export default function Leaderboard() {
 
   const loadUserRows = useCallback(
     async (targetScope: 'global' | 'friends', cat: Category) => {
-      if (!supabase || !user) {
+      if (!supabase || (targetScope === 'friends' && !user)) {
         setUserRows([]);
         return;
       }
@@ -92,6 +92,7 @@ export default function Leaderboard() {
         return;
       }
 
+      if (!user) return;
       const ids = Array.from(new Set([user.id, ...friends.map(f => f.userId)]));
       const { data } = await supabase.from('user_stats').select('*').in('user_id', ids).gt(cat.column, 0);
       const rows = (data ?? []).map((row: Record<string, unknown>) => ({
@@ -134,8 +135,13 @@ export default function Leaderboard() {
   );
 
   useEffect(() => {
-    if (!user) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // Friends/personal need an account; global doesn't.
+    if (scope !== 'global' && !user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUserRows([]);
+      setPersonalRows([]);
+      return;
+    }
     setLoading(true);
     const load = scope === 'personal' ? loadPersonalRows(category) : loadUserRows(scope, category);
     load.finally(() => setLoading(false));
@@ -148,17 +154,6 @@ export default function Leaderboard() {
         <p className="text-[var(--text-muted)] text-sm max-w-md">
           This deployment hasn't been connected to Supabase, so the leaderboard isn't available.
         </p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16">
-        <p className="text-[var(--text-muted)] text-sm text-center max-w-sm">
-          log in to view the leaderboard — and to appear on it yourself.
-        </p>
-        <AuthForm />
       </div>
     );
   }
@@ -190,7 +185,7 @@ export default function Leaderboard() {
           ))}
         </div>
 
-        <div className="flex items-center flex-wrap gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-2 py-2 text-xs">
+        <div className="flex items-center flex-wrap justify-center gap-1 w-fit mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-lg px-2 py-2 text-xs">
           {CATEGORIES.map((c, i) => (
             <Fragment key={c.key}>
               {i === 3 && <span className="w-px h-4 bg-[var(--border)] mx-1" />}
@@ -208,7 +203,11 @@ export default function Leaderboard() {
       </div>
 
       <div className="max-w-4xl w-full mx-auto flex flex-col gap-2">
-        {loading ? (
+        {scope !== 'global' && !user ? (
+          <div className="flex flex-col items-center gap-4 py-8">
+            <AuthForm />
+          </div>
+        ) : loading ? (
           <p className="text-sm text-[var(--text-muted)] text-center py-8">loading…</p>
         ) : scope === 'personal' ? (
           personalRows.length === 0 ? (
@@ -222,13 +221,15 @@ export default function Leaderboard() {
                 className="flex items-center gap-4 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3"
               >
                 <RankBadge rank={i + 1} />
-                <span className="flex-1 text-sm text-[var(--text-muted)]">
-                  {new Date(run.createdAt).toLocaleDateString()}
+                <span className="flex-1 min-w-0 truncate text-sm text-[var(--text-muted)]">
+                  {new Date(run.createdAt).toLocaleDateString()} {new Date(run.createdAt).toLocaleTimeString()}
                 </span>
-                <span className="text-sm text-[var(--text-muted)]">{run.accuracy}% acc</span>
-                <span className="text-lg font-semibold text-[var(--text-correct)] tabular-nums w-16 text-right">
-                  {run.wpm} <span className="text-xs font-normal text-[var(--text-muted)]">wpm</span>
-                </span>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">{run.accuracy}% acc</span>
+                  <span className="text-lg font-semibold text-[var(--text-correct)] tabular-nums whitespace-nowrap">
+                    {run.wpm} <span className="text-xs font-normal text-[var(--text-muted)]">wpm</span>
+                  </span>
+                </div>
               </div>
             ))
           )
@@ -241,7 +242,7 @@ export default function Leaderboard() {
             <div
               key={row.userId}
               className={`flex items-center gap-4 rounded-lg px-4 py-3 border ${
-                row.userId === user.id
+                row.userId === user?.id
                   ? 'border-[var(--accent)] bg-[var(--accent-soft)]'
                   : 'border-[var(--border)] bg-[var(--surface)]'
               }`}
@@ -257,7 +258,7 @@ export default function Leaderboard() {
                   {row.username}
                 </span>
               </Link>
-              <span className="text-lg font-semibold text-[var(--text-correct)] tabular-nums">
+              <span className="text-lg font-semibold text-[var(--text-correct)] tabular-nums shrink-0 whitespace-nowrap">
                 {row.wpm} <span className="text-xs font-normal text-[var(--text-muted)]">wpm</span>
               </span>
             </div>
