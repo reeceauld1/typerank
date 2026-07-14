@@ -74,20 +74,26 @@ function FindPeople() {
     if (!supabase || !user || query.trim().length < 2) return;
     setSearching(true);
     setMessage(null);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('user_stats')
       .select('user_id, username, equipped_avatar, equipped_border')
       .ilike('username', `%${query.trim()}%`)
       .neq('user_id', user.id)
       .limit(15);
-    setResults(
-      (data ?? []).map(row => ({
-        userId: row.user_id as string,
-        username: row.username as string,
-        equippedAvatar: row.equipped_avatar as string,
-        equippedBorder: row.equipped_border as string,
-      }))
-    );
+    if (error) {
+      setMessage(`Search failed: ${error.message}`);
+      setResults([]);
+    } else {
+      setResults(
+        (data ?? []).map(row => ({
+          userId: row.user_id as string,
+          username: row.username as string,
+          equippedAvatar: row.equipped_avatar as string,
+          equippedBorder: row.equipped_border as string,
+        }))
+      );
+      if ((data ?? []).length === 0) setMessage('No users found.');
+    }
     setSearching(false);
   };
 
