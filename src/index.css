@@ -84,3 +84,22 @@ body.is-typing,
 body.is-typing * {
   cursor: none;
 }
+
+@property --legend-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.legend-border {
+  background:
+    linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box,
+    conic-gradient(from var(--legend-angle), #ff5f6d, #ffc371, #47e0a0, #5b9bd9, #a55bd9, #ff5f6d) border-box;
+  animation: legend-spin 4s linear infinite;
+}
+
+@keyframes legend-spin {
+  to {
+    --legend-angle: 360deg;
+  }
+}

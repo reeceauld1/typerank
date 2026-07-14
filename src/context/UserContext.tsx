@@ -23,25 +23,29 @@ const defaultStats: UserStats = {
     words50: 0,
   },
   testHistory: [],
+  equippedAvatar: 'keyboard',
+  equippedBorder: 'none',
 };
 
-function mapStatsRow(row: Record<string, number> | null): Omit<UserStats, 'testHistory'> {
-  const totalXp = row?.total_xp ?? 0;
+function mapStatsRow(row: Record<string, number | string> | null): Omit<UserStats, 'testHistory'> {
+  const totalXp = (row?.total_xp as number) ?? 0;
   return {
-    totalTests: row?.total_tests ?? 0,
+    totalTests: (row?.total_tests as number) ?? 0,
     totalXp,
     level: calculateLevel(totalXp),
-    totalTimeTyped: row?.total_time_typed ?? 0,
-    totalAccuracySum: row?.total_accuracy_sum ?? 0,
-    totalWpmSum: row?.total_wpm_sum ?? 0,
+    totalTimeTyped: (row?.total_time_typed as number) ?? 0,
+    totalAccuracySum: (row?.total_accuracy_sum as number) ?? 0,
+    totalWpmSum: (row?.total_wpm_sum as number) ?? 0,
     bestWpm: {
-      time10: row?.best_wpm_time10 ?? 0,
-      time30: row?.best_wpm_time30 ?? 0,
-      time60: row?.best_wpm_time60 ?? 0,
-      words10: row?.best_wpm_words10 ?? 0,
-      words25: row?.best_wpm_words25 ?? 0,
-      words50: row?.best_wpm_words50 ?? 0,
+      time10: (row?.best_wpm_time10 as number) ?? 0,
+      time30: (row?.best_wpm_time30 as number) ?? 0,
+      time60: (row?.best_wpm_time60 as number) ?? 0,
+      words10: (row?.best_wpm_words10 as number) ?? 0,
+      words25: (row?.best_wpm_words25 as number) ?? 0,
+      words50: (row?.best_wpm_words50 as number) ?? 0,
     },
+    equippedAvatar: (row?.equipped_avatar as string) ?? 'keyboard',
+    equippedBorder: (row?.equipped_border as string) ?? 'none',
   };
 }
 
@@ -120,7 +124,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     ]);
 
     setRemoteStats({
-      ...mapStatsRow(statsRes.data as Record<string, number> | null),
+      ...mapStatsRow(statsRes.data as Record<string, number | string> | null),
       testHistory: (historyRes.data ?? []).map(row => mapHistoryRow(row as Record<string, string | number>)),
     });
     setClaimedToday(Boolean(claimRes.data));
@@ -201,6 +205,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const setEquippedCosmetics = async (avatarId: string, borderId: string): Promise<void> => {
+    if (!isAccountSynced || !user || !supabase) return;
+
+    const { error } = await supabase.rpc('set_equipped_cosmetics', {
+      p_avatar_id: avatarId,
+      p_border_id: borderId,
+    });
+    if (!error) await refreshRemoteStats();
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -217,6 +231,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         clearLastXpGained,
         claimDailyChallengeBonus,
         claimWeeklyChallengeBonus,
+        setEquippedCosmetics,
       }}
     >
       {children}

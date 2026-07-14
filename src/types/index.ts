@@ -38,6 +38,8 @@ export interface UserStats {
     words50: number;
   };
   testHistory: TestResult[];
+  equippedAvatar: string;
+  equippedBorder: string;
 }
 
 export interface Challenge {
