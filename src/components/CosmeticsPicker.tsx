@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useUser } from '../hooks/useUser.js';
-import { AVATAR_CATALOG, BORDER_CATALOG } from '../utils/cosmetics.js';
+import { useAuth } from '../hooks/useAuth.js';
+import { AVATAR_CATALOG, BORDER_CATALOG, isAdminEmail } from '../utils/cosmetics.js';
 import Tooltip from './Tooltip.js';
 
 function LockIcon() {
@@ -20,6 +21,8 @@ function cellClass(unlocked: boolean, equipped: boolean): string {
 
 export default function CosmeticsPicker() {
   const { stats, setEquippedCosmetics } = useUser();
+  const { user } = useAuth();
+  const admin = isAdminEmail(user?.email);
   const [error, setError] = useState<string | null>(null);
 
   const handleEquipAvatar = async (id: string) => {
@@ -36,8 +39,8 @@ export default function CosmeticsPicker() {
     if (!ok) setError("Couldn't equip that border — try again.");
   };
 
-  const unlockedAvatars = AVATAR_CATALOG.filter(a => a.isUnlocked(stats)).length;
-  const unlockedBorders = BORDER_CATALOG.filter(b => b.isUnlocked(stats)).length;
+  const unlockedAvatars = admin ? AVATAR_CATALOG.length : AVATAR_CATALOG.filter(a => a.isUnlocked(stats)).length;
+  const unlockedBorders = admin ? BORDER_CATALOG.length : BORDER_CATALOG.filter(b => b.isUnlocked(stats)).length;
 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
@@ -52,7 +55,7 @@ export default function CosmeticsPicker() {
         </div>
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
           {AVATAR_CATALOG.map(avatar => {
-            const unlocked = avatar.isUnlocked(stats);
+            const unlocked = admin || avatar.isUnlocked(stats);
             const equipped = stats.equippedAvatar === avatar.id;
             const Icon = avatar.icon;
             return (
@@ -88,7 +91,7 @@ export default function CosmeticsPicker() {
         </div>
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
           {BORDER_CATALOG.map(border => {
-            const unlocked = border.isUnlocked(stats);
+            const unlocked = admin || border.isUnlocked(stats);
             const equipped = stats.equippedBorder === border.id;
             return (
               <Tooltip key={border.id} content={unlocked ? border.name : `${border.name} — ${border.description}`}>

@@ -197,11 +197,14 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
       const lastWordIndex = words.length - 1;
       const targetLastWord = words[lastWordIndex] ?? '';
       const typedLastWord = inputWords[lastWordIndex] ?? '';
-      if (
-        targetLastWord.length > 0 &&
-        currentWordIndex >= lastWordIndex &&
-        typedLastWord.length >= targetLastWord.length
-      ) {
+      // A space on the last word (even skipping the rest of it, same as any
+      // other word) moves currentWordIndex past lastWordIndex — that alone
+      // should finish the test, not just typing it out to full length.
+      const movedPastLastWord = currentWordIndex > lastWordIndex;
+      const typedLastWordInFull =
+        targetLastWord.length > 0 && currentWordIndex >= lastWordIndex && typedLastWord.length >= targetLastWord.length;
+
+      if (movedPastLastWord || typedLastWordInFull) {
         finishTestRef.current();
       }
     }

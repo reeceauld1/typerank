@@ -1,5 +1,13 @@
 import type { UserStats } from '../types/index.js';
 
+// Bypasses every unlock condition below — every avatar/border shows as
+// unlocked for this account. Cosmetic-only, no other admin privileges.
+const ADMIN_EMAILS = ['yvernxyz@gmail.com'];
+
+export function isAdminEmail(email?: string | null): boolean {
+  return Boolean(email) && ADMIN_EMAILS.includes(email!.toLowerCase());
+}
+
 export interface AvatarDef {
   id: string;
   name: string;
