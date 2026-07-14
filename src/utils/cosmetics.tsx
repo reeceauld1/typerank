@@ -274,8 +274,8 @@ export const BORDER_CATALOG: BorderDef[] = [
   {
     id: 'legend',
     name: 'Legend',
-    description: 'Reach 140 WPM in any mode.',
-    isUnlocked: stats => bestWpmOverall(stats) >= 140,
+    description: 'Reach level 100.',
+    isUnlocked: stats => stats.level >= 100,
     className: 'border-transparent legend-border',
   },
 ];

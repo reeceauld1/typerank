@@ -1,3 +1,4 @@
+import type { UserStats } from '../types/index.js';
 import { useUser } from '../hooks/useUser.js';
 import { getLevelProgress } from '../utils/xp.js';
 import { motion } from 'framer-motion';
@@ -12,8 +13,13 @@ function formatTimeTyped(totalSeconds: number): string {
   return `${secs}s`;
 }
 
-export default function ProfileStats() {
-  const { stats } = useUser();
+interface ProfileStatsProps {
+  stats?: UserStats;
+}
+
+export default function ProfileStats({ stats: statsProp }: ProfileStatsProps = {}) {
+  const { stats: ownStats } = useUser();
+  const stats = statsProp ?? ownStats;
   const levelProgress = getLevelProgress(stats.totalXp);
 
   const avgAccuracy = stats.totalTests > 0 ? Math.round(stats.totalAccuracySum / stats.totalTests) : 0;

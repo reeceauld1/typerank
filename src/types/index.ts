@@ -54,6 +54,13 @@ export interface Challenge {
   expiresAt: number;
 }
 
+export interface FriendEntry {
+  userId: string;
+  username: string;
+  equippedAvatar: string;
+  equippedBorder: string;
+}
+
 export interface LeaderboardEntry {
   userId: string;
   username: string;

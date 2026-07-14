@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { UserStats } from '../types/index.js';
 import { useUser } from '../hooks/useUser.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { AVATAR_CATALOG, BORDER_CATALOG, isAdminEmail } from '../utils/cosmetics.js';
@@ -13,27 +14,37 @@ function LockIcon() {
   );
 }
 
-function cellClass(unlocked: boolean, equipped: boolean): string {
+function cellClass(unlocked: boolean, equipped: boolean, readOnly: boolean): string {
   if (equipped) return 'border-[var(--accent)] bg-[var(--accent-soft)]';
-  if (unlocked) return 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] cursor-pointer';
+  if (unlocked) {
+    return readOnly
+      ? 'border-[var(--border)] bg-[var(--surface)]'
+      : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] cursor-pointer';
+  }
   return 'border-[var(--border)] bg-[var(--surface)] opacity-40 cursor-not-allowed';
 }
 
-export default function CosmeticsPicker() {
-  const { stats, setEquippedCosmetics } = useUser();
+interface CosmeticsPickerProps {
+  statsOverride?: UserStats;
+  readOnly?: boolean;
+}
+
+export default function CosmeticsPicker({ statsOverride, readOnly = false }: CosmeticsPickerProps = {}) {
+  const { stats: ownStats, setEquippedCosmetics } = useUser();
   const { user } = useAuth();
-  const admin = isAdminEmail(user?.email);
+  const stats = statsOverride ?? ownStats;
+  const admin = !readOnly && isAdminEmail(user?.email);
   const [error, setError] = useState<string | null>(null);
 
   const handleEquipAvatar = async (id: string) => {
-    if (id === stats.equippedAvatar) return;
+    if (readOnly || id === stats.equippedAvatar) return;
     setError(null);
     const ok = await setEquippedCosmetics(id, stats.equippedBorder);
     if (!ok) setError("Couldn't equip that avatar — try again.");
   };
 
   const handleEquipBorder = async (id: string) => {
-    if (id === stats.equippedBorder) return;
+    if (readOnly || id === stats.equippedBorder) return;
     setError(null);
     const ok = await setEquippedCosmetics(stats.equippedAvatar, id);
     if (!ok) setError("Couldn't equip that border — try again.");
@@ -59,12 +70,12 @@ export default function CosmeticsPicker() {
             const equipped = stats.equippedAvatar === avatar.id;
             const Icon = avatar.icon;
             return (
-              <Tooltip key={avatar.id} content={unlocked ? avatar.name : `${avatar.name} — ${avatar.description}`}>
+              <Tooltip key={avatar.id} content={unlocked ? `${avatar.name} — Unlocked: ${avatar.description}` : `${avatar.name} — ${avatar.description}`}>
                 <button
                   type="button"
-                  disabled={!unlocked}
+                  disabled={!unlocked || readOnly}
                   onClick={() => void handleEquipAvatar(avatar.id)}
-                  className={`relative w-full flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped)}`}
+                  className={`relative w-full flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped, readOnly)}`}
                 >
                   {!unlocked && (
                     <span className="absolute top-1.5 right-1.5 text-[var(--text-muted)]">
@@ -94,12 +105,12 @@ export default function CosmeticsPicker() {
             const unlocked = admin || border.isUnlocked(stats);
             const equipped = stats.equippedBorder === border.id;
             return (
-              <Tooltip key={border.id} content={unlocked ? border.name : `${border.name} — ${border.description}`}>
+              <Tooltip key={border.id} content={unlocked ? `${border.name} — Unlocked: ${border.description}` : `${border.name} — ${border.description}`}>
                 <button
                   type="button"
-                  disabled={!unlocked}
+                  disabled={!unlocked || readOnly}
                   onClick={() => void handleEquipBorder(border.id)}
-                  className={`relative w-full flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped)}`}
+                  className={`relative w-full flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped, readOnly)}`}
                 >
                   {!unlocked && (
                     <span className="absolute top-1.5 right-1.5 text-[var(--text-muted)]">

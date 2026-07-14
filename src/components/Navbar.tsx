@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useUser } from '../hooks/useUser.js';
 import { useAuth } from '../hooks/useAuth.js';
+import { useFriends } from '../hooks/useFriends.js';
 
 function KeyboardIcon() {
   return (
@@ -32,10 +33,22 @@ function ProfileIcon() {
   );
 }
 
+function FriendsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <circle cx="8.5" cy="8" r="3" />
+      <path d="M2.5 19c1.2-3.6 3.6-5.3 6-5.3s4.8 1.7 6 5.3" />
+      <path d="M15.5 8.3a2.6 2.6 0 1 0 0-5.2" />
+      <path d="M15 13.9c2.1.3 3.9 1.9 4.9 5.1" />
+    </svg>
+  );
+}
+
 export default function Navbar() {
   const location = useLocation();
   const { lastXpGained, clearLastXpGained } = useUser();
   const { user } = useAuth();
+  const { incomingRequests } = useFriends();
 
   useEffect(() => {
     if (lastXpGained === null) return;
@@ -79,6 +92,28 @@ export default function Navbar() {
             >
               <ChallengeIcon />
               {location.pathname === '/challenges' && (
+                <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
+              )}
+            </Link>
+          )}
+          {user && (
+            <Link
+              to="/friends"
+              aria-label="Friends"
+              title="Friends"
+              className={`relative p-1 transition-colors ${
+                location.pathname === '/friends' || location.pathname.startsWith('/u/')
+                  ? 'text-[var(--text-correct)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+              }`}
+            >
+              <FriendsIcon />
+              {incomingRequests.length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-semibold leading-none text-[var(--bg)]">
+                  {incomingRequests.length}
+                </span>
+              )}
+              {(location.pathname === '/friends' || location.pathname.startsWith('/u/')) && (
                 <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
               )}
             </Link>
