@@ -29,6 +29,23 @@
         }
       })(window.location);
     </script>
+    <script type="text/javascript">
+      // Sets the theme before first paint so a resolved "light" theme
+      // (explicit, or "system" on a light OS/browser — the default) doesn't
+      // flash dark (the CSS default) for a frame while React mounts.
+      (function () {
+        try {
+          var theme = window.localStorage.getItem('theme');
+          var resolved =
+            theme === 'light' || theme === 'dark'
+              ? theme
+              : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
+                ? 'light'
+                : 'dark';
+          if (resolved === 'light') document.documentElement.dataset.theme = 'light';
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -20,5 +20,7 @@ export function mapStatsRow(row: Record<string, number | string> | null): Omit<U
     },
     equippedAvatar: (row?.equipped_avatar as string) ?? 'keyboard',
     equippedBorder: (row?.equipped_border as string) ?? 'none',
+    equippedAccentColor: (row?.equipped_accent_color as string) ?? 'blue',
+    customAccentHex: (row?.custom_accent_hex as string | undefined) ?? null,
   };
 }

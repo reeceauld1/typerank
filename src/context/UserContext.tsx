@@ -4,6 +4,7 @@ import { calculateXP, checkChallengeMilestone } from '../utils/xp.js';
 import { getDailyChallenge, todayKey, type DailyChallenge } from '../utils/dailyChallenge.js';
 import { weekKey, getWeekStart } from '../utils/weeklyChallenge.js';
 import { mapStatsRow } from '../utils/statsMapping.js';
+import { resolveAccentHex, hexToRgba } from '../utils/accentColors.js';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { UserContext } from './UserContextBase.js';
@@ -26,6 +27,8 @@ const defaultStats: UserStats = {
   testHistory: [],
   equippedAvatar: 'keyboard',
   equippedBorder: 'none',
+  equippedAccentColor: 'blue',
+  customAccentHex: null,
 };
 
 function mapHistoryRow(row: Record<string, string | number>): TestResult {
@@ -128,6 +131,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     refreshRemoteStats().finally(() => setLoading(false));
   }, [isAccountSynced, refreshRemoteStats]);
 
+  useEffect(() => {
+    const hex = resolveAccentHex(remoteStats);
+    document.documentElement.style.setProperty('--accent', hex);
+    document.documentElement.style.setProperty('--accent-soft', hexToRgba(hex, 0.14));
+    // Only the two fields actually read above should retrigger this — not
+    // every stats refresh, which would just reapply the same value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remoteStats.equippedAccentColor, remoteStats.customAccentHex]);
+
   const addTestResult = async (result: Omit<TestResult, 'id' | 'timestamp' | 'xpEarned'>): Promise<number> => {
     if (!isAccountSynced || !user || !supabase) return 0;
 
@@ -199,6 +211,21 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const setEquippedAccentColor = async (colorId: string, customHex?: string): Promise<boolean> => {
+    if (!isAccountSynced || !user || !supabase) return false;
+
+    const { error } = await supabase.rpc('set_equipped_accent_color', {
+      p_color_id: colorId,
+      p_custom_hex: customHex ?? null,
+    });
+    if (error) {
+      console.error('setEquippedAccentColor failed:', error.message);
+      return false;
+    }
+    await refreshRemoteStats();
+    return true;
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -216,6 +243,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         claimDailyChallengeBonus,
         claimWeeklyChallengeBonus,
         setEquippedCosmetics,
+        setEquippedAccentColor,
       }}
     >
       {children}

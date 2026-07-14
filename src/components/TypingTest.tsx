@@ -152,8 +152,12 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
     const base = KEYBOARD_LAYOUTS[keyboardLayout][e.code];
     if (!base || !/^[a-z]$/.test(base)) return; // key produces punctuation in this layout — nothing to type
     e.preventDefault();
-    const isUpper = capsLockRef.current !== e.shiftKey;
-    appendChar(isUpper ? base.toUpperCase() : base);
+    // Caps lock always forces lowercase (matching the qwerty path's
+    // deliberate override below) instead of the real-keyboard XOR with
+    // shift — otherwise leaving caps lock on made every letter come out
+    // uppercase and mismatch the lowercase target text.
+    const letter = capsLockRef.current ? base : e.shiftKey ? base.toUpperCase() : base;
+    appendChar(letter);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -379,7 +383,11 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
 
     const left = target ? target.offsetLeft + (atEnd ? target.offsetWidth : 0) : wordEl.offsetLeft;
     const top = target ? target.offsetTop : wordEl.offsetTop;
-    const char = target && !atEnd ? target.textContent ?? ' ' : ' ';
+    // Always underline a real character, even when past the last one typed
+    // (atEnd) — forcing a blank space here made the underline render
+    // thinner/inconsistently, which in the small gap before the next word
+    // could look like the caret had drifted into it.
+    const char = target ? target.textContent ?? ' ' : ' ';
 
     // Snap instantly on a new word or a new line — animating those larger
     // jumps risks the caret still being mid-transition (and briefly visible
@@ -498,7 +506,7 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-10 py-10"
+                className="w-full max-w-[50vw] mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl px-10 py-10"
               >
                 <div className="grid grid-cols-3 gap-6 mb-8 text-center">
                   <div>

@@ -40,6 +40,8 @@ export interface UserStats {
   testHistory: TestResult[];
   equippedAvatar: string;
   equippedBorder: string;
+  equippedAccentColor: string;
+  customAccentHex: string | null;
 }
 
 export interface Challenge {

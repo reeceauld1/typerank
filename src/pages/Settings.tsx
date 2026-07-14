@@ -22,8 +22,14 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (value: boo
   );
 }
 
+const THEME_OPTIONS: { id: 'system' | 'light' | 'dark'; label: string }[] = [
+  { id: 'system', label: 'System' },
+  { id: 'dark', label: 'Dark' },
+  { id: 'light', label: 'Light' },
+];
+
 export default function Settings() {
-  const { showKeyboard, setShowKeyboard, keyboardLayout, setKeyboardLayout } = useSettings();
+  const { showKeyboard, setShowKeyboard, keyboardLayout, setKeyboardLayout, theme, setTheme } = useSettings();
 
   return (
     <div className="flex-1 flex flex-col py-10 px-6">
@@ -38,6 +44,28 @@ export default function Settings() {
       </div>
 
       <div className="max-w-2xl w-full mx-auto flex flex-col gap-3">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
+          <p className="text-[var(--text-correct)] font-medium">theme</p>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5 mb-4">
+            "system" (default) follows your browser/OS setting, and switches automatically if that changes.
+          </p>
+          <div className="flex items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
+            {THEME_OPTIONS.map(option => (
+              <button
+                key={option.id}
+                onClick={() => setTheme(option.id)}
+                className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                  theme === option.id
+                    ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex items-center justify-between bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
           <div>
             <p className="text-[var(--text-correct)] font-medium">show on-screen keyboard</p>
