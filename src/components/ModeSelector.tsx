@@ -6,7 +6,7 @@ interface ModeSelectorProps {
 }
 
 export default function ModeSelector({ config, onChange }: ModeSelectorProps) {
-  const timeModes: TimeMode[] = [10, 30, 60];
+  const timeModes: TimeMode[] = [10, 30, 60, 'infinite'];
   const wordModes: WordMode[] = [10, 25, 50];
 
   const pill = (active: boolean) =>
@@ -18,10 +18,10 @@ export default function ModeSelector({ config, onChange }: ModeSelectorProps) {
 
   return (
     <div className="flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-2 py-2 text-xs">
-      <button onClick={() => onChange({ mode: 'time', value: config.mode === 'time' ? (config.value as TimeMode) : 30 })} className={pill(config.mode === 'time')}>
+      <button onClick={() => onChange({ mode: 'time', value: config.mode === 'time' ? config.value : 30 })} className={pill(config.mode === 'time')}>
         time
       </button>
-      <button onClick={() => onChange({ mode: 'words', value: config.mode === 'words' ? (config.value as WordMode) : 25 })} className={pill(config.mode === 'words')}>
+      <button onClick={() => onChange({ mode: 'words', value: config.mode === 'words' ? config.value : 25 })} className={pill(config.mode === 'words')}>
         words
       </button>
 
@@ -30,7 +30,7 @@ export default function ModeSelector({ config, onChange }: ModeSelectorProps) {
       {config.mode === 'time'
         ? timeModes.map(time => (
             <button key={time} onClick={() => onChange({ mode: 'time', value: time })} className={pill(config.value === time)}>
-              {time}
+              {time === 'infinite' ? 'infinite' : time}
             </button>
           ))
         : wordModes.map(words => (

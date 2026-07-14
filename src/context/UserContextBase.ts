@@ -12,7 +12,7 @@ export interface UserContextType {
   dailyChallengeTestsToday: number;
   testsThisWeek: number;
   weeklyClaimed: boolean;
-  addTestResult: (result: Omit<TestResult, 'id' | 'timestamp' | 'xpEarned'>) => Promise<number>;
+  addTestResult: (result: Omit<TestResult, 'id' | 'timestamp' | 'xpEarned'>, xpMultiplier?: number) => Promise<number>;
   clearLastXpGained: () => void;
   claimDailyChallengeBonus: () => Promise<boolean>;
   claimWeeklyChallengeBonus: (weekStart: string, testsTarget: number, xpBonus: number) => Promise<boolean>;

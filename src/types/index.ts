@@ -1,18 +1,21 @@
 export type TestMode = 'time' | 'words';
 
-export type TimeMode = 10 | 30 | 60;
+export type TimeMode = 10 | 30 | 60 | 'infinite';
 export type WordMode = 10 | 25 | 50;
 
-export interface TestConfig {
-  mode: TestMode;
-  value: TimeMode | WordMode;
-}
+// Discriminated on `mode` so narrowing config.mode narrows config.value too
+// (e.g. words mode can never statically be 'infinite' — only time mode has
+// that option, see the mode selector).
+export type TestConfig = { mode: 'time'; value: TimeMode } | { mode: 'words'; value: WordMode };
 
 export interface TestResult {
   id: string;
   timestamp: number;
   mode: TestMode;
-  value: TimeMode | WordMode;
+  // A plain number, not TimeMode | WordMode — a saved result is always a
+  // real value by the time it's recorded (infinite-time runs are saved
+  // under a 0 sentinel, since "infinite" itself isn't a storable category).
+  value: number;
   wpm: number;
   accuracy: number;
   rawWpm: number;

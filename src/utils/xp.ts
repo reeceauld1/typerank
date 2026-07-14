@@ -1,7 +1,10 @@
-import type { TestResult, TestMode, TimeMode, WordMode } from '../types/index.js';
+import type { TestResult, TestMode } from '../types/index.js';
 
-// XP calculation based on WPM and accuracy
-export function calculateXP(wpm: number, accuracy: number, mode: TestMode, value: TimeMode | WordMode): number {
+// XP calculation based on WPM and accuracy. xpMultiplier is an extra scaling
+// factor on top of the difficulty multiplier below — used to award infinite
+// (practice) mode half the usual XP, since value=0 there never matches any
+// of the difficulty checks anyway.
+export function calculateXP(wpm: number, accuracy: number, mode: TestMode, value: number, xpMultiplier = 1): number {
   const baseXP = Math.floor(wpm * accuracy / 100);
 
   // Multiplier based on test difficulty
@@ -16,7 +19,7 @@ export function calculateXP(wpm: number, accuracy: number, mode: TestMode, value
     else if (value === 10) multiplier = 1.0;
   }
 
-  return Math.floor(baseXP * multiplier);
+  return Math.floor(baseXP * multiplier * xpMultiplier);
 }
 
 // XP required to go from `level` to `level + 1`. This is the single source

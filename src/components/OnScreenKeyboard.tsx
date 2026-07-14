@@ -45,7 +45,7 @@ function Key({ label, pressed, width }: { label: string; pressed: boolean; width
     <div
       className={`flex items-center justify-center rounded-lg border-2 transition-all duration-100 h-10 ${width ? '' : 'w-10'} ${
         pressed
-          ? 'bg-white border-white translate-y-[3px] shadow-[0_0px_0_0_var(--border)]'
+          ? 'bg-[var(--accent)] border-[var(--accent)] translate-y-[3px] shadow-[0_0px_0_0_var(--border)]'
           : 'bg-[var(--surface)] border-[var(--border)] shadow-[0_3px_0_0_var(--border)]'
       }`}
       style={width ? { width } : undefined}

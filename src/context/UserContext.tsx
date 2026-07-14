@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { UserStats, TestResult, TestMode, TimeMode, WordMode } from '../types/index.js';
+import type { UserStats, TestResult, TestMode } from '../types/index.js';
 import { calculateXP, checkChallengeMilestone } from '../utils/xp.js';
 import { getDailyChallenge, todayKey, type DailyChallenge } from '../utils/dailyChallenge.js';
 import { weekKey, getWeekStart } from '../utils/weeklyChallenge.js';
@@ -36,7 +36,7 @@ function mapHistoryRow(row: Record<string, string | number>): TestResult {
     id: String(row.id),
     timestamp: new Date(row.created_at as string).getTime(),
     mode: row.mode as TestMode,
-    value: row.value as TimeMode | WordMode,
+    value: row.value as number,
     wpm: row.wpm as number,
     accuracy: row.accuracy as number,
     rawWpm: row.raw_wpm as number,
@@ -140,10 +140,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remoteStats.equippedAccentColor, remoteStats.customAccentHex]);
 
-  const addTestResult = async (result: Omit<TestResult, 'id' | 'timestamp' | 'xpEarned'>): Promise<number> => {
+  const addTestResult = async (
+    result: Omit<TestResult, 'id' | 'timestamp' | 'xpEarned'>,
+    xpMultiplier = 1
+  ): Promise<number> => {
     if (!isAccountSynced || !user || !supabase) return 0;
 
-    const xpEarned = calculateXP(result.wpm, result.accuracy, result.mode, result.value);
+    const xpEarned = calculateXP(result.wpm, result.accuracy, result.mode, result.value, xpMultiplier);
     const milestone = checkChallengeMilestone({ ...result, id: '', timestamp: 0, xpEarned });
     const totalXpEarned = xpEarned + (milestone.achieved ? milestone.bonus : 0);
 

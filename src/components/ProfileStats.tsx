@@ -99,7 +99,7 @@ export default function ProfileStats({ stats: statsProp }: ProfileStatsProps = {
               <div key={test.id} className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-3">
                 <div className="flex items-center gap-4 text-sm">
                   <div className="text-[var(--text-muted)] w-12">
-                    {test.mode === 'time' ? `${test.value}s` : `${test.value}w`}
+                    {test.value === 0 ? '∞' : test.mode === 'time' ? `${test.value}s` : `${test.value}w`}
                   </div>
                   <div className="font-semibold text-[var(--text-correct)]">{test.wpm} wpm</div>
                   <div className="text-[var(--text-muted)]">{test.accuracy}% acc</div>

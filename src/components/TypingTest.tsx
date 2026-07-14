@@ -18,6 +18,7 @@ type CharStatus = 'pending' | 'correct' | 'incorrect' | 'extra' | 'missed';
 export default function TypingTest({ config, onComplete, onRestart, onTypingActiveChange }: TypingTestProps) {
   const { addTestResult } = useUser();
   const { keyboardLayout } = useSettings();
+  const isInfinite = config.mode === 'time' && config.value === 'infinite';
   // Home.tsx remounts this component (via a `key` bump) on every config
   // change, so `config` is effectively fixed for this instance's lifetime —
   // safe to seed the initial text lazily instead of via a mount effect.
@@ -264,16 +265,25 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
 
     setStats(finalStats);
 
-    void addTestResult({
-      mode: config.mode,
-      value: config.value,
-      wpm: finalStats.wpm,
-      accuracy: finalStats.accuracy,
-      rawWpm: finalStats.rawWpm,
-      correctChars,
-      incorrectChars,
-      timeElapsed,
-    });
+    // Infinite mode has no target to rank against, so it's saved under a 0
+    // sentinel value (never a real category, so it can't update any
+    // best-wpm/leaderboard column) and earns half the usual XP. isInfinite
+    // already proves config.value is 'infinite' only in that case — TS just
+    // can't follow that through a separately-computed boolean.
+    const submittedValue = isInfinite ? 0 : (config.value as number);
+    void addTestResult(
+      {
+        mode: config.mode,
+        value: submittedValue,
+        wpm: finalStats.wpm,
+        accuracy: finalStats.accuracy,
+        rawWpm: finalStats.rawWpm,
+        correctChars,
+        incorrectChars,
+        timeElapsed,
+      },
+      isInfinite ? 0.5 : 1
+    );
 
     onComplete?.();
   };
@@ -291,7 +301,8 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
       const timer = setInterval(() => {
         const elapsed = (Date.now() - (startTime || Date.now())) / 1000;
         setElapsedDisplay(elapsed);
-        if (elapsed >= config.value) {
+        // Infinite time just counts up forever — no target to auto-finish at.
+        if (config.value !== 'infinite' && elapsed >= config.value) {
           finishTestRef.current();
         }
       }, 100);
@@ -320,6 +331,14 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Tab' && !e.shiftKey && isInfinite && isActive && !isFinished) {
+        // Infinite mode has no natural end, so Tab finishes it and shows
+        // results instead of restarting (matching every other mode's Tab
+        // shortcut would just throw away the run with nothing to show).
+        e.preventDefault();
+        finishTestRef.current();
+        return;
+      }
       if (e.key === 'Escape' || (e.key === 'Tab' && !e.shiftKey)) {
         e.preventDefault();
         resetTest();
@@ -329,7 +348,7 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isInfinite, isActive, isFinished]);
 
   useEffect(() => {
     const shouldHideCursor = isActive && isFocused && !isPaused;
@@ -446,7 +465,8 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
   };
   const mistakeUnderline = 'underline decoration-2 decoration-[var(--text-incorrect)] underline-offset-[3px]';
 
-  const timeRemaining = config.mode === 'time' ? Math.max(0, config.value - elapsedDisplay) : null;
+  const timeRemaining =
+    config.mode === 'time' && config.value !== 'infinite' ? Math.max(0, config.value - elapsedDisplay) : null;
 
   let textOpacity = 1;
   let textFilter = 'none';
@@ -463,7 +483,9 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
         <div className="text-xl font-semibold text-[var(--accent)] tabular-nums">
           {isActive
             ? config.mode === 'time'
-              ? Math.ceil(timeRemaining ?? 0)
+              ? config.value === 'infinite'
+                ? Math.floor(elapsedDisplay)
+                : Math.ceil(timeRemaining ?? 0)
               : `${Math.min(currentWordIndex + 1, config.value)}/${config.value}`
             : ''}
         </div>
@@ -522,6 +544,9 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
                     <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">raw</div>
                   </div>
                 </div>
+                {isInfinite && (
+                  <p className="text-center text-xs text-[var(--text-muted)] mb-4">practice mode — half xp, not ranked</p>
+                )}
                 <button
                   onClick={() => {
                     resetTest();
@@ -599,7 +624,9 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
       </div>
 
       {!isFinished && (
-        <p className="text-xs text-[var(--text-muted)] mt-8 tracking-wide">esc / tab — restart</p>
+        <p className="text-xs text-[var(--text-muted)] mt-8 tracking-wide">
+          {isInfinite && isActive ? 'esc — restart · tab — finish' : 'esc / tab — restart'}
+        </p>
       )}
     </div>
   );
