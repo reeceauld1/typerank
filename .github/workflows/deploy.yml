@@ -29,7 +29,7 @@ jobs:
 
       - name: Build
         env:
-          # Serving from rotagenda.com (a custom domain), so the site sits at
+          # Serving from typeladder.com (a custom domain), so the site sits at
           # the root — no /repo-name/ subpath needed. Vite defaults to "/"
           # when this isn't set, so it's omitted here.
           #
