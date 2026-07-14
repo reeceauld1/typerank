@@ -136,7 +136,7 @@ export default function Navbar() {
     <nav className="border-b border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur-sm relative z-10">
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
         <Link to="/" className="text-lg font-semibold tracking-tight text-[var(--accent)]">
-          type<span className="text-[var(--text-correct)]">rank</span>
+          type<span className="text-[var(--text-correct)]">ladder</span>
         </Link>
 
         <button

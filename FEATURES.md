@@ -1,4 +1,4 @@
-# TypeRank - Features & Roadmap
+# TypeLadder - Features & Roadmap
 
 ## Current Features ✅
 

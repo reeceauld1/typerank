@@ -1,4 +1,4 @@
--- TypeRank account system: run this once in the Supabase SQL Editor
+-- TypeLadder account system: run this once in the Supabase SQL Editor
 -- (Project → SQL Editor → New query → paste → Run).
 
 -- One row per user, holding aggregate stats. Individual test results live
