@@ -11,26 +11,42 @@ function validateUsername(username: string): string | null {
   return null;
 }
 
+type Mode = 'signin' | 'signup' | 'forgot';
+
 interface AuthFormProps {
   initialMode?: 'signin' | 'signup';
 }
 
 export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {}) {
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, sendPasswordReset } = useAuth();
 
-  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setError(null);
+    setInfo(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setInfo(null);
     setSubmitting(true);
+
+    if (mode === 'forgot') {
+      await sendPasswordReset(identifier.trim());
+      setSubmitting(false);
+      setInfo("If that account exists, we've sent a password reset link to its email.");
+      return;
+    }
 
     if (mode === 'signup') {
       const trimmedUsername = username.trim();
@@ -72,7 +88,7 @@ export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {})
       return;
     }
 
-    const { error: signInError } = await signIn(email, password);
+    const { error: signInError } = await signIn(identifier.trim(), password);
     setSubmitting(false);
     if (signInError) {
       setError(signInError);
@@ -82,10 +98,10 @@ export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {})
   return (
     <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
       <h2 className="text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">
-        {mode === 'signup' ? 'create account' : 'sign in'}
+        {mode === 'signup' ? 'create account' : mode === 'forgot' ? 'reset password' : 'sign in'}
       </h2>
       <p className="text-[var(--text-muted)] text-sm mb-6">
-        {mode === 'signup' ? 'sync your stats across devices' : 'welcome back'}
+        {mode === 'signup' ? 'sync your stats across devices' : mode === 'forgot' ? "we'll email you a reset link" : 'welcome back'}
       </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -100,23 +116,48 @@ export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {})
             className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
           />
         )}
-        <input
-          type="email"
-          required
-          placeholder="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
-        />
-        <input
-          type="password"
-          required
-          minLength={6}
-          placeholder="password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
-        />
+
+        {mode === 'signup' ? (
+          <input
+            type="email"
+            required
+            placeholder="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
+          />
+        ) : (
+          <input
+            type="text"
+            required
+            placeholder="email or username"
+            value={identifier}
+            onChange={e => setIdentifier(e.target.value)}
+            className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
+          />
+        )}
+
+        {mode !== 'forgot' && (
+          <input
+            type="password"
+            required
+            minLength={6}
+            placeholder="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
+          />
+        )}
+
+        {mode === 'signin' && (
+          <button
+            type="button"
+            onClick={() => switchMode('forgot')}
+            className="self-end -mt-1 text-xs text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+          >
+            forgot password?
+          </button>
+        )}
 
         {error && <p className="text-[var(--text-incorrect)] text-xs">{error}</p>}
         {info && <p className="text-[var(--accent)] text-xs">{info}</p>}
@@ -126,31 +167,37 @@ export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {})
           disabled={submitting}
           className="mt-2 w-full bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
         >
-          {submitting ? '...' : mode === 'signup' ? 'sign up' : 'sign in'}
+          {submitting ? '...' : mode === 'signup' ? 'sign up' : mode === 'forgot' ? 'send reset link' : 'sign in'}
         </button>
       </form>
 
-      <button
-        type="button"
-        onClick={() => {
-          setMode(m => (m === 'signup' ? 'signin' : 'signup'));
-          setError(null);
-          setInfo(null);
-        }}
-        className="mt-6 -mb-8 h-16 w-full flex items-center justify-center border-t border-[var(--border)] text-center text-sm text-[var(--text-secondary)] hover:text-[var(--text-correct)] transition-colors cursor-pointer"
-      >
-        {mode === 'signup' ? (
-          <>
-            already have an account?
-            <span className="ml-1 text-[var(--accent)] font-semibold">sign in</span>
-          </>
-        ) : (
-          <>
-            need an account?
-            <span className="ml-1 text-[var(--accent)] font-semibold">sign up</span>
-          </>
-        )}
-      </button>
+      {mode === 'forgot' ? (
+        <button
+          type="button"
+          onClick={() => switchMode('signin')}
+          className="mt-6 -mb-8 h-16 w-full flex items-center justify-center border-t border-[var(--border)] text-center text-sm text-[var(--text-secondary)] hover:text-[var(--text-correct)] transition-colors cursor-pointer"
+        >
+          back to <span className="ml-1 text-[var(--accent)] font-semibold">sign in</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => switchMode(mode === 'signup' ? 'signin' : 'signup')}
+          className="mt-6 -mb-8 h-16 w-full flex items-center justify-center border-t border-[var(--border)] text-center text-sm text-[var(--text-secondary)] hover:text-[var(--text-correct)] transition-colors cursor-pointer"
+        >
+          {mode === 'signup' ? (
+            <>
+              already have an account?
+              <span className="ml-1 text-[var(--accent)] font-semibold">sign in</span>
+            </>
+          ) : (
+            <>
+              need an account?
+              <span className="ml-1 text-[var(--accent)] font-semibold">sign up</span>
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 }

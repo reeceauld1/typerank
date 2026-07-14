@@ -1,0 +1,78 @@
+<!--
+  Supabase "Confirm signup" email template.
+
+  Paste into: Supabase Dashboard -> Authentication -> Emails -> Confirm signup
+  -> "Message body" (source/HTML mode). Subject suggestion:
+
+    confirm your typerank account
+
+  Uses Supabase's Go-template variable {{ .ConfirmationURL }}. To reuse this
+  design for another template (Magic Link, Reset Password, Invite), swap the
+  variable name accordingly:
+    - Magic Link:      {{ .ConfirmationURL }}
+    - Reset Password:  {{ .ConfirmationURL }}
+    - Invite user:      {{ .ConfirmationURL }}
+    - Change email:     {{ .ConfirmationURL }} (confirms the new address)
+  All of the above share the same variable name, so only the heading/body
+  copy needs to change between templates, not the button/link markup.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>confirm your email</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#18181b;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#18181b;">
+      <tr>
+        <td align="center" style="padding:40px 16px;">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; background-color:#1f2023; border:1px solid #303136; border-radius:12px;">
+            <tr>
+              <td style="padding:28px 32px; text-align:center; border-bottom:1px solid #303136;">
+                <span style="font-family:'SFMono-Regular',Consolas,'Courier New',Courier,monospace; font-size:20px; font-weight:700; letter-spacing:-0.02em; color:#5b9bd9;">
+                  type<span style="color:#f6f5f1;">rank</span>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <h1 style="margin:0 0 12px 0; font-family:'SFMono-Regular',Consolas,'Courier New',Courier,monospace; font-size:20px; font-weight:700; color:#f6f5f1;">
+                  confirm your email
+                </h1>
+                <p style="margin:0 0 28px 0; font-family:'SFMono-Regular',Consolas,'Courier New',Courier,monospace; font-size:14px; line-height:1.6; color:#8c8d95;">
+                  welcome to typerank — click below to confirm your account and start tracking your stats, level, and personal bests.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="border-radius:8px; background-color:#5b9bd9;">
+                      <a
+                        href="{{ .ConfirmationURL }}"
+                        target="_blank"
+                        style="display:inline-block; padding:13px 28px; font-family:'SFMono-Regular',Consolas,'Courier New',Courier,monospace; font-size:14px; font-weight:700; color:#18181b; text-decoration:none; border-radius:8px;"
+                      >
+                        confirm account
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:28px 0 0 0; font-family:'SFMono-Regular',Consolas,'Courier New',Courier,monospace; font-size:12px; line-height:1.6; color:#5c5d64;">
+                  if the button doesn't work, copy and paste this link into your browser:<br />
+                  <a href="{{ .ConfirmationURL }}" style="color:#5b9bd9; word-break:break-all;">{{ .ConfirmationURL }}</a>
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px; border-top:1px solid #303136; text-align:center;">
+                <p style="margin:0; font-family:'SFMono-Regular',Consolas,'Courier New',Courier,monospace; font-size:11px; color:#5c5d64;">
+                  if you didn't sign up for typerank, you can safely ignore this email.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

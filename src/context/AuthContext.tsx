@@ -27,13 +27,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { username } },
+      // display_name/full_name are set alongside username so Supabase
+      // Studio's Auth > Users table (which reads those common metadata
+      // keys) shows something other than "-".
+      options: { data: { username, display_name: username, full_name: username } },
     });
     return { error: error?.message ?? null };
   };
 
-  const signIn = async (email: string, password: string) => {
+  // Supabase's password-grant API only accepts an email (or phone) — there's
+  // no username-based sign-in at that level — so a non-email identifier is
+  // resolved to its email via get_email_for_username first.
+  const resolveEmail = async (identifier: string): Promise<string | null> => {
+    if (!supabase) return null;
+    if (identifier.includes('@')) return identifier;
+    const { data, error } = await supabase.rpc('get_email_for_username', { p_username: identifier });
+    if (error || !data) return null;
+    return data as string;
+  };
+
+  const signIn = async (identifier: string, password: string) => {
     if (!supabase) return { error: 'Accounts are not configured yet.' };
+    const email = await resolveEmail(identifier);
+    if (!email) return { error: 'Invalid email/username or password.' };
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error?.message ?? null };
   };
@@ -41,6 +57,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
+  };
+
+  const sendPasswordReset = async (identifier: string) => {
+    if (!supabase) return { error: 'Accounts are not configured yet.' };
+    const email = await resolveEmail(identifier);
+    // Deliberately doesn't distinguish "no such account" from "sent" — the
+    // caller shows one message regardless, so this can't be used to
+    // enumerate which usernames/emails have accounts.
+    if (email) {
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+    }
+    return { error: null };
+  };
+
+  const updatePassword = async (password: string) => {
+    if (!supabase) return { error: 'Accounts are not configured yet.' };
+    const { error } = await supabase.auth.updateUser({ password });
+    return { error: error?.message ?? null };
   };
 
   return (
@@ -53,6 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         signIn,
         signOut,
+        sendPasswordReset,
+        updatePassword,
       }}
     >
       {children}

@@ -11,6 +11,7 @@ import Friends from './pages/Friends.js';
 import UserProfile from './pages/UserProfile.js';
 import Settings from './pages/Settings.js';
 import Leaderboard from './pages/Leaderboard.js';
+import ResetPassword from './pages/ResetPassword.js';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
                   <Route path="/u/:username" element={<UserProfile />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                 </Routes>
               </div>
             </FriendsProvider>

@@ -444,3 +444,23 @@ end;
 $$;
 
 grant execute on function public.remove_friend to authenticated;
+
+-- Lets sign-in accept a username as well as an email: Supabase's
+-- password-grant API only accepts an email (or phone), so the client
+-- resolves a typed username to its email via this function first. Granted
+-- to anon since sign-in happens before the caller has a session.
+create or replace function public.get_email_for_username(p_username text)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select au.email
+  from public.user_stats us
+  join auth.users au on au.id = us.user_id
+  where lower(us.username) = lower(p_username)
+  limit 1;
+$$;
+
+grant execute on function public.get_email_for_username to anon, authenticated;
