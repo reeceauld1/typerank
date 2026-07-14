@@ -10,7 +10,7 @@ export default function ModeSelector({ config, onChange }: ModeSelectorProps) {
   const wordModes: WordMode[] = [10, 25, 50];
 
   const pill = (active: boolean) =>
-    `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+    `px-3 py-1.5 rounded-md text-sm font-bold transition-colors ${
       active
         ? 'text-[var(--accent)]'
         : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'

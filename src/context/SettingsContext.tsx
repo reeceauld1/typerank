@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import type { KeyboardLayoutId } from '../utils/keyboardLayouts.js';
-import type { Theme } from './SettingsContextBase.js';
+import { FONT_OPTIONS, getFont } from '../utils/fonts.js';
+import type { SpaceStyle, Theme } from './SettingsContextBase.js';
 import { SettingsContext } from './SettingsContextBase.js';
 
 const SHOW_KEYBOARD_KEY = 'showKeyboard';
 const KEYBOARD_LAYOUT_KEY = 'keyboardLayout';
 const THEME_KEY = 'theme';
+const FONT_KEY = 'font';
+const SPACE_STYLE_KEY = 'spaceStyle';
 
 function loadShowKeyboard(): boolean {
   try {
@@ -35,6 +38,26 @@ function loadTheme(): Theme {
   return 'system';
 }
 
+function loadFont(): string {
+  try {
+    const saved = localStorage.getItem(FONT_KEY);
+    if (saved && FONT_OPTIONS.some(f => f.id === saved)) return saved;
+  } catch {
+    // ignore malformed/unavailable storage, fall back to the default below
+  }
+  return FONT_OPTIONS[0].id;
+}
+
+function loadSpaceStyle(): SpaceStyle {
+  try {
+    const saved = localStorage.getItem(SPACE_STYLE_KEY);
+    if (saved === 'space' || saved === 'underscore' || saved === 'dot') return saved;
+  } catch {
+    // ignore malformed/unavailable storage, fall back to the default below
+  }
+  return 'space';
+}
+
 function systemPrefersLight(): boolean {
   try {
     return window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -51,6 +74,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [showKeyboard, setShowKeyboard] = useState(loadShowKeyboard);
   const [keyboardLayout, setKeyboardLayout] = useState<KeyboardLayoutId>(loadKeyboardLayout);
   const [theme, setTheme] = useState<Theme>(loadTheme);
+  const [font, setFont] = useState<string>(loadFont);
+  const [spaceStyle, setSpaceStyle] = useState<SpaceStyle>(loadSpaceStyle);
 
   useEffect(() => {
     localStorage.setItem(SHOW_KEYBOARD_KEY, String(showKeyboard));
@@ -63,6 +88,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem(FONT_KEY, font);
+    document.documentElement.style.setProperty('--font-family', getFont(font).family);
+  }, [font]);
+
+  useEffect(() => {
+    localStorage.setItem(SPACE_STYLE_KEY, spaceStyle);
+  }, [spaceStyle]);
 
   useEffect(() => {
     const apply = () => {
@@ -80,7 +114,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   return (
-    <SettingsContext.Provider value={{ showKeyboard, setShowKeyboard, keyboardLayout, setKeyboardLayout, theme, setTheme }}>
+    <SettingsContext.Provider
+      value={{
+        showKeyboard,
+        setShowKeyboard,
+        keyboardLayout,
+        setKeyboardLayout,
+        theme,
+        setTheme,
+        font,
+        setFont,
+        spaceStyle,
+        setSpaceStyle,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );

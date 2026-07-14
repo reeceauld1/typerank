@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import type { ReactElement } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useUser } from '../hooks/useUser.js';
@@ -52,6 +53,22 @@ function TrophyIcon() {
   );
 }
 
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+      <path d="M3.5 6.5h17M3.5 12h17M3.5 17.5h17" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+      <path d="M5 5l14 14M19 5 5 19" />
+    </svg>
+  );
+}
+
 function FriendsIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -63,11 +80,20 @@ function FriendsIcon() {
   );
 }
 
+interface NavItem {
+  to: string;
+  label: string;
+  icon: () => ReactElement;
+  isActive: (pathname: string) => boolean;
+  requiresUser?: boolean;
+}
+
 export default function Navbar() {
   const location = useLocation();
   const { lastXpGained, clearLastXpGained } = useUser();
   const { user } = useAuth();
   const { incomingRequests } = useFriends();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (lastXpGained === null) return;
@@ -75,14 +101,54 @@ export default function Navbar() {
     return () => clearTimeout(timer);
   }, [lastXpGained, clearLastXpGained]);
 
+  // Closes the mobile drawer on navigation, so it doesn't stay open over
+  // the page you just tapped through to.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
+  const navItems: NavItem[] = [
+    { to: '/', label: 'typing test', icon: KeyboardIcon, isActive: p => p === '/' },
+    { to: '/challenges', label: 'challenges', icon: ChallengeIcon, isActive: p => p === '/challenges', requiresUser: true },
+    { to: '/leaderboard', label: 'leaderboard', icon: TrophyIcon, isActive: p => p === '/leaderboard', requiresUser: true },
+    {
+      to: '/friends',
+      label: 'friends',
+      icon: FriendsIcon,
+      isActive: p => p === '/friends' || p.startsWith('/u/'),
+      requiresUser: true,
+    },
+    { to: '/profile', label: 'profile', icon: ProfileIcon, isActive: p => p === '/profile' },
+    { to: '/settings', label: 'settings', icon: SettingsIcon, isActive: p => p === '/settings' },
+  ];
+  const visibleNavItems = navItems.filter(item => !item.requiresUser || user);
+
   return (
+    <>
     <nav className="border-b border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur-sm relative z-10">
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
         <Link to="/" className="text-lg font-semibold tracking-tight text-[var(--accent)]">
           type<span className="text-[var(--text-correct)]">rank</span>
         </Link>
 
-        <div className="flex items-center gap-6 text-sm">
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(true)}
+          aria-label="Open menu"
+          className="sm:hidden p-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+        >
+          <MenuIcon />
+        </button>
+
+        <div className="hidden sm:flex items-center gap-6 text-sm">
           <Link
             to="/"
             aria-label="Typing test"
@@ -200,5 +266,66 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+
+    <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setMobileMenuOpen(false)}
+              className="sm:hidden fixed inset-0 bg-black/50 z-20"
+            />
+            <motion.div
+              key="drawer"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="sm:hidden fixed top-0 right-0 bottom-0 w-64 max-w-[80%] bg-[var(--bg)] border-l border-[var(--border)] z-30 flex flex-col py-4"
+            >
+              <div className="flex items-center justify-between px-4 mb-2">
+                <span className="text-sm font-semibold text-[var(--text-correct)]">menu</span>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="Close menu"
+                  className="p-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+                >
+                  <CloseIcon />
+                </button>
+              </div>
+
+              {visibleNavItems.map(item => {
+                const Icon = item.icon;
+                const active = item.isActive(location.pathname);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={`relative flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                      active
+                        ? 'text-[var(--accent)] bg-[var(--accent-soft)]'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]'
+                    }`}
+                  >
+                    <Icon />
+                    {item.label}
+                    {item.to === '/friends' && incomingRequests.length > 0 && (
+                      <span className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-semibold leading-none text-[var(--bg)]">
+                        {incomingRequests.length}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </motion.div>
+          </>
+        )}
+    </AnimatePresence>
+    </>
   );
 }

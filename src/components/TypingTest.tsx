@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { TestConfig } from '../types/index.js';
 import { generateText } from '../utils/words.js';
 import { useUser } from '../hooks/useUser.js';
@@ -15,9 +15,18 @@ interface TypingTestProps {
 
 type CharStatus = 'pending' | 'correct' | 'incorrect' | 'extra' | 'missed';
 
+// The caret's underline used to span whatever character it sat under, so it
+// went very short on narrow letters like "i"/"l". Instead it's now a fixed
+// width regardless of letter: the span is clipped to CARET_WIDTH and filled
+// with enough repeated wide characters to guarantee the real text (and so
+// the underline drawn under it) always overflows that width in any font, so
+// the visible clipped underline is always exactly CARET_WIDTH long.
+const CARET_WIDTH = 16;
+const CARET_FILLER = 'W'.repeat(20);
+
 export default function TypingTest({ config, onComplete, onRestart, onTypingActiveChange }: TypingTestProps) {
   const { addTestResult } = useUser();
-  const { keyboardLayout } = useSettings();
+  const { keyboardLayout, spaceStyle } = useSettings();
   const isInfinite = config.mode === 'time' && config.value === 'infinite';
   // Home.tsx remounts this component (via a `key` bump) on every config
   // change, so `config` is effectively fixed for this instance's lifetime —
@@ -35,7 +44,7 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [lineHeight, setLineHeight] = useState(50);
   const [scrollLine, setScrollLine] = useState(0);
-  const [caretPos, setCaretPos] = useState<{ left: number; top: number; char: string; instant: boolean } | null>(null);
+  const [caretPos, setCaretPos] = useState<{ left: number; top: number; instant: boolean } | null>(null);
   const prevWordIndexRef = useRef(0);
   const prevTopRef = useRef<number | null>(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -400,13 +409,16 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
       atEnd = true;
     }
 
-    const left = target ? target.offsetLeft + (atEnd ? target.offsetWidth : 0) : wordEl.offsetLeft;
+    // Past the last typed character (atEnd), the caret sits right after it;
+    // otherwise it centers on the upcoming character, not its left edge —
+    // "type here" reads better centered than edge-aligned once the caret is
+    // a fixed width instead of matching that letter's own width.
+    const left = target
+      ? atEnd
+        ? target.offsetLeft + target.offsetWidth
+        : target.offsetLeft + (target.offsetWidth - CARET_WIDTH) / 2
+      : wordEl.offsetLeft;
     const top = target ? target.offsetTop : wordEl.offsetTop;
-    // Always underline a real character, even when past the last one typed
-    // (atEnd) — forcing a blank space here made the underline render
-    // thinner/inconsistently, which in the small gap before the next word
-    // could look like the caret had drifted into it.
-    const char = target ? target.textContent ?? ' ' : ' ';
 
     // Snap instantly on a new word or a new line — animating those larger
     // jumps risks the caret still being mid-transition (and briefly visible
@@ -419,7 +431,7 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
     prevWordIndexRef.current = currentWordIndex;
     prevTopRef.current = top;
 
-    setCaretPos({ left, top, char, instant });
+    setCaretPos({ left, top, instant });
 
     if (measuredLineHeight) {
       const currentLine = Math.round(top / measuredLineHeight);
@@ -528,19 +540,19 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="w-full max-w-[50vw] mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl px-10 py-10"
+                className="w-full max-w-full sm:max-w-[50vw] mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 sm:px-10 py-10"
               >
                 <div className="grid grid-cols-3 gap-6 mb-8 text-center">
                   <div>
-                    <div className="text-5xl font-semibold text-[var(--accent)] tabular-nums">{stats.wpm}</div>
+                    <div className="text-3xl sm:text-5xl font-semibold text-[var(--accent)] tabular-nums">{stats.wpm}</div>
                     <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">wpm</div>
                   </div>
                   <div>
-                    <div className="text-5xl font-semibold text-[var(--text-correct)] tabular-nums">{stats.accuracy}%</div>
+                    <div className="text-3xl sm:text-5xl font-semibold text-[var(--text-correct)] tabular-nums">{stats.accuracy}%</div>
                     <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">accuracy</div>
                   </div>
                   <div>
-                    <div className="text-5xl font-semibold text-[var(--text-secondary)] tabular-nums">{stats.rawWpm}</div>
+                    <div className="text-3xl sm:text-5xl font-semibold text-[var(--text-secondary)] tabular-nums">{stats.rawWpm}</div>
                     <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">raw</div>
                   </div>
                 </div>
@@ -556,7 +568,7 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
                 >
                   try again
                 </button>
-                <p className="text-center text-xs text-[var(--text-muted)] mt-4">press tab to restart instantly</p>
+                <p className="hidden sm:block text-center text-xs text-[var(--text-muted)] mt-4">press tab to restart instantly</p>
               </motion.div>
             ) : (
               <motion.div
@@ -581,39 +593,56 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
                     const wordHasMistake =
                       isPastWord && chars.some(c => c.status === 'incorrect' || c.status === 'extra' || c.status === 'missed');
                     return (
-                      <span key={wordIdx} data-word-idx={wordIdx} className="inline-block mr-[0.55ch]">
-                        {chars.map((c, charIdx) => (
-                          <span
-                            key={charIdx}
-                            data-char-idx={charIdx}
-                            className={
-                              wordHasMistake && c.status !== 'missed'
-                                ? `${charClass[c.status]} ${mistakeUnderline}`
-                                : charClass[c.status]
-                            }
-                          >
-                            {c.char}
-                          </span>
-                        ))}
-                      </span>
+                      <Fragment key={wordIdx}>
+                        <span data-word-idx={wordIdx} className="inline-block">
+                          {chars.map((c, charIdx) => (
+                            <span
+                              key={charIdx}
+                              data-char-idx={charIdx}
+                              className={
+                                wordHasMistake && c.status !== 'missed'
+                                  ? `${charClass[c.status]} ${mistakeUnderline}`
+                                  : charClass[c.status]
+                              }
+                            >
+                              {c.char}
+                            </span>
+                          ))}
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className={`inline-flex justify-center align-middle shrink-0 ${
+                            spaceStyle === 'underscore' ? 'items-end pb-[2px]' : 'items-center'
+                          }`}
+                          style={{ width: CARET_WIDTH, height: '1em' }}
+                        >
+                          {spaceStyle === 'underscore' && (
+                            <span className="block bg-[var(--text-muted)]" style={{ width: 14, height: 3 }} />
+                          )}
+                          {spaceStyle === 'dot' && (
+                            <span className="block rounded-full bg-[var(--text-muted)]" style={{ width: 4, height: 4 }} />
+                          )}
+                        </span>
+                      </Fragment>
                     );
                   })}
                   {caretPos && (
                     <span
                       aria-hidden="true"
-                      className="absolute left-0 top-0 pointer-events-none whitespace-pre"
+                      className="absolute left-0 top-0 inline-block overflow-hidden pointer-events-none whitespace-nowrap"
                       style={{
+                        width: CARET_WIDTH,
                         color: 'transparent',
                         textDecorationLine: 'underline',
                         textDecorationColor: 'var(--accent)',
-                        textDecorationThickness: '2px',
+                        textDecorationThickness: '3px',
                         textUnderlineOffset: '8px',
                         textDecorationSkipInk: 'none',
                         transform: `translate(${caretPos.left}px, ${caretPos.top}px)`,
                         transition: caretPos.instant ? 'none' : 'transform 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
                       }}
                     >
-                      {caretPos.char}
+                      {CARET_FILLER}
                     </span>
                   )}
                 </div>
@@ -624,7 +653,7 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
       </div>
 
       {!isFinished && (
-        <p className="text-xs text-[var(--text-muted)] mt-8 tracking-wide">
+        <p className="hidden sm:block text-xs text-[var(--text-muted)] mt-8 tracking-wide">
           {isInfinite && isActive ? 'esc — restart · tab — finish' : 'esc / tab — restart'}
         </p>
       )}

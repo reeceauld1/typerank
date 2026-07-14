@@ -21,7 +21,6 @@ export default function DailyChallenge() {
       }`}
     >
       <div className="flex items-center gap-3 text-sm mb-2.5">
-        <span className={`w-2 h-2 rounded-full shrink-0 ${claimedToday ? 'bg-[var(--accent)]' : 'bg-[var(--text-muted)]'}`} />
         <span className="text-[var(--text-secondary)]">
           daily challenge — complete <span className="text-[var(--text-correct)] font-semibold tabular-nums">{dailyChallenge.testsTarget}</span>{' '}
           {label} tests

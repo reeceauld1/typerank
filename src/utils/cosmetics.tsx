@@ -12,8 +12,13 @@ export interface AvatarDef {
   id: string;
   name: string;
   description: string;
+  // Shorter description shown on the challenges page, in place of
+  // `description`, when the full tooltip text isn't needed there.
+  challengeDescription?: string;
   icon: (props: { className?: string }) => React.ReactElement;
   isUnlocked: (stats: UserStats) => boolean;
+  // 0-1 progress toward isUnlocked, for challenge-page progress bars.
+  progress: (stats: UserStats) => number;
 }
 
 export interface BorderDef {
@@ -22,6 +27,7 @@ export interface BorderDef {
   description: string;
   className: string;
   isUnlocked: (stats: UserStats) => boolean;
+  progress: (stats: UserStats) => number;
 }
 
 function avgAccuracy(stats: UserStats): number {
@@ -34,6 +40,10 @@ function bestWpmOverall(stats: UserStats): number {
 
 function allModesPlayed(stats: UserStats): boolean {
   return Object.values(stats.bestWpm).every(wpm => wpm > 0);
+}
+
+function ratio(current: number, target: number): number {
+  return target > 0 ? Math.min(1, current / target) : 1;
 }
 
 function icon(paths: React.ReactElement) {
@@ -58,6 +68,7 @@ export const AVATAR_CATALOG: AvatarDef[] = [
     name: 'Keyboard',
     description: 'Everyone starts here.',
     isUnlocked: () => true,
+    progress: () => 1,
     icon: icon(
       <>
         <rect x="2.5" y="6" width="19" height="12" rx="2" />
@@ -65,11 +76,13 @@ export const AVATAR_CATALOG: AvatarDef[] = [
       </>
     ),
   },
+  // --- levels ---
   {
     id: 'feather',
     name: 'Feather',
     description: 'Reach level 5.',
     isUnlocked: stats => stats.level >= 5,
+    progress: stats => ratio(stats.level, 5),
     icon: icon(
       <>
         <path d="M19 5c-6 0-12 3-14 14 11-2 14-8 14-14Z" />
@@ -78,39 +91,11 @@ export const AVATAR_CATALOG: AvatarDef[] = [
     ),
   },
   {
-    id: 'bolt',
-    name: 'Bolt',
-    description: 'Reach 60 WPM in any mode.',
-    isUnlocked: stats => bestWpmOverall(stats) >= 60,
-    icon: icon(<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />),
-  },
-  {
-    id: 'target',
-    name: 'Target',
-    description: 'Keep 95%+ average accuracy over 20+ tests.',
-    isUnlocked: stats => stats.totalTests >= 20 && avgAccuracy(stats) >= 95,
-    icon: icon(
-      <>
-        <circle cx="12" cy="12" r="8" />
-        <circle cx="12" cy="12" r="4.5" />
-        <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
-      </>
-    ),
-  },
-  {
-    id: 'flame',
-    name: 'Flame',
-    description: 'Complete 50 tests.',
-    isUnlocked: stats => stats.totalTests >= 50,
-    icon: icon(
-      <path d="M12 3c2 3-1 4-1 7a2 2 0 0 0 4 0c0-1-.5-2-.5-2 1.5 1 2.5 3 2.5 5a5 5 0 0 1-10 0c0-4 3-5 3-8a3 3 0 0 1 2-2Z" />
-    ),
-  },
-  {
     id: 'trophy',
     name: 'Trophy',
     description: 'Reach level 10.',
     isUnlocked: stats => stats.level >= 10,
+    progress: stats => ratio(stats.level, 10),
     icon: icon(
       <>
         <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" />
@@ -120,41 +105,11 @@ export const AVATAR_CATALOG: AvatarDef[] = [
     ),
   },
   {
-    id: 'compass',
-    name: 'Compass',
-    description: 'Set a personal best in all 6 modes.',
-    isUnlocked: stats => allModesPlayed(stats),
-    icon: icon(
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M15 9l-2 5-5 2 2-5 5-2Z" />
-      </>
-    ),
-  },
-  {
-    id: 'star',
-    name: 'Star',
-    description: 'Complete 100 tests.',
-    isUnlocked: stats => stats.totalTests >= 100,
-    icon: icon(<path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8L12 2Z" />),
-  },
-  {
-    id: 'shield',
-    name: 'Shield',
-    description: 'Keep 97%+ average accuracy over 50+ tests.',
-    isUnlocked: stats => stats.totalTests >= 50 && avgAccuracy(stats) >= 97,
-    icon: icon(
-      <>
-        <path d="M12 3l7 3v6c0 5-3 8-7 9-4-1-7-4-7-9V6l7-3Z" />
-        <path d="m9 12 2 2 4-4" />
-      </>
-    ),
-  },
-  {
     id: 'crown',
     name: 'Crown',
     description: 'Reach level 25.',
     isUnlocked: stats => stats.level >= 25,
+    progress: stats => ratio(stats.level, 25),
     icon: icon(
       <>
         <path d="M4 18h16l1-9-5 3-4-6-4 6-5-3 1 9Z" />
@@ -163,10 +118,88 @@ export const AVATAR_CATALOG: AvatarDef[] = [
     ),
   },
   {
+    id: 'hourglass',
+    name: 'Hourglass',
+    description: 'Reach level 50.',
+    isUnlocked: stats => stats.level >= 50,
+    progress: stats => ratio(stats.level, 50),
+    icon: icon(
+      <path d="M6 3h12M6 21h12M7 3c0 5 4 6 5 9-1 3-5 4-5 9M17 3c0 5-4 6-5 9 1 3 5 4 5 9" />
+    ),
+  },
+  // --- completing tests ---
+  {
+    id: 'compass',
+    name: 'Compass',
+    description: 'Set a personal best in all 6 modes.',
+    isUnlocked: stats => allModesPlayed(stats),
+    progress: stats => ratio(Object.values(stats.bestWpm).filter(wpm => wpm > 0).length, 6),
+    icon: icon(
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M15 9l-2 5-5 2 2-5 5-2Z" />
+      </>
+    ),
+  },
+  {
+    id: 'flame',
+    name: 'Flame',
+    description: 'Complete 50 tests.',
+    isUnlocked: stats => stats.totalTests >= 50,
+    progress: stats => ratio(stats.totalTests, 50),
+    icon: icon(
+      <path d="M12 3c2 3-1 4-1 7a2 2 0 0 0 4 0c0-1-.5-2-.5-2 1.5 1 2.5 3 2.5 5a5 5 0 0 1-10 0c0-4 3-5 3-8a3 3 0 0 1 2-2Z" />
+    ),
+  },
+  {
+    id: 'star',
+    name: 'Star',
+    description: 'Complete 100 tests.',
+    isUnlocked: stats => stats.totalTests >= 100,
+    progress: stats => ratio(stats.totalTests, 100),
+    icon: icon(<path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8L12 2Z" />),
+  },
+  {
+    id: 'mountain',
+    name: 'Mountain',
+    description: 'Complete 250 tests.',
+    isUnlocked: stats => stats.totalTests >= 250,
+    progress: stats => ratio(stats.totalTests, 250),
+    icon: icon(
+      <>
+        <path d="M3 19 9 7l4 6 2-3 6 9H3Z" />
+        <circle cx="17" cy="6" r="2" />
+      </>
+    ),
+  },
+  {
+    id: 'anchor',
+    name: 'Anchor',
+    description: 'Complete 500 tests.',
+    isUnlocked: stats => stats.totalTests >= 500,
+    progress: stats => ratio(stats.totalTests, 500),
+    icon: icon(
+      <>
+        <circle cx="12" cy="5" r="2" />
+        <path d="M12 7v14M8 12H4a8 8 0 0 0 8 9 8 8 0 0 0 8-9h-4" />
+      </>
+    ),
+  },
+  // --- wpm ---
+  {
+    id: 'bolt',
+    name: 'Bolt',
+    description: 'Reach 60 WPM in any mode.',
+    isUnlocked: stats => bestWpmOverall(stats) >= 60,
+    progress: stats => ratio(bestWpmOverall(stats), 60),
+    icon: icon(<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />),
+  },
+  {
     id: 'rocket',
     name: 'Rocket',
     description: 'Reach 100 WPM in any mode.',
     isUnlocked: stats => bestWpmOverall(stats) >= 100,
+    progress: stats => ratio(bestWpmOverall(stats), 100),
     icon: icon(
       <>
         <path d="M12 2c3 2 4 6 4 10l-4 4-4-4c0-4 1-8 4-10Z" />
@@ -176,44 +209,11 @@ export const AVATAR_CATALOG: AvatarDef[] = [
     ),
   },
   {
-    id: 'mountain',
-    name: 'Mountain',
-    description: 'Complete 250 tests.',
-    isUnlocked: stats => stats.totalTests >= 250,
-    icon: icon(
-      <>
-        <path d="M3 19 9 7l4 6 2-3 6 9H3Z" />
-        <circle cx="17" cy="6" r="2" />
-      </>
-    ),
-  },
-  {
-    id: 'hourglass',
-    name: 'Hourglass',
-    description: 'Reach level 50.',
-    isUnlocked: stats => stats.level >= 50,
-    icon: icon(
-      <path d="M6 3h12M6 21h12M7 3c0 5 4 6 5 9-1 3-5 4-5 9M17 3c0 5-4 6-5 9 1 3 5 4 5 9" />
-    ),
-  },
-  {
-    id: 'medal',
-    name: 'Medal',
-    description: 'Keep 99%+ average accuracy over 100+ tests.',
-    isUnlocked: stats => stats.totalTests >= 100 && avgAccuracy(stats) >= 99,
-    icon: icon(
-      <>
-        <circle cx="12" cy="15" r="6" />
-        <path d="M9 10 7 3M15 10l2-7M7 3h4M17 3h-4" />
-        <path d="M12 12v6" />
-      </>
-    ),
-  },
-  {
     id: 'diamond',
     name: 'Diamond',
     description: 'Reach 120 WPM in any mode.',
     isUnlocked: stats => bestWpmOverall(stats) >= 120,
+    progress: stats => ratio(bestWpmOverall(stats), 120),
     icon: icon(
       <>
         <path d="M6 9 12 3l6 6-6 12z" />
@@ -221,15 +221,45 @@ export const AVATAR_CATALOG: AvatarDef[] = [
       </>
     ),
   },
+  // --- keeping average accuracy ---
   {
-    id: 'anchor',
-    name: 'Anchor',
-    description: 'Complete 500 tests.',
-    isUnlocked: stats => stats.totalTests >= 500,
+    id: 'target',
+    name: 'Target',
+    description: 'Keep 95%+ average accuracy over 20 tests.',
+    isUnlocked: stats => stats.totalTests >= 20 && avgAccuracy(stats) >= 95,
+    progress: stats => Math.min(ratio(stats.totalTests, 20), ratio(avgAccuracy(stats), 95)),
     icon: icon(
       <>
-        <circle cx="12" cy="5" r="2" />
-        <path d="M12 7v14M8 12H4a8 8 0 0 0 8 9 8 8 0 0 0 8-9h-4" />
+        <circle cx="12" cy="12" r="8" />
+        <circle cx="12" cy="12" r="4.5" />
+        <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+      </>
+    ),
+  },
+  {
+    id: 'shield',
+    name: 'Shield',
+    description: 'Keep 97%+ average accuracy over 50 tests.',
+    isUnlocked: stats => stats.totalTests >= 50 && avgAccuracy(stats) >= 97,
+    progress: stats => Math.min(ratio(stats.totalTests, 50), ratio(avgAccuracy(stats), 97)),
+    icon: icon(
+      <>
+        <path d="M12 3l7 3v6c0 5-3 8-7 9-4-1-7-4-7-9V6l7-3Z" />
+        <path d="m9 12 2 2 4-4" />
+      </>
+    ),
+  },
+  {
+    id: 'medal',
+    name: 'Medal',
+    description: 'Keep 99%+ average accuracy over 100 tests.',
+    isUnlocked: stats => stats.totalTests >= 100 && avgAccuracy(stats) >= 99,
+    progress: stats => Math.min(ratio(stats.totalTests, 100), ratio(avgAccuracy(stats), 99)),
+    icon: icon(
+      <>
+        <circle cx="12" cy="15" r="6" />
+        <path d="M9 10 7 3M15 10l2-7M7 3h4M17 3h-4" />
+        <path d="M12 12v6" />
       </>
     ),
   },
@@ -241,6 +271,7 @@ export const BORDER_CATALOG: BorderDef[] = [
     name: 'None',
     description: 'Everyone starts here.',
     isUnlocked: () => true,
+    progress: () => 1,
     className: 'border-[var(--border)]',
   },
   {
@@ -248,34 +279,55 @@ export const BORDER_CATALOG: BorderDef[] = [
     name: 'Bronze',
     description: 'Reach level 5.',
     isUnlocked: stats => stats.level >= 5,
-    className: 'border-[#b08d57] shadow-[0_0_10px_-2px_#b08d5799]',
+    progress: stats => ratio(stats.level, 5),
+    className: 'border-[#b08d57] shadow-[0_0_2px_0px_#b08d5799]',
   },
   {
     id: 'silver',
     name: 'Silver',
     description: 'Reach level 15.',
     isUnlocked: stats => stats.level >= 15,
-    className: 'border-[#c7ccd1] shadow-[0_0_10px_-2px_#c7ccd199]',
+    progress: stats => ratio(stats.level, 15),
+    className: 'border-[#c7ccd1] shadow-[0_0_4px_0px_#c7ccd199]',
   },
   {
     id: 'gold',
     name: 'Gold',
     description: 'Reach level 30.',
     isUnlocked: stats => stats.level >= 30,
-    className: 'border-[#ffd24a] shadow-[0_0_12px_-1px_#ffd24aaa]',
+    progress: stats => ratio(stats.level, 30),
+    className: 'border-[#ffd24a] shadow-[0_0_6px_0px_#ffd24aaa]',
+  },
+  {
+    id: 'platinum',
+    name: 'Platinum',
+    description: 'Reach level 40.',
+    isUnlocked: stats => stats.level >= 40,
+    progress: stats => ratio(stats.level, 40),
+    className: 'border-[#7dd3fc] shadow-[0_0_8px_0px_#7dd3fcaa]',
   },
   {
     id: 'diamond',
     name: 'Diamond',
     description: 'Reach level 50.',
     isUnlocked: stats => stats.level >= 50,
-    className: 'border-[#7dd3fc] shadow-[0_0_14px_-1px_#7dd3fcbb]',
+    progress: stats => ratio(stats.level, 50),
+    className: 'border-[#3b9ee0] shadow-[0_0_10px_0px_#3b9ee0bb]',
+  },
+  {
+    id: 'amethyst',
+    name: 'Amethyst',
+    description: 'Reach level 75.',
+    isUnlocked: stats => stats.level >= 75,
+    progress: stats => ratio(stats.level, 75),
+    className: 'border-[#9b59d0] shadow-[0_0_12px_0px_#9b59d0cc]',
   },
   {
     id: 'legend',
     name: 'Legend',
     description: 'Reach level 100.',
     isUnlocked: stats => stats.level >= 100,
+    progress: stats => ratio(stats.level, 100),
     className: 'border-transparent legend-border',
   },
 ];

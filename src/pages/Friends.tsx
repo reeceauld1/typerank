@@ -174,8 +174,8 @@ export default function Friends() {
 
   return (
     <div className="flex-1 flex flex-col py-10 px-6">
-      <div className="max-w-2xl w-full mx-auto flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-correct)]">friends</h1>
+      <div className="max-w-4xl w-full mx-auto flex items-center justify-between mb-8">
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">friends</h1>
         <Link
           to="/profile"
           className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors"
@@ -184,7 +184,7 @@ export default function Friends() {
         </Link>
       </div>
 
-      <div className="max-w-2xl w-full mx-auto flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg p-1 mb-6 text-sm">
+      <div className="max-w-4xl w-full mx-auto flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg p-1 mb-6 text-sm">
         {(
           [
             ['friends', `friends (${friends.length})`],
@@ -204,7 +204,7 @@ export default function Friends() {
         ))}
       </div>
 
-      <div className="max-w-2xl w-full mx-auto flex flex-col gap-6">
+      <div className="max-w-4xl w-full mx-auto flex flex-col gap-6">
         {tab === 'requests' && (
           <>
             <section>

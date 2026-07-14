@@ -15,7 +15,7 @@ export default function Profile() {
   return (
     <div className="flex-1 flex flex-col py-10 px-6">
       <div className="max-w-4xl w-full mx-auto flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-correct)]">profile</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">profile</h1>
         <Link
           to="/"
           className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors"

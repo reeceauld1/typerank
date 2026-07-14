@@ -64,7 +64,7 @@ export default function Home() {
         />
 
         {showKeyboard && !finished && (
-          <div className="mt-10">
+          <div className="hidden sm:block mt-10">
             <OnScreenKeyboard />
           </div>
         )}

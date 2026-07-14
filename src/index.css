@@ -13,6 +13,7 @@
   --text-incorrect-dim: rgba(226, 85, 79, 0.5);
   --accent: #5b9bd9;
   --accent-soft: rgba(91, 155, 217, 0.14);
+  --accent-glow: rgba(91, 155, 217, 0.03);
 }
 
 :root[data-theme='light'] {
@@ -28,6 +29,23 @@
   --text-incorrect-dim: rgba(199, 62, 56, 0.4);
   --accent: #3b7dc4;
   --accent-soft: rgba(59, 125, 196, 0.12);
+  --accent-glow: rgba(59, 125, 196, 0.03);
+}
+
+/* Monochrome accent color: opposite of the background rather than a fixed
+   hue — white on dark, black on light. Specificity here matches (or, for
+   the combined selector, exceeds) the plain :root/[data-theme='light']
+   rules above, so it wins regardless of source order. */
+:root[data-accent-mono='true'] {
+  --accent: #ffffff;
+  --accent-soft: rgba(255, 255, 255, 0.16);
+  --accent-glow: rgba(255, 255, 255, 0.03);
+}
+
+:root[data-accent-mono='true'][data-theme='light'] {
+  --accent: #000000;
+  --accent-soft: rgba(0, 0, 0, 0.08);
+  --accent-glow: rgba(0, 0, 0, 0.03);
 }
 
 @layer base {
@@ -45,7 +63,7 @@
   }
 
   body {
-    font-family: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    font-family: var(--font-family, 'IBM Plex Mono'), ui-monospace, 'SFMono-Regular', Menlo, monospace;
     background: var(--bg);
     color: var(--text-secondary);
     -webkit-font-smoothing: antialiased;
@@ -70,7 +88,7 @@
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background: radial-gradient(ellipse 80% 55% at 50% 38%, rgba(91, 155, 217, 0.06), transparent 70%);
+    background: radial-gradient(ellipse 80% 55% at 50% 38%, var(--accent-glow), transparent 70%);
     z-index: 0;
   }
 
@@ -114,6 +132,39 @@ body.is-typing * {
   background:
     linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box,
     conic-gradient(from var(--legend-angle), #ff5f6d, #ffc371, #47e0a0, #5b9bd9, #a55bd9, #ff5f6d) border-box;
+  animation: legend-spin 4s linear infinite;
+}
+
+/* Glow lives on a wrapper *around* the circle (see Avatar.tsx), not as a
+   pseudo-element of the circle itself — a pseudo-element's negative
+   z-index only controls paint order among its host's children, so it
+   would still paint after (on top of) the circle's own opaque background,
+   bleeding the blur inward over it. On this background-less wrapper, the
+   circle is instead an ordinary child that paints over the glow, masking
+   the inward half of the blur and leaving only the outside portion
+   visible. Runs its own copy of legend-spin (rather than inheriting the
+   circle's) so it still animates even where there's no wrapper, e.g. the
+   settings/cosmetics swatch preview. filter: blur() visually spreads much
+   further than the same pixel value would as a box-shadow (roughly 2-3x),
+   hence the small blur/inset here despite following the other tiers'
+   2px-step glow size progression. */
+.legend-glow-wrapper {
+  /* Establishes its own stacking context so the glow's negative z-index is
+     contained here instead of escaping to the nearest ancestor stacking
+     context — without this, it rendered behind opaque ancestor backgrounds
+     (e.g. the profile page's avatar card) and disappeared. */
+  z-index: 0;
+}
+
+.legend-glow-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: inherit;
+  background: conic-gradient(from var(--legend-angle), #ff5f6d, #ffc371, #47e0a0, #5b9bd9, #a55bd9, #ff5f6d);
+  filter: blur(4px);
+  opacity: 0.7;
   animation: legend-spin 4s linear infinite;
 }
 

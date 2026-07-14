@@ -19,7 +19,6 @@ export default function WeeklyChallenge() {
       }`}
     >
       <div className="flex items-center gap-3 text-sm mb-2.5">
-        <span className={`w-2 h-2 rounded-full shrink-0 ${weeklyClaimed ? 'bg-[var(--accent)]' : 'bg-[var(--text-muted)]'}`} />
         <span className="text-[var(--text-secondary)]">
           weekly challenge — complete <span className="text-[var(--text-correct)] font-semibold tabular-nums">{WEEKLY_TEST_TARGET}</span> tests
         </span>

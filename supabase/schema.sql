@@ -282,7 +282,7 @@ insert into public.avatar_catalog (id) values
   ('hourglass'), ('medal'), ('diamond'), ('anchor');
 
 insert into public.border_catalog (id) values
-  ('none'), ('bronze'), ('silver'), ('gold'), ('diamond'), ('legend');
+  ('none'), ('bronze'), ('silver'), ('gold'), ('platinum'), ('diamond'), ('amethyst'), ('legend');
 
 alter table public.user_stats
   add column equipped_avatar text not null default 'keyboard' references public.avatar_catalog (id),
@@ -471,7 +471,10 @@ grant execute on function public.get_email_for_username to anon, authenticated;
 create table public.accent_color_catalog (id text primary key);
 
 insert into public.accent_color_catalog (id) values
-  ('blue'), ('teal'), ('green'), ('purple'), ('orange'), ('magenta'), ('gold'), ('custom');
+  ('blue'), ('teal'), ('green'), ('purple'), ('orange'), ('magenta'), ('gold'), ('custom'), ('monochrome');
+-- "teal" is kept for parity with existing installs (see
+-- schema_009_monochrome_accent.sql) even though the client no longer offers
+-- it as a choice, having renamed that slot to "monochrome".
 
 alter table public.user_stats
   add column equipped_accent_color text not null default 'blue' references public.accent_color_catalog (id),

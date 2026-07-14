@@ -4,7 +4,7 @@ import { calculateXP, checkChallengeMilestone } from '../utils/xp.js';
 import { getDailyChallenge, todayKey, type DailyChallenge } from '../utils/dailyChallenge.js';
 import { weekKey, getWeekStart } from '../utils/weeklyChallenge.js';
 import { mapStatsRow } from '../utils/statsMapping.js';
-import { resolveAccentHex, hexToRgba } from '../utils/accentColors.js';
+import { resolveAccentHex, hexToRgba, isMonochromeAccent } from '../utils/accentColors.js';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { UserContext } from './UserContextBase.js';
@@ -132,9 +132,22 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [isAccountSynced, refreshRemoteStats]);
 
   useEffect(() => {
-    const hex = resolveAccentHex(remoteStats);
-    document.documentElement.style.setProperty('--accent', hex);
-    document.documentElement.style.setProperty('--accent-soft', hexToRgba(hex, 0.14));
+    const root = document.documentElement;
+    if (isMonochromeAccent(remoteStats.equippedAccentColor)) {
+      // Resolved in CSS instead ([data-accent-mono='true'], keyed off the
+      // same [data-theme] the base --accent value already uses) — clear any
+      // inline value from a previous color so those rules can take effect.
+      root.style.removeProperty('--accent');
+      root.style.removeProperty('--accent-soft');
+      root.style.removeProperty('--accent-glow');
+      root.dataset.accentMono = 'true';
+    } else {
+      delete root.dataset.accentMono;
+      const hex = resolveAccentHex(remoteStats);
+      root.style.setProperty('--accent', hex);
+      root.style.setProperty('--accent-soft', hexToRgba(hex, 0.14));
+      root.style.setProperty('--accent-glow', hexToRgba(hex, 0.03));
+    }
     // Only the two fields actually read above should retrigger this — not
     // every stats refresh, which would just reapply the same value.
     // eslint-disable-next-line react-hooks/exhaustive-deps

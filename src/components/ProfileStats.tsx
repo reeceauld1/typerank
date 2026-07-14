@@ -45,12 +45,12 @@ export default function ProfileStats({ stats: statsProp }: ProfileStatsProps = {
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 mb-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-3xl font-semibold text-[var(--text-correct)]">Level {stats.level}</h2>
+            <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--text-correct)]">Level {stats.level}</h2>
             <p className="text-[var(--text-muted)] text-sm mt-1">{stats.totalXp.toLocaleString()} total XP</p>
           </div>
           <div className="text-right">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide">tests completed</p>
-            <p className="text-2xl font-semibold text-[var(--text-correct)]">{stats.totalTests}</p>
+            <p className="text-xl sm:text-2xl font-semibold text-[var(--text-correct)]">{stats.totalTests}</p>
           </div>
         </div>
 
@@ -73,7 +73,7 @@ export default function ProfileStats({ stats: statsProp }: ProfileStatsProps = {
       <div className="grid grid-cols-3 gap-4 mb-6">
         {overview.map(o => (
           <div key={o.label} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <p className="text-2xl font-semibold text-[var(--text-correct)] tabular-nums">{o.value}</p>
+            <p className="text-xl sm:text-2xl font-semibold text-[var(--text-correct)] tabular-nums">{o.value}</p>
             <p className="text-[var(--text-muted)] text-xs mt-1 uppercase tracking-wide">{o.label}</p>
           </div>
         ))}
@@ -85,7 +85,7 @@ export default function ProfileStats({ stats: statsProp }: ProfileStatsProps = {
           {bests.map(b => (
             <div key={b.label} className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-4">
               <p className="text-[var(--text-muted)] text-xs mb-1">{b.label}</p>
-              <p className="text-2xl font-semibold text-[var(--accent)] tabular-nums">{b.value} <span className="text-sm text-[var(--text-muted)] font-normal">wpm</span></p>
+              <p className="text-xl sm:text-2xl font-semibold text-[var(--accent)] tabular-nums">{b.value} <span className="text-sm text-[var(--text-muted)] font-normal">wpm</span></p>
             </div>
           ))}
         </div>

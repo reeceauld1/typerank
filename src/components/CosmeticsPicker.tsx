@@ -161,7 +161,9 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
                       <LockIcon />
                     </span>
                   )}
-                  <div className={`w-10 h-10 border-2 rounded-full bg-[var(--bg-elevated)] ${border.className}`} />
+                  <div className={`relative rounded-full ${border.id === 'legend' ? 'legend-glow-wrapper' : ''}`}>
+                    <div className={`w-10 h-10 border-2 rounded-full bg-[var(--bg-elevated)] ${border.className}`} />
+                  </div>
                   <span className="text-[10px] text-[var(--text-muted)] text-center leading-tight">{border.name}</span>
                 </button>
               </Tooltip>
@@ -227,7 +229,14 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
                       <LockIcon />
                     </span>
                   )}
-                  <div className="w-10 h-10 rounded-full border-2 border-[var(--border)]" style={{ backgroundColor: color.hex }} />
+                  <div
+                    className="w-10 h-10 rounded-full border-2 border-[var(--border)]"
+                    style={
+                      color.id === 'monochrome'
+                        ? { background: 'linear-gradient(135deg, #000 50%, #fff 50%)' }
+                        : { backgroundColor: color.hex }
+                    }
+                  />
                   <span className="text-[10px] text-[var(--text-muted)] text-center leading-tight">{color.name}</span>
                 </button>
               </Tooltip>
