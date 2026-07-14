@@ -2,6 +2,8 @@ import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { TestConfig } from '../types/index.js';
 import { generateText } from '../utils/words.js';
 import { useUser } from '../hooks/useUser.js';
+import { useSettings } from '../hooks/useSettings.js';
+import { KEYBOARD_LAYOUTS } from '../utils/keyboardLayouts.js';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TypingTestProps {
@@ -15,6 +17,7 @@ type CharStatus = 'pending' | 'correct' | 'incorrect' | 'extra' | 'missed';
 
 export default function TypingTest({ config, onComplete, onRestart, onTypingActiveChange }: TypingTestProps) {
   const { addTestResult } = useUser();
+  const { keyboardLayout } = useSettings();
   // Home.tsx remounts this component (via a `key` bump) on every config
   // change, so `config` is effectively fixed for this instance's lifetime —
   // safe to seed the initial text lazily instead of via a mount effect.
@@ -65,22 +68,99 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
     inputRef.current?.focus();
   };
 
+  // Marks the test active/unpaused and records one keystroke (space or
+  // letter) against the current word, mirroring what the diffing loop in
+  // handleInputChange does per-character — used by the alternate-layout
+  // path below, which only ever adds one character per keydown.
+  const appendChar = (ch: string) => {
+    if (!isActive) {
+      setIsActive(true);
+      setStartTime(Date.now());
+    }
+    if (isPaused) setIsPaused(false);
+
+    const priorWords = input.split(' ');
+    const wIdx = priorWords.length - 1;
+    const cIdx = priorWords[wIdx].length;
+
+    if (ch === ' ') {
+      const target = words[wIdx] ?? '';
+      for (let m = cIdx; m < target.length; m++) {
+        totalKeystrokesRef.current += 1;
+      }
+      totalKeystrokesRef.current += 1;
+      correctKeystrokesRef.current += 1;
+    } else {
+      totalKeystrokesRef.current += 1;
+      if (ch === words[wIdx]?.[cIdx]) {
+        correctKeystrokesRef.current += 1;
+      }
+    }
+
+    const value = input + ch;
+    prevInputRef.current = value;
+    setInput(value);
+    setCurrentWordIndex(value.split(' ').length - 1);
+  };
+
+  const removeLastChar = () => {
+    if (input.length === 0) return;
+    const value = input.slice(0, -1);
+    prevInputRef.current = value;
+    setInput(value);
+    setCurrentWordIndex(value.split(' ').length - 1);
+  };
+
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.getModifierState) capsLockRef.current = e.getModifierState('CapsLock');
 
-    // Block spacebar as the first keypress of a word — otherwise spamming
-    // space with nothing typed skips through the whole test almost
-    // instantly, which (before this) still scored as fast, accurate typing.
-    if (e.key === ' ') {
-      const segments = input.split(' ');
-      const currentSegment = segments[segments.length - 1];
-      if (currentSegment.length === 0) {
-        e.preventDefault();
+    if (keyboardLayout === 'qwerty') {
+      // Block spacebar as the first keypress of a word — otherwise spamming
+      // space with nothing typed skips through the whole test almost
+      // instantly, which (before this) still scored as fast, accurate typing.
+      if (e.key === ' ') {
+        const segments = input.split(' ');
+        const currentSegment = segments[segments.length - 1];
+        if (currentSegment.length === 0) {
+          e.preventDefault();
+        }
       }
+      return;
     }
+
+    // Non-QWERTY layout: the browser still thinks it's typing on a QWERTY
+    // board, so its native character output is wrong for what we want here.
+    // Every relevant key is remapped and inserted manually instead of
+    // letting the native input (and handleInputChange) handle it — see
+    // src/utils/keyboardLayouts.ts.
+    if (e.ctrlKey || e.metaKey || e.altKey) return; // leave OS/browser shortcuts alone
+
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      removeLastChar();
+      return;
+    }
+
+    if (e.key === ' ' || e.code === 'Space') {
+      e.preventDefault();
+      const segments = input.split(' ');
+      if (segments[segments.length - 1].length === 0) return; // same anti-spam rule as qwerty
+      appendChar(' ');
+      return;
+    }
+
+    const base = KEYBOARD_LAYOUTS[keyboardLayout][e.code];
+    if (!base || !/^[a-z]$/.test(base)) return; // key produces punctuation in this layout — nothing to type
+    e.preventDefault();
+    const isUpper = capsLockRef.current !== e.shiftKey;
+    appendChar(isUpper ? base.toUpperCase() : base);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only relevant for qwerty: everything else is typed manually via
+    // handleInputKeyDown above, so any native change here is stale/ignored.
+    if (keyboardLayout !== 'qwerty') return;
+
     const value = capsLockRef.current ? e.target.value.toLowerCase() : e.target.value;
     const prevValue = prevInputRef.current;
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import type { UserStats } from '../types/index.js';
 import { mapStatsRow } from '../utils/statsMapping.js';
 import { supabase } from '../lib/supabase.js';
@@ -17,8 +17,16 @@ interface TargetProfile {
 
 export default function UserProfile() {
   const { username } = useParams<{ username: string }>();
+  const location = useLocation();
   const { user } = useAuth();
   const { friends, incomingRequests, outgoingRequests, sendRequest, acceptRequest, declineRequest, removeFriend } = useFriends();
+
+  // Only takes you back to the leaderboard if that's actually where you came
+  // from (via the state the Leaderboard page's link sets) — otherwise this
+  // defaults to friends, matching every other way of reaching a profile.
+  const cameFromLeaderboard = (location.state as { from?: string } | null)?.from === 'leaderboard';
+  const backTo = cameFromLeaderboard ? '/leaderboard' : '/friends';
+  const backLabel = cameFromLeaderboard ? 'back to leaderboard' : 'back to friends';
 
   const [profile, setProfile] = useState<TargetProfile | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -58,8 +66,8 @@ export default function UserProfile() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 pb-16">
         <p className="text-[var(--text-correct)] font-semibold">User not found</p>
-        <Link to="/friends" className="text-sm text-[var(--accent)] hover:underline">
-          back to friends
+        <Link to={backTo} className="text-sm text-[var(--accent)] hover:underline">
+          {backLabel}
         </Link>
       </div>
     );
@@ -88,10 +96,10 @@ export default function UserProfile() {
       <div className="max-w-4xl w-full mx-auto flex items-center justify-between mb-8">
         <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-correct)]">profile</h1>
         <Link
-          to="/friends"
+          to={backTo}
           className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors"
         >
-          back to friends
+          {backLabel}
         </Link>
       </div>
 

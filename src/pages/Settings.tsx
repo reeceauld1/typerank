@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useSettings } from '../hooks/useSettings.js';
+import { KEYBOARD_LAYOUT_OPTIONS } from '../utils/keyboardLayouts.js';
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) {
   return (
@@ -22,7 +23,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (value: boo
 }
 
 export default function Settings() {
-  const { showKeyboard, setShowKeyboard } = useSettings();
+  const { showKeyboard, setShowKeyboard, keyboardLayout, setKeyboardLayout } = useSettings();
 
   return (
     <div className="flex-1 flex flex-col py-10 px-6">
@@ -45,6 +46,29 @@ export default function Settings() {
             </p>
           </div>
           <Toggle checked={showKeyboard} onChange={setShowKeyboard} />
+        </div>
+
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
+          <p className="text-[var(--text-correct)] font-medium">keyboard layout</p>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5 mb-4">
+            changes what letter each physical key types — practice an alternate layout without changing your OS's own
+            keyboard settings.
+          </p>
+          <div className="flex items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
+            {KEYBOARD_LAYOUT_OPTIONS.map(option => (
+              <button
+                key={option.id}
+                onClick={() => setKeyboardLayout(option.id)}
+                className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                  keyboardLayout === option.id
+                    ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

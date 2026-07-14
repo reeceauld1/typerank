@@ -247,7 +247,11 @@ export default function Leaderboard() {
               }`}
             >
               <RankBadge rank={i + 1} />
-              <Link to={`/u/${row.username}`} className="flex items-center gap-3 flex-1 min-w-0 group">
+              <Link
+                to={`/u/${row.username}`}
+                state={{ from: 'leaderboard' }}
+                className="flex items-center gap-3 flex-1 min-w-0 group"
+              >
                 <Avatar avatarId={row.equippedAvatar} borderId={row.equippedBorder} size="sm" />
                 <span className="font-medium text-[var(--text-correct)] truncate group-hover:text-[var(--accent)] transition-colors">
                   {row.username}
