@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
+    <link id="favicon" rel="icon" type="image/svg+xml" href="%BASE_URL%typeladderWhite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -43,6 +43,25 @@
                 ? 'light'
                 : 'dark';
           if (resolved === 'light') document.documentElement.dataset.theme = 'light';
+        } catch (e) {}
+      })();
+    </script>
+    <script type="text/javascript">
+      // Favicon has a black and a white variant, chosen by the browser/OS's
+      // actual color scheme — deliberately independent of the site's own
+      // theme setting (which can be overridden to light/dark regardless of
+      // the OS), so it always stays legible against whatever chrome the
+      // browser itself is drawing (tab bar, bookmarks bar, etc.).
+      (function () {
+        try {
+          var favicon = document.getElementById('favicon');
+          if (!favicon || !window.matchMedia) return;
+          var media = window.matchMedia('(prefers-color-scheme: light)');
+          var apply = function () {
+            favicon.href = media.matches ? '%BASE_URL%typeladderBlack.svg' : '%BASE_URL%typeladderWhite.svg';
+          };
+          apply();
+          media.addEventListener('change', apply);
         } catch (e) {}
       })();
     </script>
