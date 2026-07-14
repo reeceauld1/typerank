@@ -161,13 +161,6 @@ export default function Settings() {
             ))}
           </div>
         </div>
-
-        <Link
-          to="/privacy"
-          className="text-center text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors mt-2"
-        >
-          privacy policy
-        </Link>
       </div>
     </div>
   );
