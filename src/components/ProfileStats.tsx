@@ -43,7 +43,7 @@ export default function ProfileStats({ stats: statsProp }: ProfileStatsProps = {
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 mb-6">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-5">
           <div>
             <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--text-correct)]">Level {stats.level}</h2>
             <p className="text-[var(--text-muted)] text-sm mt-1">{stats.totalXp.toLocaleString()} total XP</p>

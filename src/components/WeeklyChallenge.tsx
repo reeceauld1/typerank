@@ -19,10 +19,10 @@ export default function WeeklyChallenge() {
       }`}
     >
       <div className="flex items-center gap-3 text-sm mb-2.5">
-        <span className="text-[var(--text-secondary)]">
+        <span className="text-[var(--text-secondary)] flex-1 min-w-0">
           weekly challenge — complete <span className="text-[var(--text-correct)] font-semibold tabular-nums">{WEEKLY_TEST_TARGET}</span> tests
         </span>
-        <span className={`ml-auto font-semibold tabular-nums ${weeklyClaimed ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>
+        <span className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${weeklyClaimed ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>
           {weeklyClaimed ? 'claimed' : `+${WEEKLY_XP_BONUS} xp`}
         </span>
       </div>

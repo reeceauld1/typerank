@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { TestConfig } from '../types/index.js';
 import { generateText } from '../utils/words.js';
 import { useUser } from '../hooks/useUser.js';
@@ -593,7 +593,13 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
                     const wordHasMistake =
                       isPastWord && chars.some(c => c.status === 'incorrect' || c.status === 'extra' || c.status === 'missed');
                     return (
-                      <Fragment key={wordIdx}>
+                      // A wrapping outer span (rather than a Fragment) makes the word and
+                      // its trailing separator a single atomic unit for line-wrapping — the
+                      // browser can only break before/after this box, never between the two
+                      // children, so a line can never start with an orphaned separator
+                      // (which used to shift that line's visible text start out of
+                      // alignment with the others).
+                      <span key={wordIdx} className="inline-block">
                         <span data-word-idx={wordIdx} className="inline-block">
                           {chars.map((c, charIdx) => (
                             <span
@@ -623,7 +629,7 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
                             <span className="block rounded-full bg-[var(--text-muted)]" style={{ width: 4, height: 4 }} />
                           )}
                         </span>
-                      </Fragment>
+                      </span>
                     );
                   })}
                   {caretPos && (

@@ -17,27 +17,31 @@ export default function ModeSelector({ config, onChange }: ModeSelectorProps) {
     }`;
 
   return (
-    <div className="flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-2 py-2 text-xs">
-      <button onClick={() => onChange({ mode: 'time', value: config.mode === 'time' ? config.value : 30 })} className={pill(config.mode === 'time')}>
-        time
-      </button>
-      <button onClick={() => onChange({ mode: 'words', value: config.mode === 'words' ? config.value : 25 })} className={pill(config.mode === 'words')}>
-        words
-      </button>
+    <div className="flex flex-col sm:flex-row sm:items-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-2 py-2 text-xs">
+      <div className="flex items-center justify-center gap-1">
+        <button onClick={() => onChange({ mode: 'time', value: config.mode === 'time' ? config.value : 30 })} className={pill(config.mode === 'time')}>
+          time
+        </button>
+        <button onClick={() => onChange({ mode: 'words', value: config.mode === 'words' ? config.value : 25 })} className={pill(config.mode === 'words')}>
+          words
+        </button>
+      </div>
 
-      <span className="w-px h-4 bg-[var(--border)] mx-1" />
+      <span className="hidden sm:block w-px h-4 bg-[var(--border)] mx-1" />
 
-      {config.mode === 'time'
-        ? timeModes.map(time => (
-            <button key={time} onClick={() => onChange({ mode: 'time', value: time })} className={pill(config.value === time)}>
-              {time === 'infinite' ? 'infinite' : time}
-            </button>
-          ))
-        : wordModes.map(words => (
-            <button key={words} onClick={() => onChange({ mode: 'words', value: words })} className={pill(config.value === words)}>
-              {words}
-            </button>
-          ))}
+      <div className="flex items-center justify-center gap-1">
+        {config.mode === 'time'
+          ? timeModes.map(time => (
+              <button key={time} onClick={() => onChange({ mode: 'time', value: time })} className={pill(config.value === time)}>
+                {time === 'infinite' ? 'infinite' : time}
+              </button>
+            ))
+          : wordModes.map(words => (
+              <button key={words} onClick={() => onChange({ mode: 'words', value: words })} className={pill(config.value === words)}>
+                {words}
+              </button>
+            ))}
+      </div>
     </div>
   );
 }

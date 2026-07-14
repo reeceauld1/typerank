@@ -104,14 +104,14 @@ export default function UserProfile() {
       </div>
 
       <div className="max-w-4xl w-full mx-auto mb-6">
-        <div className="flex items-center justify-between bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
+          <div className="flex items-center gap-4 min-w-0">
             <Avatar avatarId={profile.stats.equippedAvatar} borderId={profile.stats.equippedBorder} size="md" />
-            <p className="text-[var(--text-correct)] font-semibold">{profile.username}</p>
+            <p className="text-[var(--text-correct)] font-semibold truncate">{profile.username}</p>
           </div>
 
           {user && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {status === 'friend' && (
                 <button
                   onClick={() => void removeFriend(profile.userId)}

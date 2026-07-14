@@ -12,6 +12,7 @@ import UserProfile from './pages/UserProfile.js';
 import Settings from './pages/Settings.js';
 import Leaderboard from './pages/Leaderboard.js';
 import ResetPassword from './pages/ResetPassword.js';
+import PrivacyPolicy from './pages/PrivacyPolicy.js';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/leaderboard" element={<Leaderboard />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
                 </Routes>
               </div>
             </FriendsProvider>

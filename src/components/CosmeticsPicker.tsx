@@ -108,7 +108,7 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
             {unlockedAvatars} / {AVATAR_CATALOG.length} unlocked
           </span>
         </div>
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-8 gap-3">
           {AVATAR_CATALOG.map(avatar => {
             const unlocked = admin || avatar.isUnlocked(stats);
             const equipped = stats.equippedAvatar === avatar.id;
@@ -144,7 +144,7 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
             {unlockedBorders} / {BORDER_CATALOG.length} unlocked
           </span>
         </div>
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-8 gap-3">
           {BORDER_CATALOG.map(border => {
             const unlocked = admin || border.isUnlocked(stats);
             const equipped = stats.equippedBorder === border.id;
@@ -179,7 +179,7 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
             {unlockedColors} / {ACCENT_COLOR_CATALOG.length} unlocked
           </span>
         </div>
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-8 gap-3">
           {ACCENT_COLOR_CATALOG.map(color => {
             const unlocked = admin || color.isUnlocked(stats);
             const equipped = stats.equippedAccentColor === color.id;

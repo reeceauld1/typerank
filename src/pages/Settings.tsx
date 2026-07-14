@@ -68,7 +68,7 @@ export default function Settings() {
           <p className="text-[var(--text-muted)] text-sm mt-0.5 mb-4">
             "system" (default) follows your browser/OS setting, and switches automatically if that changes.
           </p>
-          <div className="flex items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
+          <div className="flex flex-wrap items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
             {THEME_OPTIONS.map(option => (
               <button
                 key={option.id}
@@ -101,7 +101,7 @@ export default function Settings() {
             changes what letter each physical key types — practice an alternate layout without changing your OS's own
             keyboard settings.
           </p>
-          <div className="flex items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
+          <div className="flex flex-wrap items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
             {KEYBOARD_LAYOUT_OPTIONS.map(option => (
               <button
                 key={option.id}
@@ -123,7 +123,7 @@ export default function Settings() {
           <p className="text-[var(--text-muted)] text-sm mt-0.5 mb-4">
             changes how the space between words is shown on the typing screen.
           </p>
-          <div className="flex items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
+          <div className="flex flex-wrap items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
             {SPACE_STYLE_OPTIONS.map(option => (
               <button
                 key={option.id}
@@ -161,6 +161,13 @@ export default function Settings() {
             ))}
           </div>
         </div>
+
+        <Link
+          to="/privacy"
+          className="text-center text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors mt-2"
+        >
+          privacy policy
+        </Link>
       </div>
     </div>
   );
