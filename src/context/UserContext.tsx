@@ -205,14 +205,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
-  const setEquippedCosmetics = async (avatarId: string, borderId: string): Promise<void> => {
-    if (!isAccountSynced || !user || !supabase) return;
+  const setEquippedCosmetics = async (avatarId: string, borderId: string): Promise<boolean> => {
+    if (!isAccountSynced || !user || !supabase) return false;
 
     const { error } = await supabase.rpc('set_equipped_cosmetics', {
       p_avatar_id: avatarId,
       p_border_id: borderId,
     });
-    if (!error) await refreshRemoteStats();
+    if (error) {
+      console.error('setEquippedCosmetics failed:', error.message);
+      return false;
+    }
+    await refreshRemoteStats();
+    return true;
   };
 
   return (

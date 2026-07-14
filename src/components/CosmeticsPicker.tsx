@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useUser } from '../hooks/useUser.js';
 import { AVATAR_CATALOG, BORDER_CATALOG } from '../utils/cosmetics.js';
+import Tooltip from './Tooltip.js';
 
 function LockIcon() {
   return (
@@ -18,15 +20,20 @@ function cellClass(unlocked: boolean, equipped: boolean): string {
 
 export default function CosmeticsPicker() {
   const { stats, setEquippedCosmetics } = useUser();
+  const [error, setError] = useState<string | null>(null);
 
-  const handleEquipAvatar = (id: string) => {
+  const handleEquipAvatar = async (id: string) => {
     if (id === stats.equippedAvatar) return;
-    void setEquippedCosmetics(id, stats.equippedBorder);
+    setError(null);
+    const ok = await setEquippedCosmetics(id, stats.equippedBorder);
+    if (!ok) setError("Couldn't equip that avatar — try again.");
   };
 
-  const handleEquipBorder = (id: string) => {
+  const handleEquipBorder = async (id: string) => {
     if (id === stats.equippedBorder) return;
-    void setEquippedCosmetics(stats.equippedAvatar, id);
+    setError(null);
+    const ok = await setEquippedCosmetics(stats.equippedAvatar, id);
+    if (!ok) setError("Couldn't equip that border — try again.");
   };
 
   const unlockedAvatars = AVATAR_CATALOG.filter(a => a.isUnlocked(stats)).length;
@@ -34,6 +41,8 @@ export default function CosmeticsPicker() {
 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
+      {error && <p className="text-[var(--text-incorrect)] text-sm">{error}</p>}
+
       <section>
         <div className="flex items-baseline justify-between mb-3">
           <h3 className="text-lg font-semibold text-[var(--text-correct)]">avatars</h3>
@@ -47,24 +56,24 @@ export default function CosmeticsPicker() {
             const equipped = stats.equippedAvatar === avatar.id;
             const Icon = avatar.icon;
             return (
-              <button
-                key={avatar.id}
-                type="button"
-                disabled={!unlocked}
-                onClick={() => handleEquipAvatar(avatar.id)}
-                title={unlocked ? avatar.name : `${avatar.name} — ${avatar.description}`}
-                className={`relative flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped)}`}
-              >
-                {!unlocked && (
-                  <span className="absolute top-1.5 right-1.5 text-[var(--text-muted)]">
-                    <LockIcon />
-                  </span>
-                )}
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--bg-elevated)] text-[var(--text-correct)]">
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] text-[var(--text-muted)] text-center leading-tight">{avatar.name}</span>
-              </button>
+              <Tooltip key={avatar.id} content={unlocked ? avatar.name : `${avatar.name} — ${avatar.description}`}>
+                <button
+                  type="button"
+                  disabled={!unlocked}
+                  onClick={() => void handleEquipAvatar(avatar.id)}
+                  className={`relative w-full flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped)}`}
+                >
+                  {!unlocked && (
+                    <span className="absolute top-1.5 right-1.5 text-[var(--text-muted)]">
+                      <LockIcon />
+                    </span>
+                  )}
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--bg-elevated)] text-[var(--text-correct)]">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] text-[var(--text-muted)] text-center leading-tight">{avatar.name}</span>
+                </button>
+              </Tooltip>
             );
           })}
         </div>
@@ -82,22 +91,22 @@ export default function CosmeticsPicker() {
             const unlocked = border.isUnlocked(stats);
             const equipped = stats.equippedBorder === border.id;
             return (
-              <button
-                key={border.id}
-                type="button"
-                disabled={!unlocked}
-                onClick={() => handleEquipBorder(border.id)}
-                title={unlocked ? border.name : `${border.name} — ${border.description}`}
-                className={`relative flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped)}`}
-              >
-                {!unlocked && (
-                  <span className="absolute top-1.5 right-1.5 text-[var(--text-muted)]">
-                    <LockIcon />
-                  </span>
-                )}
-                <div className={`w-10 h-10 border-2 rounded-full bg-[var(--bg-elevated)] ${border.className}`} />
-                <span className="text-[10px] text-[var(--text-muted)] text-center leading-tight">{border.name}</span>
-              </button>
+              <Tooltip key={border.id} content={unlocked ? border.name : `${border.name} — ${border.description}`}>
+                <button
+                  type="button"
+                  disabled={!unlocked}
+                  onClick={() => void handleEquipBorder(border.id)}
+                  className={`relative w-full flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped)}`}
+                >
+                  {!unlocked && (
+                    <span className="absolute top-1.5 right-1.5 text-[var(--text-muted)]">
+                      <LockIcon />
+                    </span>
+                  )}
+                  <div className={`w-10 h-10 border-2 rounded-full bg-[var(--bg-elevated)] ${border.className}`} />
+                  <span className="text-[10px] text-[var(--text-muted)] text-center leading-tight">{border.name}</span>
+                </button>
+              </Tooltip>
             );
           })}
         </div>
