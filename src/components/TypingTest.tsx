@@ -38,6 +38,7 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
   const prevInputRef = useRef('');
   const totalKeystrokesRef = useRef(0);
   const correctKeystrokesRef = useRef(0);
+  const capsLockRef = useRef(false);
 
   const words = text.split(' ');
   const inputWords = input.split(' ');
@@ -64,8 +65,12 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
     inputRef.current?.focus();
   };
 
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.getModifierState) capsLockRef.current = e.getModifierState('CapsLock');
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const value = capsLockRef.current ? e.target.value.toLowerCase() : e.target.value;
     const prevValue = prevInputRef.current;
 
     if (!isActive && value.length > 0) {
@@ -370,6 +375,7 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
           type="text"
           value={input}
           onChange={handleInputChange}
+          onKeyDown={handleInputKeyDown}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           disabled={isFinished}

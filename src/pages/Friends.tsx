@@ -148,7 +148,7 @@ function FindPeople() {
 export default function Friends() {
   const { user, isConfigured } = useAuth();
   const { friends, incomingRequests, outgoingRequests, acceptRequest, declineRequest, removeFriend } = useFriends();
-  const [tab, setTab] = useState<Tab>('requests');
+  const [tab, setTab] = useState<Tab>('friends');
 
   if (!isConfigured) {
     return (
@@ -187,8 +187,8 @@ export default function Friends() {
       <div className="max-w-2xl w-full mx-auto flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg p-1 mb-6 text-sm">
         {(
           [
-            ['requests', `requests${incomingRequests.length > 0 ? ` (${incomingRequests.length})` : ''}`],
             ['friends', `friends (${friends.length})`],
+            ['requests', `requests${incomingRequests.length > 0 ? ` (${incomingRequests.length})` : ''}`],
             ['find', 'find people'],
           ] as [Tab, string][]
         ).map(([key, label]) => (
