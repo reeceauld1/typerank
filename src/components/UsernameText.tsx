@@ -13,7 +13,7 @@ export default function UsernameText({ username, colorId, className = '' }: User
   const shine = colorId !== 'default' && colorId !== 'grandmaster';
   return (
     <span
-      className={`relative inline-block font-bold ${color.className} ${shine ? 'name-shine' : ''} ${className}`}
+      className={`relative -top-px inline-block self-center leading-none font-bold ${color.className} ${shine ? 'name-shine' : ''} ${className}`}
       data-shine-text={shine ? username : undefined}
     >
       {username}

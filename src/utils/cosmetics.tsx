@@ -469,8 +469,15 @@ export const BADGE_CATALOG: BadgeDef[] = [
     id: 'supporter',
     name: 'Supporter',
     description: 'Supported typeladder with a Ko-fi donation.',
-    icon: fillIcon(
-      <path d="M12 21s-7.5-4.6-10-9.1C.3 8.8 1.7 5 5.4 4.2c2-.4 4 .4 5.2 2.1 1.2-1.7 3.2-2.5 5.2-2.1C19.5 5 20.9 8.8 19.2 12 16.7 16.4 12 21 12 21z" />
+    // The heart's own bounding box (20 units wide, ~18.35 tall inside the
+    // 24x24 viewBox) fills a larger fraction of its width than its height —
+    // rendered at the same size as the other badge icons, that made it read
+    // as sitting off-center horizontally. scaleX narrows it to match the
+    // vertical fill ratio instead of the raw square box.
+    icon: ({ className }) => (
+      <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={{ transform: 'scaleX(0.92)' }}>
+        <path d="M12 21.35 10.55 20.03C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54Z" />
+      </svg>
     ),
     color: '#ec4899',
     isUnlocked: stats => stats.isSupporter,

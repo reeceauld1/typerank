@@ -16,7 +16,10 @@ export default function UsernameBadge({ badgeId, className = '', circle = false 
   if (!badge) return null;
   const Icon = badge.icon;
   return (
-    <Tooltip content={`${badge.name} — ${badge.description}`} className="inline-flex self-center shrink-0">
+    <Tooltip
+      content={`${badge.name} — ${badge.description}`}
+      className={`inline-flex self-center shrink-0 ${circle ? '' : '-ml-1'}`}
+    >
       <span
         className={`inline-flex items-center justify-center ${
           circle ? 'w-[30px] h-[30px] rounded-full bg-[var(--bg-elevated)] border border-[var(--border)]' : ''
