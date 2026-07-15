@@ -84,8 +84,7 @@ function FriendsIcon() {
 function RankedIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-      <path d="M4 20V14M10 20V9M16 20V4" />
-      <path d="M3.5 8.5 9 3l3 3 5-5" />
+      <path d="M7 2v20M17 2v20M7 6h10M7 12h10M7 18h10" />
     </svg>
   );
 }
