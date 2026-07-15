@@ -10,6 +10,8 @@ import { useAuth } from '../hooks/useAuth.js';
 import { UserContext } from './UserContextBase.js';
 
 const defaultStats: UserStats = {
+  username: '',
+  usernameChangedAt: null,
   totalTests: 0,
   totalXp: 0,
   level: 1,

@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useUser } from '../hooks/useUser.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
+import { validateUsername, nextUsernameChangeAt } from '../utils/username.js';
 
 function PencilIcon() {
   return (
@@ -62,6 +63,95 @@ function DeleteAccountModal({
   );
 }
 
+function ChangeUsernameModal({ currentUsername, onClose }: { currentUsername: string; onClose: () => void }) {
+  const { refreshStats } = useUser();
+  const [value, setValue] = useState(currentUsername);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSave = async () => {
+    if (!supabase) return;
+    const trimmed = value.trim();
+    const validationError = validateUsername(trimmed);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    if (trimmed.toLowerCase() === currentUsername.toLowerCase()) {
+      setError('That is already your username.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    const { data: available, error: checkError } = await supabase.rpc('is_username_available', {
+      p_username: trimmed,
+    });
+    if (checkError) {
+      setSaving(false);
+      setError('Could not verify username availability. Try again.');
+      return;
+    }
+    if (!available) {
+      setSaving(false);
+      setError('That username is already taken.');
+      return;
+    }
+
+    const { error: changeError } = await supabase.rpc('change_username', { p_new_username: trimmed });
+    setSaving(false);
+    if (changeError) {
+      // Rare race: someone else claimed it between the check above and
+      // this call, or the 7-day cooldown kicked in between opening this
+      // modal and clicking save (e.g. changed it in another tab).
+      setError("Couldn't change your name — it may have just been taken, try again.");
+      return;
+    }
+    await refreshStats();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+      <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
+        <h2 className="text-lg font-semibold text-[var(--text-correct)] mb-1">change your name</h2>
+        <p className="text-[var(--text-muted)] text-sm mb-4">You can only change your name once every 7 days.</p>
+        <input
+          type="text"
+          autoFocus
+          maxLength={20}
+          value={value}
+          onChange={e => {
+            setValue(e.target.value);
+            setError(null);
+          }}
+          className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-correct)] focus:outline-none focus:border-[var(--accent)] mb-3"
+        />
+        {error && <p className="text-[var(--text-incorrect)] text-sm mb-4">{error}</p>}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+          >
+            cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={saving || !value.trim()}
+            className="flex-1 text-sm bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-4 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+          >
+            {saving ? 'saving…' : 'save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   useDocumentTitle('profile');
   const navigate = useNavigate();
@@ -72,6 +162,8 @@ export default function Profile() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showNameColorPicker, setShowNameColorPicker] = useState(false);
+  const [showChangeUsername, setShowChangeUsername] = useState(false);
+  const nextChangeAt = nextUsernameChangeAt(stats.usernameChangedAt);
 
   const handleDeleteAccount = async () => {
     if (!supabase) return;
@@ -107,10 +199,7 @@ export default function Profile() {
                 <Avatar avatarId={stats.equippedAvatar} borderId={stats.equippedBorder} size="md" />
                 <div className="flex items-center gap-1.5">
                   <p>
-                    <UsernameText
-                      username={(user.user_metadata?.username as string | undefined) ?? 'account'}
-                      colorId={stats.equippedNameColor}
-                    />
+                    <UsernameText username={stats.username || 'account'} colorId={stats.equippedNameColor} />
                   </p>
                   <button
                     type="button"
@@ -122,12 +211,23 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-              <button
-                onClick={() => signOut()}
-                className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
-              >
-                sign out
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={Boolean(nextChangeAt)}
+                  onClick={() => setShowChangeUsername(true)}
+                  title={nextChangeAt ? `You can change your name again on ${nextChangeAt.toLocaleDateString()}.` : undefined}
+                  className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-secondary)]"
+                >
+                  change name
+                </button>
+                <button
+                  onClick={() => signOut()}
+                  className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  sign out
+                </button>
+              </div>
             </div>
           </div>
 
@@ -175,6 +275,10 @@ export default function Profile() {
           )}
 
           {showNameColorPicker && <NameColorPicker onClose={() => setShowNameColorPicker(false)} />}
+
+          {showChangeUsername && (
+            <ChangeUsernameModal currentUsername={stats.username} onClose={() => setShowChangeUsername(false)} />
+          )}
         </>
       ) : isConfigured ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16">

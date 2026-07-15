@@ -8,6 +8,9 @@
 create table public.user_stats (
   user_id uuid primary key references auth.users (id) on delete cascade,
   username text not null check (username ~ '^[A-Za-z0-9]{3,20}$'),
+  -- Starts null (the signup-time username isn't a "change") — set only by
+  -- change_username below, which uses it to enforce a 7-day cooldown.
+  username_changed_at timestamptz,
   total_tests integer not null default 0,
   total_xp integer not null default 0,
   total_time_typed double precision not null default 0,
@@ -1348,3 +1351,46 @@ end;
 $$;
 
 grant execute on function public.set_equipped_name_color to authenticated;
+
+-- Lets a signed-in user change their own username, at most once every 7
+-- days (see username_changed_at above).
+create or replace function public.change_username(p_new_username text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_current_username text;
+  v_last_changed timestamptz;
+begin
+  if v_user_id is null then
+    raise exception 'not authenticated';
+  end if;
+
+  -- Mirrors the column's own check constraint, just to fail with a
+  -- friendlier message before hitting a raw constraint-violation error —
+  -- the constraint itself is still what's actually authoritative here.
+  if p_new_username !~ '^[A-Za-z0-9]{3,20}$' then
+    raise exception 'invalid username';
+  end if;
+
+  select username, username_changed_at into v_current_username, v_last_changed
+  from public.user_stats where user_id = v_user_id for update;
+
+  if lower(v_current_username) = lower(p_new_username) then
+    raise exception 'that is already your username';
+  end if;
+
+  if v_last_changed is not null and now() - v_last_changed < interval '7 days' then
+    raise exception 'username can only be changed once every 7 days';
+  end if;
+
+  update public.user_stats
+  set username = p_new_username, username_changed_at = now(), updated_at = now()
+  where user_id = v_user_id;
+end;
+$$;
+
+grant execute on function public.change_username to authenticated;

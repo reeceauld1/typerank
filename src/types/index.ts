@@ -29,6 +29,8 @@ export interface TestResult {
 }
 
 export interface UserStats {
+  username: string;
+  usernameChangedAt: string | null;
   totalTests: number;
   totalXp: number;
   level: number;

@@ -4,6 +4,8 @@ import { calculateLevel } from './xp.js';
 export function mapStatsRow(row: Record<string, number | string> | null): Omit<UserStats, 'testHistory'> {
   const totalXp = (row?.total_xp as number) ?? 0;
   return {
+    username: (row?.username as string) ?? '',
+    usernameChangedAt: (row?.username_changed_at as string | null | undefined) ?? null,
     totalTests: (row?.total_tests as number) ?? 0,
     totalXp,
     level: calculateLevel(totalXp),

@@ -1,15 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth.js';
 import { supabase } from '../lib/supabase.js';
-
-const USERNAME_PATTERN = /^[A-Za-z0-9]+$/;
-
-function validateUsername(username: string): string | null {
-  if (username.length < 3) return 'Username must be at least 3 characters.';
-  if (username.length > 20) return 'Username must be 20 characters or fewer.';
-  if (!USERNAME_PATTERN.test(username)) return 'Username can only contain letters and numbers.';
-  return null;
-}
+import { validateUsername } from '../utils/username.js';
 
 type Mode = 'signin' | 'signup' | 'forgot';
 
