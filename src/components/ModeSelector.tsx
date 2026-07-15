@@ -29,7 +29,7 @@ export default function ModeSelector({ config, onChange }: ModeSelectorProps) {
   const [customText, setCustomText] = useState(isCustom ? String(config.value) : '');
 
   const pill = (active: boolean) =>
-    `px-3 py-1.5 rounded-md text-sm font-bold transition-colors ${
+    `px-3 py-1.5 rounded-md text-sm font-bold transition-colors cursor-pointer ${
       active
         ? 'text-[var(--accent)]'
         : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
