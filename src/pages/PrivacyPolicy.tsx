@@ -26,13 +26,18 @@ export default function PrivacyPolicy() {
             If you create an account, we collect your email address, a username you choose, and a password (handled
             entirely by our authentication provider, Supabase — we never see or store your password ourselves). We
             also store your typing test results (WPM, accuracy, mode, and timestamp), your level and total XP, and
-            which cosmetics (avatars, borders, accent colors) you've unlocked and equipped.
+            which cosmetics (avatars, borders, accent colors, name colors) you've unlocked and equipped.
           </p>
           <p className="mt-3">
             Duels work without an account too. If you start or join one as a guest, we store the display name you
             type in and your typing results (WPM, accuracy, time) for that duel, tied to a random token kept in your
             browser rather than to any personal identity — we don't know who you are beyond that name. If you're
             signed in, your duel results are tied to your account like any other test.
+          </p>
+          <p className="mt-3">
+            Ranked matches pair you with a random opponent near your skill level instead of someone you chose — this
+            requires an account (no guest option, since your rating needs to persist between matches). We store your
+            elo rating, rank tier progress, and the results (WPM, accuracy, opponent, outcome) of each ranked match.
           </p>
         </section>
 
@@ -52,7 +57,8 @@ export default function PrivacyPolicy() {
             Your username, level, equipped cosmetics, and best WPM scores are visible to other users — on the
             leaderboard, your profile page, and to anyone you add as a friend (or who finds you by username search).
             Whoever you duel — including a stranger via a shared link — sees your name (or username, if signed in)
-            and results for that duel. Your email address is never shown to other users.
+            and results for that duel. Your elo rating and rank tier are visible on the ranked leaderboard and to
+            whoever you're matched against. Your email address is never shown to other users.
           </p>
         </section>
 
@@ -96,12 +102,14 @@ export default function PrivacyPolicy() {
         <section>
           <h2 className="text-[var(--text-correct)] font-semibold mb-2">Your data, your choice</h2>
           <p>
-            You can delete your test history from your profile at any time. To delete your account entirely, or to
-            ask what data we hold about you, email us at{' '}
+            You can delete your test history from your profile at any time. You can also delete your account
+            entirely, yourself, from your profile page — this permanently removes your account and everything tied
+            to it (stats, test history, friends, duels, ranked data) and can't be undone. To ask what data we hold
+            about you, email us at{' '}
             <a href="mailto:contact@typeladder.com" className="text-[var(--accent)] hover:underline">
               contact@typeladder.com
-            </a>{' '}
-            and we'll take care of it.
+            </a>
+            .
           </p>
         </section>
 
