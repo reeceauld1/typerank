@@ -15,6 +15,14 @@ alter table public.user_stats
   add column is_fast_typer boolean not null default false,
   add column equipped_badge text references public.badge_catalog (id);
 
+-- Backfill Founder for accounts that already existed before this migration
+-- ran — the handle_new_user trigger below only decides it going forward, at
+-- signup time, for brand-new accounts.
+update public.user_stats us
+set is_founder = true
+from (select id from auth.users order by created_at asc limit 25) f
+where us.user_id = f.id;
+
 -- Founder: one of the first 25 accounts ever created. Decided once, at
 -- signup, from how many user_stats rows already exist at that moment.
 create or replace function public.handle_new_user()
