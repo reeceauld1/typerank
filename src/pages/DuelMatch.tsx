@@ -188,6 +188,21 @@ export default function DuelMatch() {
   );
   const bothFinished = Boolean(duel && duel.creator_wpm !== null && duel.opponent_wpm !== null);
   const waitingForOpponentToFinish = haveSubmittedResult && !bothFinished;
+  const opponentSlotOpen = Boolean(duel && !duel.opponent_id && !duel.opponent_name);
+
+  // Realtime should push updates the moment the opponent joins, finishes,
+  // or accepts — but a dropped/delayed WebSocket event (backgrounded tab,
+  // brief network hiccup) would otherwise leave this page waiting forever
+  // even after the opponent's side has actually moved on. Poll as a
+  // fallback whenever we're in any "waiting on the other side" state.
+  useEffect(() => {
+    const shouldPoll = waitingForAccept || opponentSlotOpen || waitingForOpponentToFinish;
+    if (!shouldPoll) return;
+    const interval = setInterval(() => {
+      void loadDuel();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [waitingForAccept, opponentSlotOpen, waitingForOpponentToFinish, loadDuel]);
 
   // Presence keyed by role (not user id) so it works the same whether
   // either side is signed in or a guest.
@@ -377,7 +392,6 @@ export default function DuelMatch() {
   }
 
   const isParticipant = isCreator || isOpponent;
-  const opponentSlotOpen = !duel.opponent_id && !duel.opponent_name;
   const challengerName = players[duel.creator_id ?? '']?.username ?? duel.creator_name ?? 'someone';
 
   // Not part of this duel at all.
