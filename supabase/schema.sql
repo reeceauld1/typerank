@@ -567,6 +567,8 @@ create table public.duels (
   creator_rematch boolean not null default false,
   opponent_rematch boolean not null default false,
   rematch_duel_id uuid references public.duels (id),
+  creator_rematch_token uuid,
+  opponent_rematch_token uuid,
   created_at timestamptz not null default now()
 );
 
@@ -895,7 +897,9 @@ begin
       (v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_new_creator_token, v_new_opponent_token, v_word_count, p_word_list, 'accepted')
     returning id into v_new_id;
 
-    update public.duels set rematch_duel_id = v_new_id where id = p_duel_id;
+    update public.duels
+    set rematch_duel_id = v_new_id, creator_rematch_token = v_new_creator_token, opponent_rematch_token = v_new_opponent_token
+    where id = p_duel_id;
     v_rematch_duel_id := v_new_id;
   end if;
 
@@ -960,7 +964,9 @@ begin
       (v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_new_creator_token, v_new_opponent_token, v_word_count, p_word_list, 'accepted')
     returning id into v_new_id;
 
-    update public.duels set rematch_duel_id = v_new_id where id = p_duel_id;
+    update public.duels
+    set rematch_duel_id = v_new_id, creator_rematch_token = v_new_creator_token, opponent_rematch_token = v_new_opponent_token
+    where id = p_duel_id;
     v_rematch_duel_id := v_new_id;
   end if;
 

@@ -31,6 +31,8 @@ interface DuelRow {
   creator_rematch: boolean;
   opponent_rematch: boolean;
   rematch_duel_id: string | null;
+  creator_rematch_token: string | null;
+  opponent_rematch_token: string | null;
 }
 
 interface PlayerInfo {
@@ -363,9 +365,13 @@ export default function DuelMatch() {
   // watching this row) to send them there together.
   useEffect(() => {
     if (duel?.rematch_duel_id) {
+      const myNewToken = isCreator ? duel.creator_rematch_token : isOpponent ? duel.opponent_rematch_token : null;
+      if (myNewToken) {
+        sessionStorage.setItem(`duel_token_${duel.rematch_duel_id}`, myNewToken);
+      }
       navigate(`/duel/${duel.rematch_duel_id}`);
     }
-  }, [duel?.rematch_duel_id, navigate]);
+  }, [duel?.rematch_duel_id, duel?.creator_rematch_token, duel?.opponent_rematch_token, isCreator, isOpponent, navigate]);
 
   if (!isConfigured) {
     return (
