@@ -28,6 +28,12 @@ export default function PrivacyPolicy() {
             also store your typing test results (WPM, accuracy, mode, and timestamp), your level and total XP, and
             which cosmetics (avatars, borders, accent colors) you've unlocked and equipped.
           </p>
+          <p className="mt-3">
+            Duels work without an account too. If you start or join one as a guest, we store the display name you
+            type in and your typing results (WPM, accuracy, time) for that duel, tied to a random token kept in your
+            browser rather than to any personal identity — we don't know who you are beyond that name. If you're
+            signed in, your duel results are tied to your account like any other test.
+          </p>
         </section>
 
         <section>
@@ -45,7 +51,8 @@ export default function PrivacyPolicy() {
           <p>
             Your username, level, equipped cosmetics, and best WPM scores are visible to other users — on the
             leaderboard, your profile page, and to anyone you add as a friend (or who finds you by username search).
-            Your email address is never shown to other users.
+            Whoever you duel — including a stranger via a shared link — sees your name (or username, if signed in)
+            and results for that duel. Your email address is never shown to other users.
           </p>
         </section>
 
