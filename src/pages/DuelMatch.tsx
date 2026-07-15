@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { WordMode } from '../types/index.js';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
+import { generateText } from '../utils/words.js';
 import TypingTest from '../components/TypingTest.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
@@ -27,6 +28,9 @@ interface DuelRow {
   opponent_wpm: number | null;
   opponent_accuracy: number | null;
   opponent_raw_wpm: number | null;
+  creator_rematch: boolean;
+  opponent_rematch: boolean;
+  rematch_duel_id: string | null;
 }
 
 interface PlayerInfo {
@@ -79,6 +83,7 @@ function ResultCard({
 export default function DuelMatch() {
   useDocumentTitle('duel');
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user, isConfigured } = useAuth();
 
   const [duel, setDuel] = useState<DuelRow | null>(null);
@@ -324,6 +329,28 @@ export default function DuelMatch() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const handleRematch = async () => {
+    if (!supabase || !id || !duel) return;
+    const wordList = generateText(duel.word_count);
+    const mySlotIsGuest = isCreator ? duel.creator_id === null : duel.opponent_id === null;
+    if (mySlotIsGuest) {
+      if (!guestToken) return;
+      await supabase.rpc('request_guest_rematch', { p_duel_id: id, p_token: guestToken, p_word_list: wordList });
+    } else {
+      await supabase.rpc('request_rematch', { p_duel_id: id, p_word_list: wordList });
+    }
+    await loadDuel();
+  };
+
+  // Once both sides have requested a rematch, a fresh duel is created and
+  // this fires on both clients (via the same Realtime subscription already
+  // watching this row) to send them there together.
+  useEffect(() => {
+    if (duel?.rematch_duel_id) {
+      navigate(`/duel/${duel.rematch_duel_id}`);
+    }
+  }, [duel?.rematch_duel_id, navigate]);
 
   if (!isConfigured) {
     return (
@@ -589,6 +616,18 @@ export default function DuelMatch() {
           winner={bothFinished && myWpm !== null && opponentWpm !== null && opponentWpm > myWpm}
         />
       </div>
+
+      {bothFinished && (
+        <button
+          type="button"
+          disabled={isCreator ? duel.creator_rematch : duel.opponent_rematch}
+          onClick={() => void handleRematch()}
+          className="bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+        >
+          {(isCreator ? duel.creator_rematch : duel.opponent_rematch) ? 'waiting for opponent…' : 'rematch'}{' '}
+          {Number(duel.creator_rematch) + Number(duel.opponent_rematch)}/2
+        </button>
+      )}
 
       <Link
         to="/duel"
