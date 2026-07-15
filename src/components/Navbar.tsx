@@ -142,6 +142,8 @@ export default function Navbar() {
     { to: '/', label: 'typing test', icon: KeyboardIcon, isActive: p => p === '/' },
     { to: '/challenges', label: 'challenges', icon: ChallengeIcon, isActive: p => p === '/challenges', requiresUser: true },
     { to: '/leaderboard', label: 'leaderboard', icon: TrophyIcon, isActive: p => p === '/leaderboard' },
+    { to: '/ranked', label: 'ranked', icon: RankedIcon, isActive: p => p.startsWith('/ranked'), requiresUser: true },
+    { to: '/duel', label: 'duel', icon: DuelIcon, isActive: p => p.startsWith('/duel') },
     {
       to: '/friends',
       label: 'friends',
@@ -149,8 +151,6 @@ export default function Navbar() {
       isActive: p => p === '/friends' || p.startsWith('/u/'),
       requiresUser: true,
     },
-    { to: '/duel', label: 'duel', icon: DuelIcon, isActive: p => p.startsWith('/duel') },
-    { to: '/ranked', label: 'ranked', icon: RankedIcon, isActive: p => p.startsWith('/ranked'), requiresUser: true },
     { to: '/profile', label: 'profile', icon: ProfileIcon, isActive: p => p === '/profile' },
     { to: '/settings', label: 'settings', icon: SettingsIcon, isActive: p => p === '/settings' },
   ];
@@ -223,22 +223,17 @@ export default function Navbar() {
           </Link>
           {user && (
             <Link
-              to="/friends"
-              aria-label="Friends"
-              title="Friends"
+              to="/ranked"
+              aria-label="Ranked"
+              title="Ranked"
               className={`relative p-1 transition-colors ${
-                location.pathname === '/friends' || location.pathname.startsWith('/u/')
+                location.pathname.startsWith('/ranked')
                   ? 'text-[var(--text-correct)]'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
               }`}
             >
-              <FriendsIcon />
-              {incomingRequests.length > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-semibold leading-none text-[var(--bg)]">
-                  {incomingRequests.length}
-                </span>
-              )}
-              {(location.pathname === '/friends' || location.pathname.startsWith('/u/')) && (
+              <RankedIcon />
+              {location.pathname.startsWith('/ranked') && (
                 <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
               )}
             </Link>
@@ -265,17 +260,22 @@ export default function Navbar() {
           </Link>
           {user && (
             <Link
-              to="/ranked"
-              aria-label="Ranked"
-              title="Ranked"
+              to="/friends"
+              aria-label="Friends"
+              title="Friends"
               className={`relative p-1 transition-colors ${
-                location.pathname.startsWith('/ranked')
+                location.pathname === '/friends' || location.pathname.startsWith('/u/')
                   ? 'text-[var(--text-correct)]'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
               }`}
             >
-              <RankedIcon />
-              {location.pathname.startsWith('/ranked') && (
+              <FriendsIcon />
+              {incomingRequests.length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-semibold leading-none text-[var(--bg)]">
+                  {incomingRequests.length}
+                </span>
+              )}
+              {(location.pathname === '/friends' || location.pathname.startsWith('/u/')) && (
                 <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
               )}
             </Link>
