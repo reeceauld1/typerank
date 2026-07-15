@@ -339,6 +339,11 @@ alter table public.friendships enable row level security;
 create policy "select own friendships" on public.friendships
   for select using (auth.uid() = requester_id or auth.uid() = addressee_id);
 
+-- Lets FriendsContext subscribe to postgres_changes on this table, so a
+-- request being accepted/declined by the *other* side updates your friends
+-- list live instead of requiring a manual page refresh.
+alter publication supabase_realtime add table public.friendships;
+
 -- Profiles need to be viewable by username search and by friends before a
 -- request is even sent, so stats (no PII beyond a username — no email,
 -- nothing account-sensitive) become readable by any signed-in user. This

@@ -351,6 +351,19 @@ export default function DuelMatch() {
     await loadDuel();
   };
 
+  // Also covered by the unmount-cleanup effect above if the creator just
+  // navigates away, but that's a best-effort fallback — this is the
+  // explicit "I changed my mind" path, and navigates back to /duel
+  // immediately rather than leaving the creator on a page that's about to
+  // announce its own cancellation.
+  const handleCancelInvite = async () => {
+    if (!supabase || !id) return;
+    setResponding(true);
+    await supabase.rpc('cancel_duel_invite', { p_duel_id: id });
+    setResponding(false);
+    navigate('/duel');
+  };
+
   const handleComplete = async (stats: {
     wpm: number;
     accuracy: number;
@@ -626,11 +639,19 @@ export default function DuelMatch() {
         <p className="text-[var(--text-correct)] font-semibold">
           Waiting for{' '}
           <UsernameText
-            username={players[duel.opponent_id ?? '']?.username ?? duel.opponent_name ?? 'them'}
+            username={players[duel.opponent_id ?? '']?.username ?? duel.opponent_name ?? 'player'}
             colorId={players[duel.opponent_id ?? '']?.equippedNameColor ?? 'default'}
           />{' '}
           to accept…
         </p>
+        <button
+          type="button"
+          disabled={responding}
+          onClick={() => void handleCancelInvite()}
+          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+        >
+          {responding ? '...' : 'cancel'}
+        </button>
       </div>
     );
   }

@@ -87,6 +87,33 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
     refresh().finally(() => setLoading(false));
   }, [isAccountSynced, refresh]);
 
+  // Otherwise this only ever updates on *my own* actions (send/accept/
+  // decline/remove, each of which calls refresh() itself below) — someone
+  // else accepting a request I sent, or sending me a new one, would
+  // otherwise sit stale until a manual page reload. requester_id and
+  // addressee_id need separate filters since postgres_changes only
+  // supports one column-equality filter per subscription.
+  useEffect(() => {
+    const client = supabase;
+    if (!client || !user) return;
+    const channel = client
+      .channel(`friendships-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'friendships', filter: `requester_id=eq.${user.id}` },
+        () => void refresh()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'friendships', filter: `addressee_id=eq.${user.id}` },
+        () => void refresh()
+      )
+      .subscribe();
+    return () => {
+      void client.removeChannel(channel);
+    };
+  }, [user, refresh]);
+
   const sendRequest = async (username: string): Promise<{ ok: boolean; error?: string }> => {
     if (!user || !supabase) return { ok: false, error: 'not signed in' };
     const { error } = await supabase.rpc('send_friend_request', { p_username: username });
