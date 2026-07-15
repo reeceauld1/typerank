@@ -22,5 +22,11 @@ export function mapStatsRow(row: Record<string, number | string> | null): Omit<U
     equippedBorder: (row?.equipped_border as string) ?? 'none',
     equippedAccentColor: (row?.equipped_accent_color as string) ?? 'blue',
     customAccentHex: (row?.custom_accent_hex as string | undefined) ?? null,
+    elo: (row?.elo as number) ?? 1000,
+    peakElo: (row?.peak_elo as number) ?? 1000,
+    rankedGamesPlayed: (row?.ranked_games_played as number) ?? 0,
+    rankedWins: (row?.ranked_wins as number) ?? 0,
+    rankedLosses: (row?.ranked_losses as number) ?? 0,
+    rankedDraws: (row?.ranked_draws as number) ?? 0,
   };
 }

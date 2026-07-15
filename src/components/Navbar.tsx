@@ -81,6 +81,15 @@ function FriendsIcon() {
   );
 }
 
+function RankedIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M4 20V14M10 20V9M16 20V4" />
+      <path d="M3.5 8.5 9 3l3 3 5-5" />
+    </svg>
+  );
+}
+
 function DuelIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -142,6 +151,7 @@ export default function Navbar() {
       requiresUser: true,
     },
     { to: '/duel', label: 'duel', icon: DuelIcon, isActive: p => p.startsWith('/duel') },
+    { to: '/ranked', label: 'ranked', icon: RankedIcon, isActive: p => p.startsWith('/ranked'), requiresUser: true },
     { to: '/profile', label: 'profile', icon: ProfileIcon, isActive: p => p === '/profile' },
     { to: '/settings', label: 'settings', icon: SettingsIcon, isActive: p => p === '/settings' },
   ];
@@ -254,6 +264,23 @@ export default function Navbar() {
               <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
             )}
           </Link>
+          {user && (
+            <Link
+              to="/ranked"
+              aria-label="Ranked"
+              title="Ranked"
+              className={`relative p-1 transition-colors ${
+                location.pathname.startsWith('/ranked')
+                  ? 'text-[var(--text-correct)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+              }`}
+            >
+              <RankedIcon />
+              {location.pathname.startsWith('/ranked') && (
+                <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
+              )}
+            </Link>
+          )}
           <Link
             to="/profile"
             aria-label="Profile"

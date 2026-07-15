@@ -18,6 +18,7 @@ export interface UserContextType {
   claimWeeklyChallengeBonus: (weekStart: string, testsTarget: number, xpBonus: number) => Promise<boolean>;
   setEquippedCosmetics: (avatarId: string, borderId: string) => Promise<boolean>;
   setEquippedAccentColor: (colorId: string, customHex?: string) => Promise<boolean>;
+  refreshStats: () => Promise<void>;
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);

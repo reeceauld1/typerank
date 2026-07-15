@@ -1,6 +1,7 @@
 import type { UserStats } from '../types/index.js';
 import { useUser } from '../hooks/useUser.js';
 import { getLevelProgress } from '../utils/xp.js';
+import RankBadge from './RankBadge.js';
 import { motion } from 'framer-motion';
 
 function formatTimeTyped(totalSeconds: number): string {
@@ -47,6 +48,7 @@ export default function ProfileStats({ stats: statsProp }: ProfileStatsProps = {
           <div>
             <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--text-correct)]">Level {stats.level}</h2>
             <p className="text-[var(--text-muted)] text-sm mt-1">{stats.totalXp.toLocaleString()} total XP</p>
+            <RankBadge elo={stats.elo} rankedGamesPlayed={stats.rankedGamesPlayed} className="mt-2" />
           </div>
           <div className="text-right">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide">tests completed</p>

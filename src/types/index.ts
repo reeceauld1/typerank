@@ -48,6 +48,12 @@ export interface UserStats {
   equippedBorder: string;
   equippedAccentColor: string;
   customAccentHex: string | null;
+  elo: number;
+  peakElo: number;
+  rankedGamesPlayed: number;
+  rankedWins: number;
+  rankedLosses: number;
+  rankedDraws: number;
 }
 
 export interface Challenge {

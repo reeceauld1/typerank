@@ -18,6 +18,8 @@ import PrivacyPolicy from './pages/PrivacyPolicy.js';
 import BugReport from './pages/BugReport.js';
 import Duel from './pages/Duel.js';
 import DuelMatch from './pages/DuelMatch.js';
+import Ranked from './pages/Ranked.js';
+import RankedMatch from './pages/RankedMatch.js';
 
 function App() {
   return (
@@ -41,6 +43,8 @@ function App() {
                   <Route path="/report-bug" element={<BugReport />} />
                   <Route path="/duel" element={<Duel />} />
                   <Route path="/duel/:id" element={<DuelMatch />} />
+                  <Route path="/ranked" element={<Ranked />} />
+                  <Route path="/ranked/:id" element={<RankedMatch />} />
                 </Routes>
                 <Footer />
                 <CookieConsentBanner />

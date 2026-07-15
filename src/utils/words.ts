@@ -411,15 +411,14 @@ function getWordPool(size: WordListSize): readonly string[] {
 
 const NO_REPEAT_WINDOW = 20;
 
-export function generateWords(count: number, size: WordListSize): string[] {
-  const pool = getWordPool(size);
+function buildWordList(count: number, pool: readonly string[], random: () => number): string[] {
   const words: string[] = [];
   for (let i = 0; i < count; i++) {
     const recentWindow = words.slice(Math.max(0, words.length - NO_REPEAT_WINDOW));
     let candidate: string;
     let attempts = 0;
     do {
-      candidate = pool[Math.floor(Math.random() * pool.length)];
+      candidate = pool[Math.floor(random() * pool.length)];
       attempts++;
     } while (recentWindow.includes(candidate) && attempts < 50);
     words.push(candidate);
@@ -427,8 +426,38 @@ export function generateWords(count: number, size: WordListSize): string[] {
   return words;
 }
 
+export function generateWords(count: number, size: WordListSize): string[] {
+  return buildWordList(count, getWordPool(size), Math.random);
+}
+
 export function generateText(wordCount: number, size: WordListSize): string {
   return generateWords(wordCount, size).join(' ');
+}
+
+// A small deterministic PRNG (mulberry32) — ranked matches need both
+// players' clients to independently produce the exact same word list from
+// a single server-generated seed (see ranked_matches.word_seed), since
+// unlike duels, neither client knows in advance who they'll be paired
+// with, so the usual "one client generates it, the RPC just stores it"
+// approach doesn't work here. Math.random() isn't seedable, hence this.
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Ranked matches are always the fixed 30-second time format — same sizing
+// logic as wordsNeededForDuration below, always drawn from the 300-word
+// pool (same rationale as generateDuelWordList: no per-user word-list-size
+// choice for competitive formats).
+export function generateSeededWordList(seed: number): string {
+  const random = mulberry32(seed);
+  return buildWordList(wordsNeededForDuration(30), WORDS_300, random).join(' ');
 }
 
 // A fixed (never extended mid-test) word list needs enough words that

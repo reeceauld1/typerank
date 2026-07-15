@@ -1,4 +1,5 @@
 import type { UserStats } from '../types/index.js';
+import { RANK_TIERS, PLACEMENT_GAMES } from './rank.js';
 
 // Bypasses every unlock condition below — every avatar/border shows as
 // unlocked for this account. Cosmetic-only, no other admin privileges.
@@ -44,6 +45,18 @@ function allModesPlayed(stats: UserStats): boolean {
 
 function ratio(current: number, target: number): number {
   return target > 0 ? Math.min(1, current / target) : 1;
+}
+
+function rankMinElo(tierId: string): number {
+  return RANK_TIERS.find(t => t.id === tierId)?.min ?? 0;
+}
+
+// peakElo defaults to the same 1000 starting elo everyone has before ever
+// playing a ranked match, so unlocking also requires having actually
+// finished placements — otherwise Bronze/Silver would show as already
+// unlocked for someone who has never queued.
+function reachedRank(stats: UserStats, tierId: string): boolean {
+  return stats.rankedGamesPlayed >= PLACEMENT_GAMES && stats.peakElo >= rankMinElo(tierId);
 }
 
 function icon(paths: React.ReactElement) {
@@ -329,6 +342,65 @@ export const BORDER_CATALOG: BorderDef[] = [
     isUnlocked: stats => stats.level >= 100,
     progress: stats => ratio(stats.level, 100),
     className: 'border-transparent legend-border',
+  },
+  // --- ranked tiers (peakElo, not the level-based borders above — these
+  // reward a separate track, so they intentionally don't reuse the ids or
+  // display names "bronze"/"silver"/etc. that already exist above) ---
+  {
+    id: 'rank_bronze',
+    name: 'Ranked Bronze',
+    description: 'Reach Bronze rank.',
+    isUnlocked: stats => reachedRank(stats, 'bronze'),
+    progress: stats => ratio(stats.peakElo, rankMinElo('bronze')),
+    className: 'border-[#b08d57] shadow-[0_0_2px_0px_#b08d5799]',
+  },
+  {
+    id: 'rank_silver',
+    name: 'Ranked Silver',
+    description: 'Reach Silver rank.',
+    isUnlocked: stats => reachedRank(stats, 'silver'),
+    progress: stats => ratio(stats.peakElo, rankMinElo('silver')),
+    className: 'border-[#c7ccd1] shadow-[0_0_4px_0px_#c7ccd199]',
+  },
+  {
+    id: 'rank_gold',
+    name: 'Ranked Gold',
+    description: 'Reach Gold rank.',
+    isUnlocked: stats => reachedRank(stats, 'gold'),
+    progress: stats => ratio(stats.peakElo, rankMinElo('gold')),
+    className: 'border-[#ffd24a] shadow-[0_0_6px_0px_#ffd24aaa]',
+  },
+  {
+    id: 'rank_platinum',
+    name: 'Ranked Platinum',
+    description: 'Reach Platinum rank.',
+    isUnlocked: stats => reachedRank(stats, 'platinum'),
+    progress: stats => ratio(stats.peakElo, rankMinElo('platinum')),
+    className: 'border-[#7dd3fc] shadow-[0_0_8px_0px_#7dd3fcaa]',
+  },
+  {
+    id: 'rank_diamond',
+    name: 'Ranked Diamond',
+    description: 'Reach Diamond rank.',
+    isUnlocked: stats => reachedRank(stats, 'diamond'),
+    progress: stats => ratio(stats.peakElo, rankMinElo('diamond')),
+    className: 'border-[#3b9ee0] shadow-[0_0_10px_0px_#3b9ee0bb]',
+  },
+  {
+    id: 'rank_master',
+    name: 'Ranked Master',
+    description: 'Reach Master rank.',
+    isUnlocked: stats => reachedRank(stats, 'master'),
+    progress: stats => ratio(stats.peakElo, rankMinElo('master')),
+    className: 'border-[#a855f7] shadow-[0_0_12px_0px_#a855f7cc]',
+  },
+  {
+    id: 'rank_grandmaster',
+    name: 'Ranked Grandmaster',
+    description: 'Reach Grandmaster rank.',
+    isUnlocked: stats => reachedRank(stats, 'grandmaster'),
+    progress: stats => ratio(stats.peakElo, rankMinElo('grandmaster')),
+    className: 'border-[#f43f5e] shadow-[0_0_14px_0px_#f43f5ecc]',
   },
 ];
 

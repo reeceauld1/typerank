@@ -29,6 +29,12 @@ const defaultStats: UserStats = {
   equippedBorder: 'none',
   equippedAccentColor: 'blue',
   customAccentHex: null,
+  elo: 1000,
+  peakElo: 1000,
+  rankedGamesPlayed: 0,
+  rankedWins: 0,
+  rankedLosses: 0,
+  rankedDraws: 0,
 };
 
 function mapHistoryRow(row: Record<string, string | number>): TestResult {
@@ -294,6 +300,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         claimWeeklyChallengeBonus,
         setEquippedCosmetics,
         setEquippedAccentColor,
+        // Ranked matches call submit_ranked_result directly (it updates
+        // both players' elo server-side, unlike addTestResult which only
+        // ever touches the caller's own row) — this just exposes the same
+        // refresh every other mutation here already does afterward.
+        refreshStats: refreshRemoteStats,
       }}
     >
       {children}
