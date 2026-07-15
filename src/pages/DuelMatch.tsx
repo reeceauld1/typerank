@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import type { WordMode } from '../types/index.js';
+import type { TestConfig } from '../types/index.js';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
+import { useUser } from '../hooks/useUser.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
-import { generateText } from '../utils/words.js';
+import { generateDuelWordList } from '../utils/words.js';
+import { type DuelMode, isRankedDuelValue, formatDuelSetting } from '../utils/duels.js';
 import TypingTest from '../components/TypingTest.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
@@ -19,7 +21,8 @@ interface DuelRow {
   opponent_name: string | null;
   creator_token: string | null;
   opponent_token: string | null;
-  word_count: number;
+  mode: DuelMode;
+  value: number;
   word_list: string;
   status: DuelStatus;
   creator_wpm: number | null;
@@ -87,6 +90,7 @@ export default function DuelMatch() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isConfigured } = useAuth();
+  const { addTestResult } = useUser();
 
   const [duel, setDuel] = useState<DuelRow | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -314,7 +318,14 @@ export default function DuelMatch() {
     await loadDuel();
   };
 
-  const handleComplete = async (stats: { wpm: number; accuracy: number; rawWpm: number; timeElapsed: number }) => {
+  const handleComplete = async (stats: {
+    wpm: number;
+    accuracy: number;
+    rawWpm: number;
+    timeElapsed: number;
+    correctChars: number;
+    incorrectChars: number;
+  }) => {
     if (!supabase || !id || !duel) return;
     // Whether *my own* slot (whichever one I am) was filled via an account
     // or a guest token — not whether the duel as a whole was guest-created.
@@ -337,6 +348,25 @@ export default function DuelMatch() {
         p_raw_wpm: stats.rawWpm,
         p_time_elapsed: stats.timeElapsed,
       });
+      // Guests have no account to award xp/history to — only real
+      // participants earn it. Standard word/time counts (10/25/50,
+      // 10/30/60) rank and earn full xp, same as a solo test of that mode
+      // and value; anything custom is unranked practice at half xp, saved
+      // under the same 0 sentinel value solo's infinite mode already uses.
+      const ranked = isRankedDuelValue(duel.mode, duel.value);
+      void addTestResult(
+        {
+          mode: duel.mode,
+          value: ranked ? duel.value : 0,
+          wpm: stats.wpm,
+          accuracy: stats.accuracy,
+          rawWpm: stats.rawWpm,
+          correctChars: stats.correctChars,
+          incorrectChars: stats.incorrectChars,
+          timeElapsed: stats.timeElapsed,
+        },
+        ranked ? 1 : 0.5
+      );
     }
     await loadDuel();
   };
@@ -349,7 +379,7 @@ export default function DuelMatch() {
 
   const handleRematch = async () => {
     if (!supabase || !id || !duel) return;
-    const wordList = generateText(duel.word_count);
+    const wordList = generateDuelWordList(duel.mode, duel.value);
     const mySlotIsGuest = isCreator ? duel.creator_id === null : duel.opponent_id === null;
     if (mySlotIsGuest) {
       if (!guestToken) return;
@@ -411,7 +441,7 @@ export default function DuelMatch() {
         return (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
             <p className="text-[var(--text-correct)] font-semibold">
-              {challengerName} challenged you to a {duel.word_count}-word duel.
+              {challengerName} challenged you to a {formatDuelSetting(duel.mode, duel.value)} duel.
             </p>
             {respondError && <p className="text-[var(--text-incorrect)] text-sm">{respondError}</p>}
             <button
@@ -428,7 +458,7 @@ export default function DuelMatch() {
       return (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
           <p className="text-[var(--text-correct)] font-semibold">
-            {challengerName} challenged you to a {duel.word_count}-word duel.
+            {challengerName} challenged you to a {formatDuelSetting(duel.mode, duel.value)} duel.
           </p>
           <input
             type="text"
@@ -477,7 +507,7 @@ export default function DuelMatch() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
         <p className="text-[var(--text-correct)] font-semibold">
-          {players[duel.creator_id ?? '']?.username ?? 'someone'} challenged you to a {duel.word_count}-word duel.
+          {players[duel.creator_id ?? '']?.username ?? 'someone'} challenged you to a {formatDuelSetting(duel.mode, duel.value)} duel.
         </p>
         {respondError && <p className="text-[var(--text-incorrect)] text-sm">{respondError}</p>}
         <div className="flex items-center gap-2">
@@ -602,7 +632,7 @@ export default function DuelMatch() {
       <div className="flex-1 flex items-center justify-center px-6 py-10">
         <div className="relative w-[92%] sm:w-[80%] lg:w-[65%]">
           <TypingTest
-            config={{ mode: 'words', value: duel.word_count as WordMode }}
+            config={{ mode: duel.mode, value: duel.value } as TestConfig}
             fixedText={duel.word_list}
             skipStatsSave
             onComplete={stats => void handleComplete(stats)}

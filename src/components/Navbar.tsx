@@ -84,8 +84,12 @@ function FriendsIcon() {
 function DuelIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-      <path d="M4 4l7 7M20 4l-7 7M4 20l7-7M20 20l-7-7" />
-      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <path d="M5 19 19 5" />
+      <path d="M3 17l4 4" />
+      <circle cx="4" cy="20" r="1" fill="currentColor" stroke="none" />
+      <path d="M19 19 5 5" />
+      <path d="M21 17l-4 4" />
+      <circle cx="20" cy="20" r="1" fill="currentColor" stroke="none" />
     </svg>
   );
 }

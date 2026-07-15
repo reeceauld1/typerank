@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { TestConfig } from '../types/index.js';
 import { generateText } from '../utils/words.js';
+import { isRankedValue } from '../utils/xp.js';
 import { useUser } from '../hooks/useUser.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { KEYBOARD_LAYOUTS } from '../utils/keyboardLayouts.js';
@@ -11,10 +12,17 @@ interface TypingTestProps {
   // Used by duels: both players type the same shared word list instead of
   // each generating their own random one.
   fixedText?: string;
-  // Duels don't count toward personal stats/XP/leaderboard — they're a
-  // separate track (see the duel_records tally instead).
+  // Duels save their own xp separately (see DuelMatch.tsx's handleComplete)
+  // rather than through this component's own addTestResult call below.
   skipStatsSave?: boolean;
-  onComplete?: (stats: { wpm: number; accuracy: number; rawWpm: number; timeElapsed: number }) => void;
+  onComplete?: (stats: {
+    wpm: number;
+    accuracy: number;
+    rawWpm: number;
+    timeElapsed: number;
+    correctChars: number;
+    incorrectChars: number;
+  }) => void;
   onRestart?: () => void;
   onTypingActiveChange?: (active: boolean) => void;
 }
@@ -41,6 +49,17 @@ export default function TypingTest({
   const { addTestResult } = useUser();
   const { keyboardLayout, spaceStyle } = useSettings();
   const isInfinite = config.mode === 'time' && config.value === 'infinite';
+  // Ranked = one of the fixed preset values (10/25/50 words, 10/30/60s) —
+  // anything else (a custom count/duration, or infinite) is unranked
+  // practice: half xp, and never touches a best-wpm/leaderboard column.
+  const isRanked = !isInfinite && isRankedValue(config.mode, config.value as number);
+  // Time mode starts with a modest word buffer and extends itself as the
+  // typist approaches the end (see the effect below) rather than
+  // pre-generating enough words to cover the whole duration up front —
+  // for a long custom duration that upfront amount could run into the
+  // thousands of words, which made every keystroke re-render (and the
+  // browser lay out) that entire word list, not just the ~100 actually
+  // visible at once.
   // Home.tsx remounts this component (via a `key` bump) on every config
   // change, so `config` is effectively fixed for this instance's lifetime —
   // safe to seed the initial text lazily instead of via a mount effect.
@@ -72,8 +91,7 @@ export default function TypingTest({
   const finishTestRef = useRef<() => void>(() => {});
 
   const resetTest = () => {
-    const wordCount = config.mode === 'words' ? config.value : 100;
-    setText(fixedText ?? generateText(wordCount));
+    setText(fixedText ?? generateText(config.mode === 'words' ? config.value : 100));
     setInput('');
     setStartTime(null);
     setIsActive(false);
@@ -287,13 +305,12 @@ export default function TypingTest({
 
     setStats(finalStats);
 
-    // Infinite mode has no target to rank against, so it's saved under a 0
+    // Unranked runs (infinite mode, or any custom word count/duration) have
+    // no fixed category to rank against, so they're saved under a 0
     // sentinel value (never a real category, so it can't update any
-    // best-wpm/leaderboard column) and earns half the usual XP. isInfinite
-    // already proves config.value is 'infinite' only in that case — TS just
-    // can't follow that through a separately-computed boolean.
+    // best-wpm/leaderboard column) and earn half the usual XP.
     if (!skipStatsSave) {
-      const submittedValue = isInfinite ? 0 : (config.value as number);
+      const submittedValue = isRanked ? (config.value as number) : 0;
       void addTestResult(
         {
           mode: config.mode,
@@ -305,11 +322,11 @@ export default function TypingTest({
           incorrectChars,
           timeElapsed,
         },
-        isInfinite ? 0.5 : 1
+        isRanked ? 1 : 0.5
       );
     }
 
-    onComplete?.({ ...finalStats, timeElapsed });
+    onComplete?.({ ...finalStats, timeElapsed, correctChars, incorrectChars });
   };
 
   useEffect(() => {
@@ -352,6 +369,19 @@ export default function TypingTest({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input, config, isActive, currentWordIndex]);
+
+  // Time mode (any duration, including infinite) tops up the word list as
+  // the typist nears the end, instead of generating the whole thing up
+  // front — keeps the live word count (and so the per-keystroke render
+  // cost) small regardless of how long the test runs. Duels skip this:
+  // fixedText is one static string both players were given identically.
+  useEffect(() => {
+    if (fixedText || config.mode !== 'time' || !isActive) return;
+    if (words.length - currentWordIndex < 30) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setText(prev => `${prev} ${generateText(60)}`);
+    }
+  }, [fixedText, config.mode, isActive, currentWordIndex, words.length]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -571,7 +601,7 @@ export default function TypingTest({
                     <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">raw</div>
                   </div>
                 </div>
-                {isInfinite && (
+                {!isRanked && (
                   <p className="text-center text-xs text-[var(--text-muted)] mb-4">practice mode — half xp, not ranked</p>
                 )}
                 <button

@@ -42,3 +42,26 @@ export function generateWords(count: number): string[] {
 export function generateText(wordCount: number): string {
   return generateWords(wordCount).join(' ');
 }
+
+// A fixed (never extended mid-test) word list needs enough words that
+// nobody runs out before a `seconds`-long timer does — sized for a
+// generous 200wpm ceiling, floored at 100 words so short/preset durations
+// keep the same amount of text they always had. Only used for duels (see
+// generateDuelWordList below) — solo time mode extends its list on the fly
+// instead of pre-generating for the whole duration, since for a long
+// custom duration that could mean thousands of words rendered at once,
+// which made every keystroke re-render the entire list and lag badly.
+// Duels can't do that (both players need the identical text up front), so
+// their custom duration is capped lower client-side (see Duel.tsx) to keep
+// this from producing a similarly huge list.
+export function wordsNeededForDuration(seconds: number): number {
+  return Math.max(100, Math.ceil((seconds / 60) * 200));
+}
+
+// Duels share one fixed word list between both players, generated up front
+// (unlike solo time mode, it's never extended mid-test). Words mode just
+// needs exactly `value` words; time mode uses the safety sizing above.
+export function generateDuelWordList(mode: 'words' | 'time', value: number): string {
+  if (mode === 'words') return generateText(value);
+  return generateText(wordsNeededForDuration(value));
+}

@@ -3,33 +3,108 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useFriends } from '../hooks/useFriends.js';
-import { generateText } from '../utils/words.js';
+import { generateDuelWordList } from '../utils/words.js';
+import { type DuelMode, WORD_PRESETS, TIME_PRESETS, formatDuelSetting } from '../utils/duels.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import Avatar from '../components/Avatar.js';
 
-type WordCount = 10 | 25 | 50;
-const WORD_COUNTS: WordCount[] = [10, 25, 50];
+// Custom (non-preset) duels aren't ranked and earn half XP — see
+// DuelMatch.tsx's handleComplete — so the range is otherwise generous
+// since there's no leaderboard integrity to protect. Time is capped
+// lower than the word count: unlike solo (which extends its word list on
+// the fly), a duel's word list is one fixed string both players must get
+// identically, generated up front — a long custom duration would mean
+// generating (and both clients rendering) thousands of words at once.
+const CUSTOM_RANGE: Record<DuelMode, { min: number; max: number; default: number }> = {
+  words: { min: 5, max: 300, default: 100 },
+  time: { min: 5, max: 180, default: 90 },
+};
+
+function clampCustom(mode: DuelMode, n: number): number {
+  const { min, max, default: fallback } = CUSTOM_RANGE[mode];
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
 
 interface PendingInvite {
   id: string;
-  wordCount: number;
+  mode: DuelMode;
+  value: number;
 }
 
-function WordCountPicker({ value, onChange }: { value: WordCount; onChange: (count: WordCount) => void }) {
+function DuelSettingsPicker({
+  mode,
+  value,
+  onChange,
+}: {
+  mode: DuelMode;
+  value: number;
+  onChange: (mode: DuelMode, value: number) => void;
+}) {
+  const presets = mode === 'words' ? WORD_PRESETS : TIME_PRESETS;
+  const isCustom = !presets.includes(value);
+  const [customText, setCustomText] = useState(isCustom ? String(value) : '');
+
+  const pill = (active: boolean) =>
+    `px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+      active ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+    }`;
+
+  const handleCustomTextChange = (raw: string) => {
+    setCustomText(raw);
+    const n = Number(raw);
+    if (raw.trim() !== '' && Number.isFinite(n) && n > 0) {
+      onChange(mode, Math.round(n));
+    }
+  };
+
+  const handleCustomBlur = () => {
+    const n = clampCustom(mode, Number(customText));
+    setCustomText(String(n));
+    onChange(mode, n);
+  };
+
   return (
-    <div className="flex items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit mb-6">
-      {WORD_COUNTS.map(count => (
-        <button
-          key={count}
-          type="button"
-          onClick={() => onChange(count)}
-          className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-            value === count ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-          }`}
-        >
-          {count} words
+    <div className="mb-6 flex flex-col items-center gap-2">
+      <div className="flex items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm">
+        <button type="button" onClick={() => onChange('time', TIME_PRESETS[1])} className={pill(mode === 'time')}>
+          time
         </button>
-      ))}
+        <button type="button" onClick={() => onChange('words', WORD_PRESETS[1])} className={pill(mode === 'words')}>
+          words
+        </button>
+      </div>
+      <div className="flex items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm">
+        {presets.map(preset => (
+          <button key={preset} type="button" onClick={() => onChange(mode, preset)} className={pill(!isCustom && value === preset)}>
+            {mode === 'words' ? preset : `${preset}s`}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => {
+            const fallback = CUSTOM_RANGE[mode].default;
+            setCustomText(String(fallback));
+            onChange(mode, fallback);
+          }}
+          className={pill(isCustom)}
+        >
+          custom
+        </button>
+        {isCustom && (
+          <input
+            type="number"
+            min={CUSTOM_RANGE[mode].min}
+            max={CUSTOM_RANGE[mode].max}
+            value={customText}
+            onChange={e => handleCustomTextChange(e.target.value)}
+            onBlur={handleCustomBlur}
+            autoFocus
+            placeholder={mode === 'words' ? 'words' : 'seconds'}
+            className="w-16 bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1 text-[var(--text-correct)] focus:outline-none focus:border-[var(--accent)]"
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -81,7 +156,8 @@ export default function Duel() {
   const { user, isConfigured } = useAuth();
   const { friends } = useFriends();
   const navigate = useNavigate();
-  const [wordCount, setWordCount] = useState<WordCount>(25);
+  const [mode, setMode] = useState<DuelMode>('words');
+  const [value, setValue] = useState(25);
   const [creating, setCreating] = useState(false);
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -106,11 +182,11 @@ export default function Duel() {
     if (!supabase || !user) return;
     const { data } = await supabase
       .from('duels')
-      .select('id, word_count')
+      .select('id, mode, value')
       .eq('opponent_id', user.id)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
-    setInvites((data ?? []).map(row => ({ id: row.id as string, wordCount: row.word_count as number })));
+    setInvites((data ?? []).map(row => ({ id: row.id as string, mode: row.mode as DuelMode, value: row.value as number })));
   }, [user]);
 
   useEffect(() => {
@@ -139,7 +215,7 @@ export default function Duel() {
     setError(null);
     const { data, error: insertError } = await supabase
       .from('duels')
-      .insert({ creator_id: user.id, word_count: wordCount, word_list: generateText(wordCount) })
+      .insert({ creator_id: user.id, mode, value, word_list: generateDuelWordList(mode, value) })
       .select('id')
       .single();
     setCreating(false);
@@ -162,8 +238,9 @@ export default function Duel() {
         creator_id: user.id,
         opponent_id: friendId,
         status: 'pending',
-        word_count: wordCount,
-        word_list: generateText(wordCount),
+        mode,
+        value,
+        word_list: generateDuelWordList(mode, value),
       })
       .select('id')
       .single();
@@ -181,8 +258,9 @@ export default function Duel() {
     setGuestError(null);
     const { data, error: rpcError } = await supabase
       .rpc('create_guest_duel', {
-        p_word_count: wordCount,
-        p_word_list: generateText(wordCount),
+        p_mode: mode,
+        p_value: value,
+        p_word_list: generateDuelWordList(mode, value),
         p_creator_name: guestName.trim(),
       })
       .single();
@@ -229,12 +307,12 @@ export default function Duel() {
         <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
           <h1 className="text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h1>
           <p className="text-[var(--text-muted)] text-sm mb-6">
-            {guestStep === 'pick-count' ? 'Pick a word count.' : "What's your name?"}
+            {guestStep === 'pick-count' ? 'Pick words or time.' : "What's your name?"}
           </p>
 
           {guestStep === 'pick-count' ? (
             <>
-              <WordCountPicker value={wordCount} onChange={setWordCount} />
+              <DuelSettingsPicker mode={mode} value={value} onChange={(m, v) => { setMode(m); setValue(v); }} />
               <button
                 type="button"
                 onClick={() => setGuestStep('enter-name')}
@@ -303,7 +381,7 @@ export default function Duel() {
                 to={`/duel/${invite.id}`}
                 className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm hover:border-[var(--accent)] transition-colors"
               >
-                <span className="text-[var(--text-secondary)]">{invite.wordCount}-word duel</span>
+                <span className="text-[var(--text-secondary)]">{formatDuelSetting(invite.mode, invite.value)} duel</span>
                 <span className="text-[var(--accent)] text-xs font-semibold">respond</span>
               </Link>
             ))}
@@ -313,9 +391,9 @@ export default function Duel() {
 
       <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
         <h1 className="text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h1>
-        <p className="text-[var(--text-muted)] text-sm mb-6">Pick a word count, then challenge a friend or share a link.</p>
+        <p className="text-[var(--text-muted)] text-sm mb-6">Pick words or time, then challenge a friend or share a link.</p>
 
-        <WordCountPicker value={wordCount} onChange={setWordCount} />
+        <DuelSettingsPicker mode={mode} value={value} onChange={(m, v) => { setMode(m); setValue(v); }} />
 
         {error && <p className="text-[var(--text-incorrect)] text-xs mb-3">{error}</p>}
 

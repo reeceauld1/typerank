@@ -553,7 +553,8 @@ create table public.duels (
   opponent_name text,
   creator_token uuid,
   opponent_token uuid,
-  word_count int not null,
+  value int not null,
+  mode text not null default 'words' check (mode in ('words', 'time')),
   word_list text not null,
   status text not null default 'open' check (status in ('open', 'pending', 'accepted', 'declined', 'cancelled')),
   creator_wpm int,
@@ -705,7 +706,7 @@ $$;
 
 grant execute on function public.cancel_duel_invite to authenticated;
 
-create or replace function public.create_guest_duel(p_word_count int, p_word_list text, p_creator_name text)
+create or replace function public.create_guest_duel(p_mode text, p_value int, p_word_list text, p_creator_name text)
 returns table(id uuid, creator_token uuid)
 language plpgsql
 security definer set search_path = public
@@ -717,9 +718,12 @@ begin
   if p_creator_name is null or length(trim(p_creator_name)) = 0 then
     raise exception 'name required';
   end if;
+  if p_mode not in ('words', 'time') then
+    raise exception 'invalid mode';
+  end if;
 
-  insert into public.duels (id, word_count, word_list, creator_name, creator_token, status)
-  values (v_id, p_word_count, p_word_list, trim(p_creator_name), v_token, 'open');
+  insert into public.duels (id, mode, value, word_list, creator_name, creator_token, status)
+  values (v_id, p_mode, p_value, p_word_list, trim(p_creator_name), v_token, 'open');
 
   return query select v_id, v_token;
 end;
@@ -850,7 +854,8 @@ declare
   v_opponent_id uuid;
   v_creator_name text;
   v_opponent_name text;
-  v_word_count int;
+  v_mode text;
+  v_value int;
   v_creator_wpm int;
   v_opponent_wpm int;
   v_creator_rematch boolean;
@@ -864,9 +869,9 @@ begin
     raise exception 'not authenticated';
   end if;
 
-  select creator_id, opponent_id, creator_name, opponent_name, word_count, creator_wpm, opponent_wpm,
+  select creator_id, opponent_id, creator_name, opponent_name, mode, value, creator_wpm, opponent_wpm,
          creator_rematch, opponent_rematch, rematch_duel_id
-  into v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_word_count, v_creator_wpm, v_opponent_wpm,
+  into v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_mode, v_value, v_creator_wpm, v_opponent_wpm,
        v_creator_rematch, v_opponent_rematch, v_rematch_duel_id
   from public.duels where id = p_duel_id for update;
 
@@ -892,9 +897,9 @@ begin
     v_new_opponent_token := case when v_opponent_id is null then gen_random_uuid() else null end;
 
     insert into public.duels
-      (creator_id, opponent_id, creator_name, opponent_name, creator_token, opponent_token, word_count, word_list, status)
+      (creator_id, opponent_id, creator_name, opponent_name, creator_token, opponent_token, mode, value, word_list, status)
     values
-      (v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_new_creator_token, v_new_opponent_token, v_word_count, p_word_list, 'accepted')
+      (v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_new_creator_token, v_new_opponent_token, v_mode, v_value, p_word_list, 'accepted')
     returning id into v_new_id;
 
     update public.duels
@@ -921,7 +926,8 @@ declare
   v_opponent_name text;
   v_creator_token uuid;
   v_opponent_token uuid;
-  v_word_count int;
+  v_mode text;
+  v_value int;
   v_creator_wpm int;
   v_opponent_wpm int;
   v_creator_rematch boolean;
@@ -931,9 +937,9 @@ declare
   v_new_creator_token uuid;
   v_new_opponent_token uuid;
 begin
-  select creator_id, opponent_id, creator_name, opponent_name, creator_token, opponent_token, word_count,
+  select creator_id, opponent_id, creator_name, opponent_name, creator_token, opponent_token, mode, value,
          creator_wpm, opponent_wpm, creator_rematch, opponent_rematch, rematch_duel_id
-  into v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_creator_token, v_opponent_token, v_word_count,
+  into v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_creator_token, v_opponent_token, v_mode, v_value,
        v_creator_wpm, v_opponent_wpm, v_creator_rematch, v_opponent_rematch, v_rematch_duel_id
   from public.duels where id = p_duel_id for update;
 
@@ -959,9 +965,9 @@ begin
     v_new_opponent_token := case when v_opponent_id is null then gen_random_uuid() else null end;
 
     insert into public.duels
-      (creator_id, opponent_id, creator_name, opponent_name, creator_token, opponent_token, word_count, word_list, status)
+      (creator_id, opponent_id, creator_name, opponent_name, creator_token, opponent_token, mode, value, word_list, status)
     values
-      (v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_new_creator_token, v_new_opponent_token, v_word_count, p_word_list, 'accepted')
+      (v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_new_creator_token, v_new_opponent_token, v_mode, v_value, p_word_list, 'accepted')
     returning id into v_new_id;
 
     update public.duels

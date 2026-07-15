@@ -1,7 +1,10 @@
 export type TestMode = 'time' | 'words';
 
-export type TimeMode = 10 | 30 | 60 | 'infinite';
-export type WordMode = 10 | 25 | 50;
+// A plain number covers both the presets (10/30/60, 10/25/50) and any
+// custom value the user types in — see xp.ts's WORD_PRESETS/TIME_PRESETS
+// for which numbers are "ranked" vs. unranked practice.
+export type TimeMode = number | 'infinite';
+export type WordMode = number;
 
 // Discriminated on `mode` so narrowing config.mode narrows config.value too
 // (e.g. words mode can never statically be 'infinite' — only time mode has

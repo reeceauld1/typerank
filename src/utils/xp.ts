@@ -1,5 +1,16 @@
 import type { TestResult, TestMode } from '../types/index.js';
 
+// The only "ranked" word/time values — anything else (a custom count or
+// duration, or solo's infinite mode) is unranked practice: half xp, and
+// saved under a 0 sentinel value so it can never touch a best-wpm/
+// leaderboard column. Used by both solo tests and duels.
+export const WORD_PRESETS = [10, 25, 50];
+export const TIME_PRESETS = [10, 30, 60];
+
+export function isRankedValue(mode: TestMode, value: number): boolean {
+  return mode === 'words' ? WORD_PRESETS.includes(value) : TIME_PRESETS.includes(value);
+}
+
 // XP calculation based on WPM and accuracy. xpMultiplier is an extra scaling
 // factor on top of the difficulty multiplier below — used to award infinite
 // (practice) mode half the usual XP, since value=0 there never matches any
