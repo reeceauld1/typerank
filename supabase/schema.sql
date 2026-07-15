@@ -537,15 +537,19 @@ alter table public.bug_reports enable row level security;
 create policy "insert bug reports" on public.bug_reports
   for insert to anon, authenticated with check (true);
 
--- 1v1 duels (see schema_013_duels.sql): a shared word list, a link to
--- share, async results. No live opponent progress and no friend-gating
--- yet — anyone with the link can join as the opponent.
+-- 1v1 duels (see schema_013_duels.sql, schema_014_duel_invites.sql): a
+-- shared word list, a link to share, async results, plus friend-targeted
+-- invites with an explicit accept/decline step. status: 'open' (link
+-- share, no opponent yet), 'pending' (friend invited, awaiting response),
+-- 'accepted' (ready to play / in progress), 'declined'. No live opponent
+-- progress yet, and no per-friend win/loss tally yet.
 create table public.duels (
   id uuid primary key default gen_random_uuid(),
   creator_id uuid not null references auth.users (id) on delete cascade,
   opponent_id uuid references auth.users (id) on delete cascade,
   word_count int not null,
   word_list text not null,
+  status text not null default 'open' check (status in ('open', 'pending', 'accepted', 'declined')),
   creator_wpm int,
   creator_accuracy int,
   creator_raw_wpm int,
@@ -594,11 +598,70 @@ begin
     raise exception 'duel already has an opponent';
   end if;
 
-  update public.duels set opponent_id = v_user_id where id = p_duel_id;
+  update public.duels set opponent_id = v_user_id, status = 'accepted' where id = p_duel_id;
 end;
 $$;
 
 grant execute on function public.join_duel to authenticated;
+
+create or replace function public.accept_duel_invite(p_duel_id uuid)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_opponent_id uuid;
+  v_status text;
+begin
+  if v_user_id is null then
+    raise exception 'not authenticated';
+  end if;
+
+  select opponent_id, status into v_opponent_id, v_status
+  from public.duels where id = p_duel_id for update;
+
+  if v_opponent_id is null then
+    raise exception 'duel not found';
+  end if;
+  if v_opponent_id != v_user_id then
+    raise exception 'not your invite';
+  end if;
+  if v_status != 'pending' then
+    raise exception 'invite is no longer pending';
+  end if;
+
+  update public.duels set status = 'accepted' where id = p_duel_id;
+end;
+$$;
+
+grant execute on function public.accept_duel_invite to authenticated;
+
+create or replace function public.decline_duel_invite(p_duel_id uuid)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_opponent_id uuid;
+begin
+  if v_user_id is null then
+    raise exception 'not authenticated';
+  end if;
+
+  select opponent_id into v_opponent_id
+  from public.duels where id = p_duel_id for update;
+
+  if v_opponent_id is null or v_opponent_id != v_user_id then
+    raise exception 'not your invite';
+  end if;
+
+  update public.duels set status = 'declined' where id = p_duel_id and status = 'pending';
+end;
+$$;
+
+grant execute on function public.decline_duel_invite to authenticated;
 
 create or replace function public.submit_duel_result(
   p_duel_id uuid,

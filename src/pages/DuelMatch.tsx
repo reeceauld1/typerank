@@ -8,12 +8,15 @@ import TypingTest from '../components/TypingTest.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
 
+type DuelStatus = 'open' | 'pending' | 'accepted' | 'declined';
+
 interface DuelRow {
   id: string;
   creator_id: string;
   opponent_id: string | null;
   word_count: number;
   word_list: string;
+  status: DuelStatus;
   creator_wpm: number | null;
   creator_accuracy: number | null;
   creator_raw_wpm: number | null;
@@ -78,8 +81,8 @@ export default function DuelMatch() {
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState<Record<string, PlayerInfo>>({});
-  const [joining, setJoining] = useState(false);
-  const [joinError, setJoinError] = useState<string | null>(null);
+  const [responding, setResponding] = useState(false);
+  const [respondError, setRespondError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const loadPlayers = useCallback(async (ids: string[]) => {
@@ -135,14 +138,35 @@ export default function DuelMatch() {
 
   const handleJoin = async () => {
     if (!supabase || !id) return;
-    setJoining(true);
-    setJoinError(null);
+    setResponding(true);
+    setRespondError(null);
     const { error } = await supabase.rpc('join_duel', { p_duel_id: id });
-    setJoining(false);
+    setResponding(false);
     if (error) {
-      setJoinError(error.message.includes('opponent') ? 'Someone already joined this duel.' : "Couldn't join — try again.");
+      setRespondError(error.message.includes('opponent') ? 'Someone already joined this duel.' : "Couldn't join — try again.");
       return;
     }
+    await loadDuel();
+  };
+
+  const handleAcceptInvite = async () => {
+    if (!supabase || !id) return;
+    setResponding(true);
+    setRespondError(null);
+    const { error } = await supabase.rpc('accept_duel_invite', { p_duel_id: id });
+    setResponding(false);
+    if (error) {
+      setRespondError("Couldn't accept — try again.");
+      return;
+    }
+    await loadDuel();
+  };
+
+  const handleDeclineInvite = async () => {
+    if (!supabase || !id) return;
+    setResponding(true);
+    await supabase.rpc('decline_duel_invite', { p_duel_id: id });
+    setResponding(false);
     await loadDuel();
   };
 
@@ -200,10 +224,29 @@ export default function DuelMatch() {
   const isOpponent = user.id === duel.opponent_id;
   const isParticipant = isCreator || isOpponent;
 
-  if (!isParticipant && duel.opponent_id) {
+  // Not part of this duel at all.
+  if (!isParticipant) {
+    if (duel.status === 'open' && !duel.opponent_id) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
+          <p className="text-[var(--text-correct)] font-semibold">
+            {players[duel.creator_id]?.username ?? 'someone'} challenged you to a {duel.word_count}-word duel.
+          </p>
+          {respondError && <p className="text-[var(--text-incorrect)] text-sm">{respondError}</p>}
+          <button
+            type="button"
+            disabled={responding}
+            onClick={() => void handleJoin()}
+            className="bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+          >
+            {responding ? '...' : 'accept duel'}
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 pb-16">
-        <p className="text-[var(--text-correct)] font-semibold">This duel is full</p>
+        <p className="text-[var(--text-correct)] font-semibold">This duel isn't available</p>
         <Link to="/duel" className="text-sm text-[var(--accent)] hover:underline">
           start your own
         </Link>
@@ -211,21 +254,46 @@ export default function DuelMatch() {
     );
   }
 
-  if (!isParticipant) {
+  // Invited by a friend, haven't responded yet.
+  if (isOpponent && duel.status === 'pending') {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
         <p className="text-[var(--text-correct)] font-semibold">
           {players[duel.creator_id]?.username ?? 'someone'} challenged you to a {duel.word_count}-word duel.
         </p>
-        {joinError && <p className="text-[var(--text-incorrect)] text-sm">{joinError}</p>}
-        <button
-          type="button"
-          disabled={joining}
-          onClick={() => void handleJoin()}
-          className="bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
-        >
-          {joining ? '...' : 'accept duel'}
-        </button>
+        {respondError && <p className="text-[var(--text-incorrect)] text-sm">{respondError}</p>}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={responding}
+            onClick={() => void handleDeclineInvite()}
+            className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+          >
+            decline
+          </button>
+          <button
+            type="button"
+            disabled={responding}
+            onClick={() => void handleAcceptInvite()}
+            className="bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+          >
+            {responding ? '...' : 'accept'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Creator revisiting after the invite was declined.
+  if (isCreator && duel.status === 'declined') {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 pb-16">
+        <p className="text-[var(--text-correct)] font-semibold">
+          {players[duel.opponent_id ?? '']?.username ?? 'they'} declined this duel.
+        </p>
+        <Link to="/duel" className="text-sm text-[var(--accent)] hover:underline">
+          start a new one
+        </Link>
       </div>
     );
   }
