@@ -7,6 +7,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { getRankTier, PLACEMENT_GAMES } from '../utils/rank.js';
 import RankBadge from '../components/RankBadge.js';
 import AuthForm from '../components/AuthForm.js';
+import NameColorPicker from '../components/NameColorPicker.js';
 
 // How often the waiting client re-attempts try_match_ranked while queued —
 // this is also what makes a lone waiting player eventually get matched once
@@ -29,6 +30,7 @@ export default function Ranked() {
   const [searchStart, setSearchStart] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [showRewards, setShowRewards] = useState(false);
 
   // Read inside the unmount cleanup below, since that closure only ever
   // sees the values from the render it was created in otherwise.
@@ -153,6 +155,16 @@ export default function Ranked() {
         30-second time test, one fixed format for everyone. Win to gain elo, lose to drop — closer opponents move your
         rating more than lopsided matches.
       </p>
+
+      <button
+        type="button"
+        onClick={() => setShowRewards(true)}
+        className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
+      >
+        rewards
+      </button>
+
+      {showRewards && <NameColorPicker onClose={() => setShowRewards(false)} />}
     </div>
   );
 }
