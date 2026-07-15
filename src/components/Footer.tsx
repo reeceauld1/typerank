@@ -36,6 +36,15 @@ function TikTokIcon() {
   );
 }
 
+function BugIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <rect x="6" y="7" width="12" height="12" rx="6" />
+      <path d="M12 7V4M9 4l1.5 1.5M15 4l-1.5 1.5M4 11h2M18 11h2M4 15h2M18 15h2M8 19l-1.5 1.5M16 19l1.5 1.5" />
+    </svg>
+  );
+}
+
 function PadlockIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -67,6 +76,10 @@ export default function Footer() {
           <EmailIcon />
           contact
         </a>
+        <Link to="/report-bug" className={LINK_CLASS}>
+          <BugIcon />
+          report a bug
+        </Link>
         <Link to="/privacy" className={LINK_CLASS}>
           <PadlockIcon />
           privacy

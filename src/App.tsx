@@ -15,6 +15,7 @@ import Settings from './pages/Settings.js';
 import Leaderboard from './pages/Leaderboard.js';
 import ResetPassword from './pages/ResetPassword.js';
 import PrivacyPolicy from './pages/PrivacyPolicy.js';
+import BugReport from './pages/BugReport.js';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
                   <Route path="/leaderboard" element={<Leaderboard />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/report-bug" element={<BugReport />} />
                 </Routes>
                 <Footer />
                 <CookieConsentBanner />
