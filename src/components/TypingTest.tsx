@@ -47,7 +47,7 @@ export default function TypingTest({
   onTypingActiveChange,
 }: TypingTestProps) {
   const { addTestResult } = useUser();
-  const { keyboardLayout, spaceStyle } = useSettings();
+  const { keyboardLayout, spaceStyle, wordListSize } = useSettings();
   const isInfinite = config.mode === 'time' && config.value === 'infinite';
   // Ranked = one of the fixed preset values (10/25/50 words, 10/30/60s) —
   // anything else (a custom count/duration, or infinite) is unranked
@@ -63,7 +63,7 @@ export default function TypingTest({
   // Home.tsx remounts this component (via a `key` bump) on every config
   // change, so `config` is effectively fixed for this instance's lifetime —
   // safe to seed the initial text lazily instead of via a mount effect.
-  const [text, setText] = useState(() => fixedText ?? generateText(config.mode === 'words' ? config.value : 100));
+  const [text, setText] = useState(() => fixedText ?? generateText(config.mode === 'words' ? config.value : 100, wordListSize));
   const [input, setInput] = useState('');
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isActive, setIsActive] = useState(false);
@@ -91,7 +91,7 @@ export default function TypingTest({
   const finishTestRef = useRef<() => void>(() => {});
 
   const resetTest = () => {
-    setText(fixedText ?? generateText(config.mode === 'words' ? config.value : 100));
+    setText(fixedText ?? generateText(config.mode === 'words' ? config.value : 100, wordListSize));
     setInput('');
     setStartTime(null);
     setIsActive(false);
@@ -379,9 +379,9 @@ export default function TypingTest({
     if (fixedText || config.mode !== 'time' || !isActive) return;
     if (words.length - currentWordIndex < 30) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setText(prev => `${prev} ${generateText(60)}`);
+      setText(prev => `${prev} ${generateText(60, wordListSize)}`);
     }
-  }, [fixedText, config.mode, isActive, currentWordIndex, words.length]);
+  }, [fixedText, config.mode, isActive, currentWordIndex, words.length, wordListSize]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { KeyboardLayoutId } from '../utils/keyboardLayouts.js';
 import { FONT_OPTIONS, getFont } from '../utils/fonts.js';
+import type { WordListSize } from '../utils/words.js';
 import type { SpaceStyle, Theme } from './SettingsContextBase.js';
 import { SettingsContext } from './SettingsContextBase.js';
 
@@ -9,6 +10,7 @@ const KEYBOARD_LAYOUT_KEY = 'keyboardLayout';
 const THEME_KEY = 'theme';
 const FONT_KEY = 'font';
 const SPACE_STYLE_KEY = 'spaceStyle';
+const WORD_LIST_SIZE_KEY = 'wordListSize';
 
 function loadShowKeyboard(): boolean {
   try {
@@ -58,6 +60,16 @@ function loadSpaceStyle(): SpaceStyle {
   return 'space';
 }
 
+function loadWordListSize(): WordListSize {
+  try {
+    const saved = localStorage.getItem(WORD_LIST_SIZE_KEY);
+    if (saved === '300' || saved === '1000' || saved === '2500') return saved;
+  } catch {
+    // ignore malformed/unavailable storage, fall back to the default below
+  }
+  return '300';
+}
+
 function systemPrefersLight(): boolean {
   try {
     return window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -76,6 +88,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(loadTheme);
   const [font, setFont] = useState<string>(loadFont);
   const [spaceStyle, setSpaceStyle] = useState<SpaceStyle>(loadSpaceStyle);
+  const [wordListSize, setWordListSize] = useState<WordListSize>(loadWordListSize);
 
   useEffect(() => {
     localStorage.setItem(SHOW_KEYBOARD_KEY, String(showKeyboard));
@@ -97,6 +110,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem(SPACE_STYLE_KEY, spaceStyle);
   }, [spaceStyle]);
+
+  useEffect(() => {
+    localStorage.setItem(WORD_LIST_SIZE_KEY, wordListSize);
+  }, [wordListSize]);
 
   useEffect(() => {
     const apply = () => {
@@ -126,6 +143,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setFont,
         spaceStyle,
         setSpaceStyle,
+        wordListSize,
+        setWordListSize,
       }}
     >
       {children}

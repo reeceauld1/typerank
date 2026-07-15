@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useSettings } from '../hooks/useSettings.js';
 import { KEYBOARD_LAYOUT_OPTIONS } from '../utils/keyboardLayouts.js';
 import { FONT_OPTIONS } from '../utils/fonts.js';
+import { WORD_LIST_OPTIONS } from '../utils/words.js';
 import type { SpaceStyle } from '../context/SettingsContextBase.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
@@ -50,6 +51,8 @@ export default function Settings() {
     setFont,
     spaceStyle,
     setSpaceStyle,
+    wordListSize,
+    setWordListSize,
   } = useSettings();
 
   return (
@@ -132,6 +135,28 @@ export default function Settings() {
                 onClick={() => setSpaceStyle(option.id)}
                 className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
                   spaceStyle === option.id
+                    ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
+          <p className="text-[var(--text-correct)] font-medium">word list</p>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5 mb-4">
+            how many distinct words to draw from during tests — a larger list means more variety and fewer repeats.
+          </p>
+          <div className="flex flex-wrap items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
+            {WORD_LIST_OPTIONS.map(option => (
+              <button
+                key={option.id}
+                onClick={() => setWordListSize(option.id)}
+                className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                  wordListSize === option.id
                     ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                 }`}
