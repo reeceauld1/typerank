@@ -173,3 +173,91 @@ body.is-typing * {
     --legend-angle: 360deg;
   }
 }
+
+/* Metallic shine sweep, applied to every unlocked rank tier except
+   Grandmaster (see UsernameText.tsx — its own rainbow animation already
+   reads as "shiny" without this on top). A moving white highlight band
+   clipped to a duplicate copy of the username text via a pseudo-element,
+   since background-clip:text needs the *element's own* color to be
+   transparent for its gradient to show through — doing that on the real
+   element would hide the solid tier color underneath instead of layering a
+   highlight over it. The duplicate is content: attr(data-shine-text),
+   positioned exactly over the original with inset: 0. */
+.name-shine {
+  position: relative;
+  display: inline-block;
+}
+
+.name-shine::after {
+  content: attr(data-shine-text);
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.7) 48%, rgba(255, 255, 255, 0.7) 52%, transparent 65%);
+  background-size: 250% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: name-shine-sweep 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes name-shine-sweep {
+  0% {
+    background-position: 150% 0;
+  }
+  100% {
+    background-position: -150% 0;
+  }
+}
+
+/* Grandmaster's animated username color. Same six-stop palette as
+   legend-border above for a consistent "top tier" look. background-clip:
+   text paints the gradient only where the text glyphs are, with the text's
+   own color made transparent so the gradient shows through — the
+   -webkit- prefix is still needed for Safari. The glow is a second,
+   independent animation cycling text-shadow through the same stops (a true
+   conic-gradient spin, like legend-border's, doesn't apply to text-shadow —
+   this is the closest equivalent: a glow that keeps changing color rather
+   than sitting fixed on one, so it reads as "spinning" alongside the
+   gradient-shift on the text fill itself). Ordinary properties like
+   text-shadow interpolate their color natively, unlike legend-border's
+   --legend-angle custom property, which needed the @property registration
+   above to be animatable at all. */
+.rainbow-name {
+  background: linear-gradient(90deg, #ff5f6d, #ffc371, #47e0a0, #5b9bd9, #a55bd9, #ff5f6d);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation:
+    rainbow-name-shift 3s linear infinite,
+    rainbow-glow-cycle 3s linear infinite;
+}
+
+@keyframes rainbow-name-shift {
+  to {
+    background-position: -200% center;
+  }
+}
+
+@keyframes rainbow-glow-cycle {
+  0% {
+    text-shadow: 0 0 8px #ff5f6d80;
+  }
+  16.66% {
+    text-shadow: 0 0 8px #ffc37180;
+  }
+  33.33% {
+    text-shadow: 0 0 8px #47e0a080;
+  }
+  50% {
+    text-shadow: 0 0 8px #5b9bd980;
+  }
+  66.66% {
+    text-shadow: 0 0 8px #a55bd980;
+  }
+  100% {
+    text-shadow: 0 0 8px #ff5f6d80;
+  }
+}

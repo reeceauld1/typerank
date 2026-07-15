@@ -29,6 +29,7 @@ const defaultStats: UserStats = {
   equippedBorder: 'none',
   equippedAccentColor: 'blue',
   customAccentHex: null,
+  equippedNameColor: 'default',
   elo: 1000,
   peakElo: 1000,
   rankedGamesPlayed: 0,
@@ -282,6 +283,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const setEquippedNameColor = async (colorId: string): Promise<boolean> => {
+    if (!isAccountSynced || !user || !supabase) return false;
+
+    const { error } = await supabase.rpc('set_equipped_name_color', { p_color_id: colorId });
+    if (error) {
+      console.error('setEquippedNameColor failed:', error.message);
+      return false;
+    }
+    await refreshRemoteStats();
+    return true;
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -300,6 +313,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         claimWeeklyChallengeBonus,
         setEquippedCosmetics,
         setEquippedAccentColor,
+        setEquippedNameColor,
         // Ranked matches call submit_ranked_result directly (it updates
         // both players' elo server-side, unlike addTestResult which only
         // ever touches the caller's own row) — this just exposes the same

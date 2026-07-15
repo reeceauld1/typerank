@@ -6,7 +6,7 @@ const TIER_COLORS: Record<string, string> = {
   gold: '#ffd24a',
   platinum: '#7dd3fc',
   diamond: '#3b9ee0',
-  master: '#a855f7',
+  master: '#b967ff',
   grandmaster: '#f43f5e',
 };
 

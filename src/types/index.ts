@@ -48,6 +48,7 @@ export interface UserStats {
   equippedBorder: string;
   equippedAccentColor: string;
   customAccentHex: string | null;
+  equippedNameColor: string;
   elo: number;
   peakElo: number;
   rankedGamesPlayed: number;

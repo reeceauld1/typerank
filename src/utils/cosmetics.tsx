@@ -343,66 +343,91 @@ export const BORDER_CATALOG: BorderDef[] = [
     progress: stats => ratio(stats.level, 100),
     className: 'border-transparent legend-border',
   },
-  // --- ranked tiers (peakElo, not the level-based borders above — these
-  // reward a separate track, so they intentionally don't reuse the ids or
-  // display names "bronze"/"silver"/etc. that already exist above) ---
+];
+
+// Ranked-tier rewards are a username color (not a border — see
+// NAME_COLOR_CATALOG below), gated on peakElo rather than the level-gated
+// borders above.
+export interface NameColorDef {
+  id: string;
+  name: string;
+  description: string;
+  // Applied directly to the rendered username text (see UsernameText.tsx).
+  className: string;
+  isUnlocked: (stats: UserStats) => boolean;
+  progress: (stats: UserStats) => number;
+}
+
+export const NAME_COLOR_CATALOG: NameColorDef[] = [
   {
-    id: 'rank_bronze',
-    name: 'Ranked Bronze',
+    id: 'default',
+    name: 'Default',
+    description: 'Everyone starts here.',
+    isUnlocked: () => true,
+    progress: () => 1,
+    className: 'text-[var(--text-correct)]',
+  },
+  {
+    id: 'bronze',
+    name: 'Bronze',
     description: 'Reach Bronze rank.',
     isUnlocked: stats => reachedRank(stats, 'bronze'),
     progress: stats => ratio(stats.peakElo, rankMinElo('bronze')),
-    className: 'border-[#b08d57] shadow-[0_0_2px_0px_#b08d5799]',
+    className: 'text-[#b08d57]',
   },
   {
-    id: 'rank_silver',
-    name: 'Ranked Silver',
+    id: 'silver',
+    name: 'Silver',
     description: 'Reach Silver rank.',
     isUnlocked: stats => reachedRank(stats, 'silver'),
     progress: stats => ratio(stats.peakElo, rankMinElo('silver')),
-    className: 'border-[#c7ccd1] shadow-[0_0_4px_0px_#c7ccd199]',
+    className: 'text-[#c7ccd1]',
   },
   {
-    id: 'rank_gold',
-    name: 'Ranked Gold',
+    id: 'gold',
+    name: 'Gold',
     description: 'Reach Gold rank.',
     isUnlocked: stats => reachedRank(stats, 'gold'),
     progress: stats => ratio(stats.peakElo, rankMinElo('gold')),
-    className: 'border-[#ffd24a] shadow-[0_0_6px_0px_#ffd24aaa]',
+    className: 'text-[#ffd24a]',
   },
   {
-    id: 'rank_platinum',
-    name: 'Ranked Platinum',
+    id: 'platinum',
+    name: 'Platinum',
     description: 'Reach Platinum rank.',
     isUnlocked: stats => reachedRank(stats, 'platinum'),
     progress: stats => ratio(stats.peakElo, rankMinElo('platinum')),
-    className: 'border-[#7dd3fc] shadow-[0_0_8px_0px_#7dd3fcaa]',
+    className: 'text-[#7dd3fc]',
   },
   {
-    id: 'rank_diamond',
-    name: 'Ranked Diamond',
+    id: 'diamond',
+    name: 'Diamond',
     description: 'Reach Diamond rank.',
     isUnlocked: stats => reachedRank(stats, 'diamond'),
     progress: stats => ratio(stats.peakElo, rankMinElo('diamond')),
-    className: 'border-[#3b9ee0] shadow-[0_0_10px_0px_#3b9ee0bb]',
+    className: 'text-[#3b9ee0]',
   },
   {
-    id: 'rank_master',
-    name: 'Ranked Master',
+    id: 'master',
+    name: 'Master',
     description: 'Reach Master rank.',
     isUnlocked: stats => reachedRank(stats, 'master'),
     progress: stats => ratio(stats.peakElo, rankMinElo('master')),
-    className: 'border-[#a855f7] shadow-[0_0_12px_0px_#a855f7cc]',
+    className: 'text-[#b967ff]',
   },
   {
-    id: 'rank_grandmaster',
-    name: 'Ranked Grandmaster',
+    id: 'grandmaster',
+    name: 'Grandmaster',
     description: 'Reach Grandmaster rank.',
     isUnlocked: stats => reachedRank(stats, 'grandmaster'),
     progress: stats => ratio(stats.peakElo, rankMinElo('grandmaster')),
-    className: 'border-[#f43f5e] shadow-[0_0_14px_0px_#f43f5ecc]',
+    className: 'rainbow-name',
   },
 ];
+
+export function getNameColor(id: string): NameColorDef {
+  return NAME_COLOR_CATALOG.find(c => c.id === id) ?? NAME_COLOR_CATALOG[0];
+}
 
 export function getAvatar(id: string): AvatarDef {
   return AVATAR_CATALOG.find(a => a.id === id) ?? AVATAR_CATALOG[0];

@@ -263,12 +263,3 @@ end;
 $$;
 
 grant execute on function public.submit_ranked_result to authenticated;
-
--- Rank-tier reward borders. Named/id'd distinctly from the existing
--- level-gated bronze/silver/gold/platinum/diamond/amethyst/legend borders
--- (see schema_005_cosmetics.sql) so the two reward tracks never collide —
--- unlock logic (gated on peak_elo) lives in src/utils/cosmetics.tsx, same
--- as every other cosmetic here.
-insert into public.border_catalog (id) values
-  ('rank_bronze'), ('rank_silver'), ('rank_gold'), ('rank_platinum'),
-  ('rank_diamond'), ('rank_master'), ('rank_grandmaster');

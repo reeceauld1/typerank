@@ -4,10 +4,20 @@ import ProfileStats from '../components/ProfileStats.js';
 import AuthForm from '../components/AuthForm.js';
 import Avatar from '../components/Avatar.js';
 import CosmeticsPicker from '../components/CosmeticsPicker.js';
+import UsernameText from '../components/UsernameText.js';
+import NameColorPicker from '../components/NameColorPicker.js';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useUser } from '../hooks/useUser.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+      <path d="M16.5 3.5a1.9 1.9 0 0 1 2.7 2.7L7 18.4l-3.5.8.8-3.5L16.5 3.5Z" />
+    </svg>
+  );
+}
 
 function DeleteAccountModal({
   deleting,
@@ -61,6 +71,7 @@ export default function Profile() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showNameColorPicker, setShowNameColorPicker] = useState(false);
 
   const handleDeleteAccount = async () => {
     if (!supabase) return;
@@ -94,9 +105,22 @@ export default function Profile() {
             <div className="flex items-center justify-between bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
               <div className="flex items-center gap-4">
                 <Avatar avatarId={stats.equippedAvatar} borderId={stats.equippedBorder} size="md" />
-                <p className="text-[var(--text-correct)] font-semibold">
-                  {(user.user_metadata?.username as string | undefined) ?? 'account'}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p>
+                    <UsernameText
+                      username={(user.user_metadata?.username as string | undefined) ?? 'account'}
+                      colorId={stats.equippedNameColor}
+                    />
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowNameColorPicker(true)}
+                    aria-label="Change name color"
+                    className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                  >
+                    <PencilIcon />
+                  </button>
+                </div>
               </div>
               <button
                 onClick={() => signOut()}
@@ -149,6 +173,8 @@ export default function Profile() {
               }}
             />
           )}
+
+          {showNameColorPicker && <NameColorPicker onClose={() => setShowNameColorPicker(false)} />}
         </>
       ) : isConfigured ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16">
