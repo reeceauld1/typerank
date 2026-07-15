@@ -34,6 +34,48 @@ function WordCountPicker({ value, onChange }: { value: WordCount; onChange: (cou
   );
 }
 
+function LinkPopup({
+  link,
+  copied,
+  onCopy,
+  onClose,
+}: {
+  link: string;
+  copied: boolean;
+  onCopy: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+      <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
+        <h2 className="text-lg font-semibold text-[var(--text-correct)] mb-1">duel link ready</h2>
+        <p className="text-[var(--text-muted)] text-sm mb-4">Send this to whoever you want to race.</p>
+        <div className="flex items-center gap-2 mb-4">
+          <input
+            readOnly
+            value={link}
+            className="flex-1 min-w-0 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-[var(--text-correct)] truncate"
+          />
+          <button
+            type="button"
+            onClick={onCopy}
+            className="shrink-0 text-sm border border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-soft)] px-3 py-2 rounded-lg transition-colors cursor-pointer"
+          >
+            {copied ? 'copied' : 'copy'}
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+        >
+          close
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Duel() {
   useDocumentTitle('duel');
   const { user, isConfigured } = useAuth();
@@ -46,15 +88,19 @@ export default function Duel() {
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState(true);
 
-  // Guest (no account) creation flow: pick word count -> enter name -> a
-  // popup with the link to share, closing which takes you into the duel.
+  // Shared by both the account and guest "create a link" flows — a popup
+  // with the link, a copy button, and a close button that takes you into
+  // the duel.
+  const [pendingDuelId, setPendingDuelId] = useState<string | null>(null);
+  const [pendingDuelLink, setPendingDuelLink] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  // Guest (no account) creation flow: pick word count -> enter name -> the
+  // link popup above.
   const [guestStep, setGuestStep] = useState<'pick-count' | 'enter-name'>('pick-count');
   const [guestName, setGuestName] = useState('');
   const [guestCreating, setGuestCreating] = useState(false);
   const [guestError, setGuestError] = useState<string | null>(null);
-  const [guestDuelId, setGuestDuelId] = useState<string | null>(null);
-  const [guestLink, setGuestLink] = useState<string | null>(null);
-  const [linkCopied, setLinkCopied] = useState(false);
 
   const loadInvites = useCallback(async () => {
     if (!supabase || !user) return;
@@ -101,7 +147,9 @@ export default function Duel() {
       setError("Couldn't create a duel — try again.");
       return;
     }
-    navigate(`/duel/${data.id as string}`);
+    const duelId = data.id as string;
+    setPendingDuelId(duelId);
+    setPendingDuelLink(`${window.location.origin}/duel/${duelId}`);
   };
 
   const handleInviteFriend = async (friendId: string) => {
@@ -149,15 +197,19 @@ export default function Duel() {
     } catch {
       // ignore unavailable storage
     }
-    setGuestDuelId(row.id);
-    setGuestLink(`${window.location.origin}/duel/${row.id}`);
+    setPendingDuelId(row.id);
+    setPendingDuelLink(`${window.location.origin}/duel/${row.id}`);
   };
 
-  const copyGuestLink = () => {
-    if (!guestLink) return;
-    void navigator.clipboard.writeText(guestLink);
+  const copyPendingLink = () => {
+    if (!pendingDuelLink) return;
+    void navigator.clipboard.writeText(pendingDuelLink);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  const closeLinkPopup = () => {
+    if (pendingDuelId) navigate(`/duel/${pendingDuelId}`);
   };
 
   if (!isConfigured) {
@@ -232,34 +284,8 @@ export default function Duel() {
           </p>
         </div>
 
-        {guestLink && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
-            <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
-              <h2 className="text-lg font-semibold text-[var(--text-correct)] mb-1">duel link ready</h2>
-              <p className="text-[var(--text-muted)] text-sm mb-4">Send this to whoever you want to race.</p>
-              <div className="flex items-center gap-2 mb-4">
-                <input
-                  readOnly
-                  value={guestLink}
-                  className="flex-1 min-w-0 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-[var(--text-correct)] truncate"
-                />
-                <button
-                  type="button"
-                  onClick={copyGuestLink}
-                  className="shrink-0 text-sm border border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-soft)] px-3 py-2 rounded-lg transition-colors cursor-pointer"
-                >
-                  {linkCopied ? 'copied' : 'copy'}
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => guestDuelId && navigate(`/duel/${guestDuelId}`)}
-                className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
-              >
-                close
-              </button>
-            </div>
-          </div>
+        {pendingDuelLink && (
+          <LinkPopup link={pendingDuelLink} copied={linkCopied} onCopy={copyPendingLink} onClose={closeLinkPopup} />
         )}
       </div>
     );
@@ -326,6 +352,10 @@ export default function Duel() {
           {creating ? '...' : 'or create a shareable link'}
         </button>
       </div>
+
+      {pendingDuelLink && (
+        <LinkPopup link={pendingDuelLink} copied={linkCopied} onCopy={copyPendingLink} onClose={closeLinkPopup} />
+      )}
     </div>
   );
 }

@@ -92,6 +92,12 @@ export default function DuelMatch() {
   const [opponentEverPresent, setOpponentEverPresent] = useState(false);
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [joinName, setJoinName] = useState('');
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReady(false);
+  }, [id]);
 
   const loadPlayers = useCallback(async (ids: string[]) => {
     if (!supabase || ids.length === 0) return;
@@ -159,12 +165,17 @@ export default function DuelMatch() {
     }
   }, [id]);
 
-  const isGuestDuel = Boolean(duel && duel.creator_id === null);
+  // creator_id/creator_token (and opponent_id/opponent_token) are mutually
+  // exclusive by construction — whichever path someone joined through sets
+  // only its own pair — so matching either one directly is sufficient;
+  // gating the token check behind "was this duel guest-created" was the
+  // bug: a guest opponent's token is valid regardless of how the creator
+  // joined.
   const isCreator = Boolean(
-    duel && ((user && user.id === duel.creator_id) || (isGuestDuel && guestToken && guestToken === duel.creator_token))
+    duel && ((user && user.id === duel.creator_id) || (guestToken && guestToken === duel.creator_token))
   );
   const isOpponent = Boolean(
-    duel && ((user && user.id === duel.opponent_id) || (isGuestDuel && guestToken && guestToken === duel.opponent_token))
+    duel && ((user && user.id === duel.opponent_id) || (guestToken && guestToken === duel.opponent_token))
   );
   const waitingForAccept = isCreator && duel?.status === 'pending';
   const haveSubmittedResult = Boolean(
@@ -282,8 +293,11 @@ export default function DuelMatch() {
   };
 
   const handleComplete = async (stats: { wpm: number; accuracy: number; rawWpm: number; timeElapsed: number }) => {
-    if (!supabase || !id) return;
-    if (isGuestDuel) {
+    if (!supabase || !id || !duel) return;
+    // Whether *my own* slot (whichever one I am) was filled via an account
+    // or a guest token — not whether the duel as a whole was guest-created.
+    const mySlotIsGuest = isCreator ? duel.creator_id === null : duel.opponent_id === null;
+    if (mySlotIsGuest) {
       if (!guestToken) return;
       await supabase.rpc('submit_guest_duel_result', {
         p_duel_id: id,
@@ -491,6 +505,22 @@ export default function DuelMatch() {
     );
   }
 
+  // I've created an open duel and no one has joined via the link yet.
+  if (opponentSlotOpen) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
+        <p className="text-[var(--text-correct)] font-semibold">Waiting for an opponent to join…</p>
+        <button
+          type="button"
+          onClick={copyLink}
+          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
+        >
+          {copied ? 'link copied' : 'copy duel link'}
+        </button>
+      </div>
+    );
+  }
+
   const myName = isCreator
     ? (players[duel.creator_id ?? '']?.username ?? duel.creator_name ?? 'you')
     : (players[duel.opponent_id ?? '']?.username ?? duel.opponent_name ?? 'you');
@@ -501,6 +531,24 @@ export default function DuelMatch() {
   const opponentAvatar = isCreator ? players[duel.opponent_id ?? ''] : players[duel.creator_id ?? ''];
   const myWpm = isCreator ? duel.creator_wpm : duel.opponent_wpm;
   const opponentWpm = isCreator ? duel.opponent_wpm : duel.creator_wpm;
+
+  // Both players are in — a shared moment to see who you're racing before
+  // the test starts, rather than the creator finding themselves mid-test
+  // alone the instant someone joins.
+  if (!haveSubmittedResult && !ready) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
+        <p className="text-[var(--text-correct)] font-semibold">You're racing {opponentName}.</p>
+        <button
+          type="button"
+          onClick={() => setReady(true)}
+          className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+        >
+          start
+        </button>
+      </div>
+    );
+  }
 
   if (!haveSubmittedResult) {
     return (
@@ -541,16 +589,6 @@ export default function DuelMatch() {
           winner={bothFinished && myWpm !== null && opponentWpm !== null && opponentWpm > myWpm}
         />
       </div>
-
-      {opponentSlotOpen && (
-        <button
-          type="button"
-          onClick={copyLink}
-          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
-        >
-          {copied ? 'link copied' : 'copy duel link'}
-        </button>
-      )}
 
       <Link
         to="/duel"
