@@ -3,7 +3,7 @@ import { useSettings } from '../hooks/useSettings.js';
 import { KEYBOARD_LAYOUT_OPTIONS } from '../utils/keyboardLayouts.js';
 import { FONT_OPTIONS } from '../utils/fonts.js';
 import { WORD_LIST_OPTIONS } from '../utils/words.js';
-import type { SpaceStyle } from '../context/SettingsContextBase.js';
+import type { KeyboardKeyColors, SpaceStyle } from '../context/SettingsContextBase.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) {
@@ -38,6 +38,12 @@ const SPACE_STYLE_OPTIONS: { id: SpaceStyle; label: string }[] = [
   { id: 'dot', label: 'Dot' },
 ];
 
+const KEYBOARD_KEY_COLORS_OPTIONS: { id: KeyboardKeyColors; label: string }[] = [
+  { id: 'default', label: 'Default' },
+  { id: 'colors', label: 'Colors' },
+  { id: 'colors-and-text', label: 'Colors and text' },
+];
+
 export default function Settings() {
   useDocumentTitle('settings');
   const {
@@ -45,6 +51,8 @@ export default function Settings() {
     setShowKeyboard,
     keyboardLayout,
     setKeyboardLayout,
+    keyboardKeyColors,
+    setKeyboardKeyColors,
     theme,
     setTheme,
     font,
@@ -94,10 +102,40 @@ export default function Settings() {
           <div>
             <p className="text-[var(--text-correct)] font-medium">show on-screen keyboard</p>
             <p className="text-[var(--text-muted)] text-sm mt-0.5">
-              displays a keyboard beneath the words on the main page that lights up as you type.
+              displays a keyboard beneath the words (on the main page and learn mode) that lights up as you type.
             </p>
           </div>
           <Toggle checked={showKeyboard} onChange={setShowKeyboard} />
+        </div>
+
+        <div
+          className={`hidden sm:block bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4 transition-opacity ${
+            showKeyboard ? '' : 'opacity-50'
+          }`}
+        >
+          <p className="text-[var(--text-correct)] font-medium">keyboard finger colors</p>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5 mb-4">
+            colors each key on the on-screen keyboard by which finger types it, matching a standard touch-typing
+            chart.
+          </p>
+          <div className="flex flex-wrap items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
+            {KEYBOARD_KEY_COLORS_OPTIONS.map(option => (
+              <button
+                key={option.id}
+                disabled={!showKeyboard}
+                onClick={() => setKeyboardKeyColors(option.id)}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  showKeyboard ? 'cursor-pointer' : 'cursor-not-allowed'
+                } ${
+                  keyboardKeyColors === option.id
+                    ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="hidden sm:block bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">

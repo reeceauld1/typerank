@@ -4,12 +4,15 @@ import type { WordListSize } from '../utils/words.js';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type SpaceStyle = 'space' | 'underscore' | 'dot';
+export type KeyboardKeyColors = 'default' | 'colors' | 'colors-and-text';
 
 export interface SettingsContextType {
   showKeyboard: boolean;
   setShowKeyboard: (value: boolean) => void;
   keyboardLayout: KeyboardLayoutId;
   setKeyboardLayout: (value: KeyboardLayoutId) => void;
+  keyboardKeyColors: KeyboardKeyColors;
+  setKeyboardKeyColors: (value: KeyboardKeyColors) => void;
   theme: Theme;
   setTheme: (value: Theme) => void;
   font: string;

@@ -25,6 +25,13 @@ interface TypingTestProps {
   }) => void;
   onRestart?: () => void;
   onTypingActiveChange?: (active: boolean) => void;
+  // Learn mode's per-letter accuracy tracking hooks in here — fired for
+  // every character as it's scored, alongside (not instead of) the
+  // aggregate totalKeystrokesRef/correctKeystrokesRef tallying below.
+  onCharacterResult?: (expected: string, typed: string, correct: boolean) => void;
+  // Learn mode always runs at 0 xp (not "half xp, practice"), so it hides
+  // the practice-mode caption below rather than showing a misleading one.
+  hidePracticeCaption?: boolean;
 }
 
 type CharStatus = 'pending' | 'correct' | 'incorrect' | 'extra' | 'missed';
@@ -45,6 +52,8 @@ export default function TypingTest({
   onComplete,
   onRestart,
   onTypingActiveChange,
+  onCharacterResult,
+  hidePracticeCaption,
 }: TypingTestProps) {
   const { addTestResult } = useUser();
   const { keyboardLayout, spaceStyle, wordListSize } = useSettings();
@@ -128,14 +137,18 @@ export default function TypingTest({
       const target = words[wIdx] ?? '';
       for (let m = cIdx; m < target.length; m++) {
         totalKeystrokesRef.current += 1;
+        onCharacterResult?.(target[m], '', false);
       }
       totalKeystrokesRef.current += 1;
       correctKeystrokesRef.current += 1;
     } else {
       totalKeystrokesRef.current += 1;
-      if (ch === words[wIdx]?.[cIdx]) {
+      const expected = words[wIdx]?.[cIdx];
+      const isCorrect = ch === expected;
+      if (isCorrect) {
         correctKeystrokesRef.current += 1;
       }
+      if (expected !== undefined) onCharacterResult?.(expected, ch, isCorrect);
     }
 
     const value = input + ch;
@@ -236,6 +249,7 @@ export default function TypingTest({
           const target = words[wIdx] ?? '';
           for (let m = cIdx; m < target.length; m++) {
             totalKeystrokesRef.current += 1;
+            onCharacterResult?.(target[m], '', false);
           }
           totalKeystrokesRef.current += 1;
           correctKeystrokesRef.current += 1;
@@ -243,9 +257,12 @@ export default function TypingTest({
           cIdx = 0;
         } else {
           totalKeystrokesRef.current += 1;
-          if (ch === words[wIdx]?.[cIdx]) {
+          const expected = words[wIdx]?.[cIdx];
+          const isCorrect = ch === expected;
+          if (isCorrect) {
             correctKeystrokesRef.current += 1;
           }
+          if (expected !== undefined) onCharacterResult?.(expected, ch, isCorrect);
           cIdx += 1;
         }
       }
@@ -601,7 +618,7 @@ export default function TypingTest({
                     <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">raw</div>
                   </div>
                 </div>
-                {!isRanked && (
+                {!isRanked && !hidePracticeCaption && (
                   <p className="text-center text-xs text-[var(--text-muted)] mb-4">practice mode — half xp, not ranked</p>
                 )}
                 <button

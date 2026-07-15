@@ -89,6 +89,15 @@ function RankedIcon() {
   );
 }
 
+function LearnIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M12 3 2 8l10 5 10-5-10-5Z" />
+      <path d="M6 10.5v5c0 1.5 2.5 3 6 3s6-1.5 6-3v-5" />
+    </svg>
+  );
+}
+
 function DuelIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -140,6 +149,7 @@ export default function Navbar() {
 
   const navItems: NavItem[] = [
     { to: '/', label: 'typing test', icon: KeyboardIcon, isActive: p => p === '/' },
+    { to: '/learn', label: 'learn', icon: LearnIcon, isActive: p => p === '/learn' },
     { to: '/challenges', label: 'challenges', icon: ChallengeIcon, isActive: p => p === '/challenges', requiresUser: true },
     { to: '/leaderboard', label: 'leaderboard', icon: TrophyIcon, isActive: p => p === '/leaderboard' },
     { to: '/ranked', label: 'ranked', icon: RankedIcon, isActive: p => p.startsWith('/ranked'), requiresUser: true },
@@ -186,6 +196,21 @@ export default function Navbar() {
           >
             <KeyboardIcon />
             {location.pathname === '/' && (
+              <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
+            )}
+          </Link>
+          <Link
+            to="/learn"
+            aria-label="Learn"
+            title="Learn"
+            className={`relative p-1 transition-colors ${
+              location.pathname === '/learn'
+                ? 'text-[var(--text-correct)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+            }`}
+          >
+            <LearnIcon />
+            {location.pathname === '/learn' && (
               <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
             )}
           </Link>
