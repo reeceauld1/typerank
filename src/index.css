@@ -224,12 +224,19 @@ body.is-typing * {
    text-shadow interpolate their color natively, unlike legend-border's
    --legend-angle custom property, which needed the @property registration
    above to be animatable at all. */
+/* padding+negative-margin below reserves room for the text-shadow glow's
+   8px blur so it isn't clipped when this lands inside a `truncate`
+   container elsewhere on the site (overflow: hidden clips at the padding
+   edge, not the glyph edge) — the negative margin cancels the padding back
+   out so it doesn't otherwise shift surrounding layout. */
 .rainbow-name {
   background: linear-gradient(90deg, #ff5f6d, #ffc371, #47e0a0, #5b9bd9, #a55bd9, #ff5f6d);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  padding: 8px;
+  margin: -8px;
   animation:
     rainbow-name-shift 3s linear infinite,
     rainbow-glow-cycle 3s linear infinite;
