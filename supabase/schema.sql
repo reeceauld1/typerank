@@ -1094,8 +1094,13 @@ begin
 
   delete from public.ranked_queue where last_seen_at < now() - interval '10 seconds';
 
-  select id into v_existing from public.ranked_matches
-    where status = 'in_progress' and (player1_id = v_user_id or player2_id = v_user_id) limit 1;
+  -- Table-qualified: `status` is also the name of this function's second
+  -- OUT column (returns table(match_id uuid, status text)), so a bare
+  -- `status` reference here is ambiguous between that and the column below
+  -- — PL/pgSQL doesn't catch this at CREATE FUNCTION time, only when the
+  -- function is actually called, raising "column reference is ambiguous".
+  select rm.id into v_existing from public.ranked_matches rm
+    where rm.status = 'in_progress' and (rm.player1_id = v_user_id or rm.player2_id = v_user_id) limit 1;
   if v_existing is not null then
     return query select v_existing, 'matched'::text;
     return;
