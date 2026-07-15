@@ -3,7 +3,7 @@ import { useSettings } from '../hooks/useSettings.js';
 import { KEYBOARD_LAYOUT_OPTIONS } from '../utils/keyboardLayouts.js';
 import { FONT_OPTIONS } from '../utils/fonts.js';
 import { WORD_LIST_OPTIONS } from '../utils/words.js';
-import type { KeyboardKeyColors, SpaceStyle } from '../context/SettingsContextBase.js';
+import type { KeyboardKeyColors, KeyboardPressStyle, SpaceStyle } from '../context/SettingsContextBase.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import Toggle from '../components/Toggle.js';
 
@@ -25,6 +25,12 @@ const KEYBOARD_KEY_COLORS_OPTIONS: { id: KeyboardKeyColors; label: string }[] = 
   { id: 'colors-and-text', label: 'Colors and text' },
 ];
 
+const KEYBOARD_PRESS_STYLE_OPTIONS: { id: KeyboardPressStyle; label: string }[] = [
+  { id: 'static', label: 'Static' },
+  { id: 'press', label: 'Press' },
+  { id: 'accent', label: 'Accent' },
+];
+
 export default function Settings() {
   useDocumentTitle('settings');
   const {
@@ -34,6 +40,8 @@ export default function Settings() {
     setKeyboardLayout,
     keyboardKeyColors,
     setKeyboardKeyColors,
+    keyboardPressStyle,
+    setKeyboardPressStyle,
     theme,
     setTheme,
     font,
@@ -79,14 +87,42 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center justify-between bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
-          <div>
-            <p className="text-[var(--text-correct)] font-medium">show on-screen keyboard</p>
-            <p className="text-[var(--text-muted)] text-sm mt-0.5">
-              displays a keyboard beneath the words (on the main page and learn mode) that lights up as you type.
-            </p>
+        <div className="hidden sm:block bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[var(--text-correct)] font-medium">show on-screen keyboard</p>
+              <p className="text-[var(--text-muted)] text-sm mt-0.5">
+                displays a keyboard beneath the words (on the main page and learn mode) that lights up as you type.
+              </p>
+            </div>
+            <Toggle checked={showKeyboard} onChange={setShowKeyboard} />
           </div>
-          <Toggle checked={showKeyboard} onChange={setShowKeyboard} />
+
+          <div className={`mt-4 pt-4 border-t border-[var(--border)] transition-opacity ${showKeyboard ? '' : 'opacity-50'}`}>
+            <p className="text-[var(--text-correct)] font-medium">key press style</p>
+            <p className="text-[var(--text-muted)] text-sm mt-0.5 mb-4">
+              "static" doesn't move or recolor, "press" only does the physical press animation, "accent" also flashes
+              the accent color.
+            </p>
+            <div className="flex flex-wrap items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
+              {KEYBOARD_PRESS_STYLE_OPTIONS.map(option => (
+                <button
+                  key={option.id}
+                  disabled={!showKeyboard}
+                  onClick={() => setKeyboardPressStyle(option.id)}
+                  className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                    showKeyboard ? 'cursor-pointer' : 'cursor-not-allowed'
+                  } ${
+                    keyboardPressStyle === option.id
+                      ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div
@@ -208,7 +244,12 @@ export default function Settings() {
           </div>
         </div>
 
-        <p className="text-center text-xs text-[var(--text-muted)] mt-2">created by yvern</p>
+        <p className="text-center text-xs text-[var(--text-muted)] mt-2">
+          created by{' '}
+          <Link to="/u/yvern" className="hover:text-[var(--accent)] transition-colors">
+            yvern
+          </Link>
+        </p>
       </div>
     </div>
   );

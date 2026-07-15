@@ -12,6 +12,13 @@ const CUSTOM_RANGE: Record<TestConfig['mode'], { min: number; max: number; defau
   time: { min: 5, max: 600, default: 90 },
 };
 
+// Switching mode carries the current preset across to its counterpart
+// (time10 <-> words10, time30 <-> words25, time60 <-> words50) instead of
+// always resetting to a fixed default — 'infinite' and custom values have
+// no natural counterpart, so those fall back to the old fixed default.
+const TIME_TO_WORDS: Partial<Record<number, WordMode>> = { 10: 10, 30: 25, 60: 50 };
+const WORDS_TO_TIME: Partial<Record<number, TimeMode>> = { 10: 10, 25: 30, 50: 60 };
+
 function clampCustom(mode: TestConfig['mode'], n: number): number {
   const { min, max, default: fallback } = CUSTOM_RANGE[mode];
   if (!Number.isFinite(n) || n <= 0) return fallback;
@@ -65,10 +72,26 @@ export default function ModeSelector({ config, onChange }: ModeSelectorProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-2 py-2 text-xs">
       <div className="flex items-center justify-center gap-1">
-        <button onClick={() => onChange({ mode: 'time', value: config.mode === 'time' ? config.value : 30 })} className={pill(config.mode === 'time')}>
+        <button
+          onClick={() =>
+            onChange({
+              mode: 'time',
+              value: config.mode === 'time' ? config.value : (WORDS_TO_TIME[config.value] ?? 30),
+            })
+          }
+          className={pill(config.mode === 'time')}
+        >
           time
         </button>
-        <button onClick={() => onChange({ mode: 'words', value: config.mode === 'words' ? config.value : 25 })} className={pill(config.mode === 'words')}>
+        <button
+          onClick={() =>
+            onChange({
+              mode: 'words',
+              value: config.mode === 'words' ? config.value : (TIME_TO_WORDS[config.value as number] ?? 25),
+            })
+          }
+          className={pill(config.mode === 'words')}
+        >
           words
         </button>
       </div>

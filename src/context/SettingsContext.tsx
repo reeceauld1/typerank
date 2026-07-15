@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import type { KeyboardLayoutId } from '../utils/keyboardLayouts.js';
 import { FONT_OPTIONS, getFont } from '../utils/fonts.js';
 import type { WordListSize } from '../utils/words.js';
-import type { KeyboardKeyColors, SpaceStyle, Theme } from './SettingsContextBase.js';
+import type { KeyboardKeyColors, KeyboardPressStyle, SpaceStyle, Theme } from './SettingsContextBase.js';
 import { SettingsContext } from './SettingsContextBase.js';
 
 const SHOW_KEYBOARD_KEY = 'showKeyboard';
 const KEYBOARD_LAYOUT_KEY = 'keyboardLayout';
 const KEYBOARD_KEY_COLORS_KEY = 'keyboardKeyColors';
+const KEYBOARD_PRESS_STYLE_KEY = 'keyboardPressStyle';
 const THEME_KEY = 'theme';
 const FONT_KEY = 'font';
 const SPACE_STYLE_KEY = 'spaceStyle';
@@ -39,6 +40,16 @@ function loadKeyboardKeyColors(): KeyboardKeyColors {
     // ignore malformed/unavailable storage, fall back to the default below
   }
   return 'default';
+}
+
+function loadKeyboardPressStyle(): KeyboardPressStyle {
+  try {
+    const saved = localStorage.getItem(KEYBOARD_PRESS_STYLE_KEY);
+    if (saved === 'static' || saved === 'press' || saved === 'accent') return saved;
+  } catch {
+    // ignore malformed/unavailable storage, fall back to the default below
+  }
+  return 'press';
 }
 
 function loadTheme(): Theme {
@@ -97,6 +108,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [showKeyboard, setShowKeyboard] = useState(loadShowKeyboard);
   const [keyboardLayout, setKeyboardLayout] = useState<KeyboardLayoutId>(loadKeyboardLayout);
   const [keyboardKeyColors, setKeyboardKeyColors] = useState<KeyboardKeyColors>(loadKeyboardKeyColors);
+  const [keyboardPressStyle, setKeyboardPressStyle] = useState<KeyboardPressStyle>(loadKeyboardPressStyle);
   const [theme, setTheme] = useState<Theme>(loadTheme);
   const [font, setFont] = useState<string>(loadFont);
   const [spaceStyle, setSpaceStyle] = useState<SpaceStyle>(loadSpaceStyle);
@@ -113,6 +125,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem(KEYBOARD_KEY_COLORS_KEY, keyboardKeyColors);
   }, [keyboardKeyColors]);
+
+  useEffect(() => {
+    localStorage.setItem(KEYBOARD_PRESS_STYLE_KEY, keyboardPressStyle);
+  }, [keyboardPressStyle]);
 
   useEffect(() => {
     localStorage.setItem(THEME_KEY, theme);
@@ -155,6 +171,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setKeyboardLayout,
         keyboardKeyColors,
         setKeyboardKeyColors,
+        keyboardPressStyle,
+        setKeyboardPressStyle,
         theme,
         setTheme,
         font,

@@ -53,6 +53,14 @@ function saveLocalProgress(layout: string, progress: StoredProgress) {
 export default function Learn() {
   useDocumentTitle('learn');
   const { user } = useAuth();
+  // Supabase hands back a brand new `user` object on every token refresh
+  // (a routine background event, not just sign-in/out) — depending the load
+  // effect below on `user` itself made it refire on those refreshes too,
+  // re-fetching from Supabase and reverting any not-yet-persisted unlock if
+  // that refetch raced the previous round's fire-and-forget save. `user.id`
+  // is stable across refreshes, so it only refires on an actual account
+  // change.
+  const userId = user?.id ?? null;
   const { keyboardLayout } = useSettings();
   // Independent from the main typing page's on-screen-keyboard settings —
   // this page's keyboard is either fully on (colors + finger labels, since
@@ -92,8 +100,8 @@ export default function Learn() {
     const load = async () => {
       setLoading(true);
 
-      if (user && supabase) {
-        const { data } = await supabase.from('learn_progress').select('*').eq('user_id', user.id).maybeSingle();
+      if (userId && supabase) {
+        const { data } = await supabase.from('learn_progress').select('*').eq('user_id', userId).maybeSingle();
         if (cancelled) return;
         // Progress is per-layout — if the saved row is for a different
         // layout than the one currently selected in Settings, start fresh
@@ -117,10 +125,10 @@ export default function Learn() {
     return () => {
       cancelled = true;
     };
-  }, [user, keyboardLayout]);
+  }, [userId, keyboardLayout]);
 
   const saveProgress = (nextUnlocked: string[], nextAccuracy: LetterAccuracy, nextReps: number) => {
-    if (user && supabase) {
+    if (userId && supabase) {
       void supabase.rpc('save_learn_progress', {
         p_keyboard_layout: keyboardLayout,
         p_unlocked_letters: nextUnlocked.join(''),
@@ -317,6 +325,7 @@ export default function Learn() {
               dimmedCodes={dimmedCodes}
               accuracyByCode={accuracyByCode}
               keyColors="colors-and-text"
+              pressStyle="finger"
             />
           </div>
         )}
