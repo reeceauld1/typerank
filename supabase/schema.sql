@@ -537,19 +537,25 @@ alter table public.bug_reports enable row level security;
 create policy "insert bug reports" on public.bug_reports
   for insert to anon, authenticated with check (true);
 
--- 1v1 duels (see schema_013_duels.sql, schema_014_duel_invites.sql): a
--- shared word list, a link to share, async results, plus friend-targeted
--- invites with an explicit accept/decline step. status: 'open' (link
--- share, no opponent yet), 'pending' (friend invited, awaiting response),
--- 'accepted' (ready to play / in progress), 'declined'. No live opponent
--- progress yet, and no per-friend win/loss tally yet.
+-- 1v1 duels (see schema_013_duels.sql, schema_014_duel_invites.sql,
+-- schema_015_duel_guests.sql): a shared word list, a link to share, async
+-- results, friend-targeted invites with an explicit accept/decline step,
+-- and guest (no-account) duels identified by a per-browser token instead
+-- of auth.uid(). status: 'open' (link share, no opponent yet), 'pending'
+-- (friend invited, awaiting response), 'accepted' (ready to play / in
+-- progress), 'declined'. No live opponent progress yet, and no per-friend
+-- win/loss tally yet.
 create table public.duels (
   id uuid primary key default gen_random_uuid(),
-  creator_id uuid not null references auth.users (id) on delete cascade,
+  creator_id uuid references auth.users (id) on delete cascade,
   opponent_id uuid references auth.users (id) on delete cascade,
+  creator_name text,
+  opponent_name text,
+  creator_token uuid,
+  opponent_token uuid,
   word_count int not null,
   word_list text not null,
-  status text not null default 'open' check (status in ('open', 'pending', 'accepted', 'declined')),
+  status text not null default 'open' check (status in ('open', 'pending', 'accepted', 'declined', 'cancelled')),
   creator_wpm int,
   creator_accuracy int,
   creator_raw_wpm int,
@@ -567,7 +573,7 @@ create policy "insert own duel" on public.duels
   for insert to authenticated with check (creator_id = auth.uid());
 
 create policy "select duels" on public.duels
-  for select to authenticated using (true);
+  for select to anon, authenticated using (true);
 
 alter publication supabase_realtime add table public.duels;
 
@@ -662,6 +668,123 @@ end;
 $$;
 
 grant execute on function public.decline_duel_invite to authenticated;
+
+create or replace function public.cancel_duel_invite(p_duel_id uuid)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_creator_id uuid;
+begin
+  if v_user_id is null then
+    raise exception 'not authenticated';
+  end if;
+
+  select creator_id into v_creator_id
+  from public.duels where id = p_duel_id for update;
+
+  if v_creator_id is null or v_creator_id != v_user_id then
+    raise exception 'not your duel';
+  end if;
+
+  update public.duels set status = 'cancelled' where id = p_duel_id and status = 'pending';
+end;
+$$;
+
+grant execute on function public.cancel_duel_invite to authenticated;
+
+create or replace function public.create_guest_duel(p_word_count int, p_word_list text, p_creator_name text)
+returns table(id uuid, creator_token uuid)
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+  v_token uuid := gen_random_uuid();
+begin
+  if p_creator_name is null or length(trim(p_creator_name)) = 0 then
+    raise exception 'name required';
+  end if;
+
+  insert into public.duels (id, word_count, word_list, creator_name, creator_token, status)
+  values (v_id, p_word_count, p_word_list, trim(p_creator_name), v_token, 'open');
+
+  return query select v_id, v_token;
+end;
+$$;
+
+grant execute on function public.create_guest_duel to anon, authenticated;
+
+create or replace function public.join_guest_duel(p_duel_id uuid, p_name text)
+returns uuid
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_opponent_name text;
+  v_creator_id uuid;
+  v_token uuid := gen_random_uuid();
+begin
+  if p_name is null or length(trim(p_name)) = 0 then
+    raise exception 'name required';
+  end if;
+
+  select opponent_name, creator_id into v_opponent_name, v_creator_id
+  from public.duels where id = p_duel_id for update;
+
+  if v_creator_id is not null then
+    raise exception 'not a guest duel';
+  end if;
+  if v_opponent_name is not null then
+    raise exception 'duel already has an opponent';
+  end if;
+
+  update public.duels
+  set opponent_name = trim(p_name), opponent_token = v_token, status = 'accepted'
+  where id = p_duel_id;
+
+  return v_token;
+end;
+$$;
+
+grant execute on function public.join_guest_duel to anon, authenticated;
+
+create or replace function public.submit_guest_duel_result(
+  p_duel_id uuid,
+  p_token uuid,
+  p_wpm int,
+  p_accuracy int,
+  p_raw_wpm int,
+  p_time_elapsed numeric
+)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_creator_token uuid;
+  v_opponent_token uuid;
+begin
+  select creator_token, opponent_token into v_creator_token, v_opponent_token
+  from public.duels where id = p_duel_id for update;
+
+  if v_creator_token is not null and v_creator_token = p_token then
+    update public.duels
+    set creator_wpm = p_wpm, creator_accuracy = p_accuracy, creator_raw_wpm = p_raw_wpm, creator_time_elapsed = p_time_elapsed
+    where id = p_duel_id;
+  elsif v_opponent_token is not null and v_opponent_token = p_token then
+    update public.duels
+    set opponent_wpm = p_wpm, opponent_accuracy = p_accuracy, opponent_raw_wpm = p_raw_wpm, opponent_time_elapsed = p_time_elapsed
+    where id = p_duel_id;
+  else
+    raise exception 'invalid token';
+  end if;
+end;
+$$;
+
+grant execute on function public.submit_guest_duel_result to anon, authenticated;
 
 create or replace function public.submit_duel_result(
   p_duel_id uuid,

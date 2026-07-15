@@ -5,7 +5,6 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useFriends } from '../hooks/useFriends.js';
 import { generateText } from '../utils/words.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
-import AuthForm from '../components/AuthForm.js';
 import Avatar from '../components/Avatar.js';
 
 type WordCount = 10 | 25 | 50;
@@ -14,6 +13,25 @@ const WORD_COUNTS: WordCount[] = [10, 25, 50];
 interface PendingInvite {
   id: string;
   wordCount: number;
+}
+
+function WordCountPicker({ value, onChange }: { value: WordCount; onChange: (count: WordCount) => void }) {
+  return (
+    <div className="flex items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit mb-6">
+      {WORD_COUNTS.map(count => (
+        <button
+          key={count}
+          type="button"
+          onClick={() => onChange(count)}
+          className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+            value === count ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+          }`}
+        >
+          {count} words
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export default function Duel() {
@@ -27,6 +45,16 @@ export default function Duel() {
   const [error, setError] = useState<string | null>(null);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState(true);
+
+  // Guest (no account) creation flow: pick word count -> enter name -> a
+  // popup with the link to share, closing which takes you into the duel.
+  const [guestStep, setGuestStep] = useState<'pick-count' | 'enter-name'>('pick-count');
+  const [guestName, setGuestName] = useState('');
+  const [guestCreating, setGuestCreating] = useState(false);
+  const [guestError, setGuestError] = useState<string | null>(null);
+  const [guestDuelId, setGuestDuelId] = useState<string | null>(null);
+  const [guestLink, setGuestLink] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const loadInvites = useCallback(async () => {
     if (!supabase || !user) return;
@@ -99,6 +127,39 @@ export default function Duel() {
     navigate(`/duel/${data.id as string}`);
   };
 
+  const handleGuestCreate = async () => {
+    if (!supabase || !guestName.trim()) return;
+    setGuestCreating(true);
+    setGuestError(null);
+    const { data, error: rpcError } = await supabase
+      .rpc('create_guest_duel', {
+        p_word_count: wordCount,
+        p_word_list: generateText(wordCount),
+        p_creator_name: guestName.trim(),
+      })
+      .single();
+    setGuestCreating(false);
+    if (rpcError || !data) {
+      setGuestError("Couldn't create a duel — try again.");
+      return;
+    }
+    const row = data as { id: string; creator_token: string };
+    try {
+      sessionStorage.setItem(`duel_token_${row.id}`, row.creator_token);
+    } catch {
+      // ignore unavailable storage
+    }
+    setGuestDuelId(row.id);
+    setGuestLink(`${window.location.origin}/duel/${row.id}`);
+  };
+
+  const copyGuestLink = () => {
+    if (!guestLink) return;
+    void navigator.clipboard.writeText(guestLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
   if (!isConfigured) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 pb-16">
@@ -112,8 +173,94 @@ export default function Duel() {
 
   if (!user) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16">
-        <AuthForm />
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
+        <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h1>
+          <p className="text-[var(--text-muted)] text-sm mb-6">
+            {guestStep === 'pick-count' ? 'Pick a word count.' : "What's your name?"}
+          </p>
+
+          {guestStep === 'pick-count' ? (
+            <>
+              <WordCountPicker value={wordCount} onChange={setWordCount} />
+              <button
+                type="button"
+                onClick={() => setGuestStep('enter-name')}
+                className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+              >
+                next
+              </button>
+            </>
+          ) : (
+            <>
+              <input
+                type="text"
+                autoFocus
+                maxLength={20}
+                placeholder="your name"
+                value={guestName}
+                onChange={e => setGuestName(e.target.value)}
+                className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] mb-3"
+              />
+              {guestError && <p className="text-[var(--text-incorrect)] text-xs mb-3">{guestError}</p>}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGuestStep('pick-count')}
+                  className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  back
+                </button>
+                <button
+                  type="button"
+                  disabled={guestCreating || !guestName.trim()}
+                  onClick={() => void handleGuestCreate()}
+                  className="flex-1 bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+                >
+                  {guestCreating ? '...' : 'create duel'}
+                </button>
+              </div>
+            </>
+          )}
+
+          <p className="text-center text-xs text-[var(--text-muted)] mt-6">
+            have an account?{' '}
+            <Link to="/profile" className="text-[var(--accent)] hover:underline">
+              sign in
+            </Link>{' '}
+            to challenge friends directly.
+          </p>
+        </div>
+
+        {guestLink && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+            <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
+              <h2 className="text-lg font-semibold text-[var(--text-correct)] mb-1">duel link ready</h2>
+              <p className="text-[var(--text-muted)] text-sm mb-4">Send this to whoever you want to race.</p>
+              <div className="flex items-center gap-2 mb-4">
+                <input
+                  readOnly
+                  value={guestLink}
+                  className="flex-1 min-w-0 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-[var(--text-correct)] truncate"
+                />
+                <button
+                  type="button"
+                  onClick={copyGuestLink}
+                  className="shrink-0 text-sm border border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-soft)] px-3 py-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  {linkCopied ? 'copied' : 'copy'}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => guestDuelId && navigate(`/duel/${guestDuelId}`)}
+                className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+              >
+                close
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -142,22 +289,7 @@ export default function Duel() {
         <h1 className="text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h1>
         <p className="text-[var(--text-muted)] text-sm mb-6">Pick a word count, then challenge a friend or share a link.</p>
 
-        <div className="flex items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit mb-6">
-          {WORD_COUNTS.map(count => (
-            <button
-              key={count}
-              type="button"
-              onClick={() => setWordCount(count)}
-              className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                wordCount === count
-                  ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-            >
-              {count} words
-            </button>
-          ))}
-        </div>
+        <WordCountPicker value={wordCount} onChange={setWordCount} />
 
         {error && <p className="text-[var(--text-incorrect)] text-xs mb-3">{error}</p>}
 

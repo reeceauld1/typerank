@@ -137,7 +137,7 @@ export default function Navbar() {
       isActive: p => p === '/friends' || p.startsWith('/u/'),
       requiresUser: true,
     },
-    { to: '/duel', label: 'duel', icon: DuelIcon, isActive: p => p.startsWith('/duel'), requiresUser: true },
+    { to: '/duel', label: 'duel', icon: DuelIcon, isActive: p => p.startsWith('/duel') },
     { to: '/profile', label: 'profile', icon: ProfileIcon, isActive: p => p === '/profile' },
     { to: '/settings', label: 'settings', icon: SettingsIcon, isActive: p => p === '/settings' },
   ];
@@ -230,28 +230,26 @@ export default function Navbar() {
               )}
             </Link>
           )}
-          {user && (
-            <Link
-              to="/duel"
-              aria-label="Duel"
-              title="Duel"
-              className={`relative p-1 transition-colors ${
-                location.pathname.startsWith('/duel')
-                  ? 'text-[var(--text-correct)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-            >
-              <DuelIcon />
-              {duelInviteCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-semibold leading-none text-[var(--bg)]">
-                  {duelInviteCount}
-                </span>
-              )}
-              {location.pathname.startsWith('/duel') && (
-                <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
-              )}
-            </Link>
-          )}
+          <Link
+            to="/duel"
+            aria-label="Duel"
+            title="Duel"
+            className={`relative p-1 transition-colors ${
+              location.pathname.startsWith('/duel')
+                ? 'text-[var(--text-correct)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+            }`}
+          >
+            <DuelIcon />
+            {duelInviteCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-semibold leading-none text-[var(--bg)]">
+                {duelInviteCount}
+              </span>
+            )}
+            {location.pathname.startsWith('/duel') && (
+              <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
+            )}
+          </Link>
           <Link
             to="/profile"
             aria-label="Profile"

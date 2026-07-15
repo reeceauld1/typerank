@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { WordMode } from '../types/index.js';
 import { supabase } from '../lib/supabase.js';
@@ -8,12 +8,16 @@ import TypingTest from '../components/TypingTest.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
 
-type DuelStatus = 'open' | 'pending' | 'accepted' | 'declined';
+type DuelStatus = 'open' | 'pending' | 'accepted' | 'declined' | 'cancelled';
 
 interface DuelRow {
   id: string;
-  creator_id: string;
+  creator_id: string | null;
   opponent_id: string | null;
+  creator_name: string | null;
+  opponent_name: string | null;
+  creator_token: string | null;
+  opponent_token: string | null;
   word_count: number;
   word_list: string;
   status: DuelStatus;
@@ -32,15 +36,15 @@ interface PlayerInfo {
 }
 
 function ResultCard({
-  label,
-  player,
+  name,
+  avatar,
   wpm,
   accuracy,
   rawWpm,
   winner,
 }: {
-  label: string;
-  player: PlayerInfo | undefined;
+  name: string;
+  avatar: PlayerInfo | undefined;
   wpm: number | null;
   accuracy: number | null;
   rawWpm: number | null;
@@ -53,8 +57,8 @@ function ResultCard({
       }`}
     >
       <div className="flex items-center justify-center gap-2 mb-3">
-        {player && <Avatar avatarId={player.equippedAvatar} borderId={player.equippedBorder} size="sm" />}
-        <span className="text-sm font-medium text-[var(--text-correct)] truncate">{player?.username ?? label}</span>
+        {avatar && <Avatar avatarId={avatar.equippedAvatar} borderId={avatar.equippedBorder} size="sm" />}
+        <span className="text-sm font-medium text-[var(--text-correct)] truncate">{name}</span>
         {winner && <span className="text-xs font-semibold text-[var(--accent)]">winner</span>}
       </div>
       {wpm === null ? (
@@ -84,6 +88,10 @@ export default function DuelMatch() {
   const [responding, setResponding] = useState(false);
   const [respondError, setRespondError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [opponentPresent, setOpponentPresent] = useState<boolean | null>(null);
+  const [opponentEverPresent, setOpponentEverPresent] = useState(false);
+  const [guestToken, setGuestToken] = useState<string | null>(null);
+  const [joinName, setJoinName] = useState('');
 
   const loadPlayers = useCallback(async (ids: string[]) => {
     if (!supabase || ids.length === 0) return;
@@ -136,6 +144,89 @@ export default function DuelMatch() {
     };
   }, [id, loadPlayers]);
 
+  // A guest's identity for this duel — a random token issued on create/join
+  // and remembered per-browser, since there's no account to check against.
+  useEffect(() => {
+    if (!id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setGuestToken(null);
+      return;
+    }
+    try {
+      setGuestToken(sessionStorage.getItem(`duel_token_${id}`));
+    } catch {
+      setGuestToken(null);
+    }
+  }, [id]);
+
+  const isGuestDuel = Boolean(duel && duel.creator_id === null);
+  const isCreator = Boolean(
+    duel && ((user && user.id === duel.creator_id) || (isGuestDuel && guestToken && guestToken === duel.creator_token))
+  );
+  const isOpponent = Boolean(
+    duel && ((user && user.id === duel.opponent_id) || (isGuestDuel && guestToken && guestToken === duel.opponent_token))
+  );
+  const waitingForAccept = isCreator && duel?.status === 'pending';
+  const haveSubmittedResult = Boolean(
+    duel && ((isCreator && duel.creator_wpm !== null) || (isOpponent && duel.opponent_wpm !== null))
+  );
+  const bothFinished = Boolean(duel && duel.creator_wpm !== null && duel.opponent_wpm !== null);
+  const waitingForOpponentToFinish = haveSubmittedResult && !bothFinished;
+
+  // Presence keyed by role (not user id) so it works the same whether
+  // either side is signed in or a guest.
+  const myRole: 'creator' | 'opponent' | null = isCreator ? 'creator' : isOpponent ? 'opponent' : null;
+  const waitingOnRole: 'creator' | 'opponent' | null =
+    waitingForAccept || waitingForOpponentToFinish ? (isCreator ? 'opponent' : 'creator') : null;
+
+  // Tracks whether whoever we're waiting on is actually still connected —
+  // lets us tell "they haven't shown up yet" (normal, keep waiting) apart
+  // from "they were here and left" (show cancelled instead of waiting
+  // forever).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOpponentEverPresent(false);
+    setOpponentPresent(null);
+
+    const client = supabase;
+    if (!client || !id || !myRole || !waitingOnRole) return;
+
+    const channel = client.channel(`duel-presence-${id}`, { config: { presence: { key: myRole } } });
+    channel.on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState();
+      const present = waitingOnRole in state;
+      if (present) setOpponentEverPresent(true);
+      setOpponentPresent(present);
+    });
+    channel.subscribe(status => {
+      if (status === 'SUBSCRIBED') void channel.track({ online: true });
+    });
+
+    return () => {
+      void client.removeChannel(channel);
+    };
+  }, [id, myRole, waitingOnRole]);
+
+  const matchCancelled = waitingOnRole !== null && opponentEverPresent && opponentPresent === false;
+
+  // If the creator navigates away from a friend invite before it's been
+  // accepted, withdraw it — otherwise the recipient's pending-invite badge
+  // and /duel list would keep showing it indefinitely. Tracked via a ref
+  // (rather than effect deps) so this only fires on a true unmount, not on
+  // every status change while the page stays open.
+  const latestCancelInfoRef = useRef({ id, isCreator, status: duel?.status });
+  useEffect(() => {
+    latestCancelInfoRef.current = { id, isCreator, status: duel?.status };
+  });
+  useEffect(() => {
+    return () => {
+      const { id: duelId, isCreator: wasCreator, status } = latestCancelInfoRef.current;
+      if (wasCreator && status === 'pending' && duelId && supabase) {
+        void supabase.rpc('cancel_duel_invite', { p_duel_id: duelId });
+      }
+    };
+  }, []);
+
   const handleJoin = async () => {
     if (!supabase || !id) return;
     setResponding(true);
@@ -146,6 +237,25 @@ export default function DuelMatch() {
       setRespondError(error.message.includes('opponent') ? 'Someone already joined this duel.' : "Couldn't join — try again.");
       return;
     }
+    await loadDuel();
+  };
+
+  const handleGuestJoin = async () => {
+    if (!supabase || !id || !joinName.trim()) return;
+    setResponding(true);
+    setRespondError(null);
+    const { data, error } = await supabase.rpc('join_guest_duel', { p_duel_id: id, p_name: joinName.trim() });
+    setResponding(false);
+    if (error || !data) {
+      setRespondError("Couldn't join — try again.");
+      return;
+    }
+    try {
+      sessionStorage.setItem(`duel_token_${id}`, data as string);
+    } catch {
+      // ignore unavailable storage
+    }
+    setGuestToken(data as string);
     await loadDuel();
   };
 
@@ -172,13 +282,25 @@ export default function DuelMatch() {
 
   const handleComplete = async (stats: { wpm: number; accuracy: number; rawWpm: number; timeElapsed: number }) => {
     if (!supabase || !id) return;
-    await supabase.rpc('submit_duel_result', {
-      p_duel_id: id,
-      p_wpm: stats.wpm,
-      p_accuracy: stats.accuracy,
-      p_raw_wpm: stats.rawWpm,
-      p_time_elapsed: stats.timeElapsed,
-    });
+    if (isGuestDuel) {
+      if (!guestToken) return;
+      await supabase.rpc('submit_guest_duel_result', {
+        p_duel_id: id,
+        p_token: guestToken,
+        p_wpm: stats.wpm,
+        p_accuracy: stats.accuracy,
+        p_raw_wpm: stats.rawWpm,
+        p_time_elapsed: stats.timeElapsed,
+      });
+    } else {
+      await supabase.rpc('submit_duel_result', {
+        p_duel_id: id,
+        p_wpm: stats.wpm,
+        p_accuracy: stats.accuracy,
+        p_raw_wpm: stats.rawWpm,
+        p_time_elapsed: stats.timeElapsed,
+      });
+    }
     await loadDuel();
   };
 
@@ -199,14 +321,6 @@ export default function DuelMatch() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16">
-        <AuthForm />
-      </div>
-    );
-  }
-
   if (loading) return null;
 
   if (notFound || !duel) {
@@ -220,17 +334,53 @@ export default function DuelMatch() {
     );
   }
 
-  const isCreator = user.id === duel.creator_id;
-  const isOpponent = user.id === duel.opponent_id;
+  // Guest duels don't need an account at all — only authenticated ones
+  // (friend invites, or an open link created while signed in) do.
+  if (!isGuestDuel && !user) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16">
+        <AuthForm />
+      </div>
+    );
+  }
+
   const isParticipant = isCreator || isOpponent;
+  const opponentSlotOpen = !duel.opponent_id && !duel.opponent_name;
 
   // Not part of this duel at all.
   if (!isParticipant) {
-    if (duel.status === 'open' && !duel.opponent_id) {
+    if (duel.status === 'open' && opponentSlotOpen) {
+      if (isGuestDuel) {
+        return (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
+            <p className="text-[var(--text-correct)] font-semibold">
+              {duel.creator_name ?? 'someone'} challenged you to a {duel.word_count}-word duel.
+            </p>
+            <input
+              type="text"
+              autoFocus
+              maxLength={20}
+              placeholder="your name"
+              value={joinName}
+              onChange={e => setJoinName(e.target.value)}
+              className="w-full max-w-xs bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-center text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
+            />
+            {respondError && <p className="text-[var(--text-incorrect)] text-sm">{respondError}</p>}
+            <button
+              type="button"
+              disabled={responding || !joinName.trim()}
+              onClick={() => void handleGuestJoin()}
+              className="bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+            >
+              {responding ? '...' : 'confirm'}
+            </button>
+          </div>
+        );
+      }
       return (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
           <p className="text-[var(--text-correct)] font-semibold">
-            {players[duel.creator_id]?.username ?? 'someone'} challenged you to a {duel.word_count}-word duel.
+            {players[duel.creator_id ?? '']?.username ?? 'someone'} challenged you to a {duel.word_count}-word duel.
           </p>
           {respondError && <p className="text-[var(--text-incorrect)] text-sm">{respondError}</p>}
           <button
@@ -254,12 +404,13 @@ export default function DuelMatch() {
     );
   }
 
-  // Invited by a friend, haven't responded yet.
+  // Invited by a friend, haven't responded yet (auth-only — guest duels
+  // never have a 'pending' status).
   if (isOpponent && duel.status === 'pending') {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
         <p className="text-[var(--text-correct)] font-semibold">
-          {players[duel.creator_id]?.username ?? 'someone'} challenged you to a {duel.word_count}-word duel.
+          {players[duel.creator_id ?? '']?.username ?? 'someone'} challenged you to a {duel.word_count}-word duel.
         </p>
         {respondError && <p className="text-[var(--text-incorrect)] text-sm">{respondError}</p>}
         <div className="flex items-center gap-2">
@@ -289,7 +440,7 @@ export default function DuelMatch() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 pb-16">
         <p className="text-[var(--text-correct)] font-semibold">
-          {players[duel.opponent_id ?? '']?.username ?? 'they'} declined this duel.
+          {players[duel.opponent_id ?? '']?.username ?? duel.opponent_name ?? 'they'} declined this duel.
         </p>
         <Link to="/duel" className="text-sm text-[var(--accent)] hover:underline">
           start a new one
@@ -298,13 +449,54 @@ export default function DuelMatch() {
     );
   }
 
-  const myWpm = isCreator ? duel.creator_wpm : duel.opponent_wpm;
-  const opponentIdKnown = isCreator ? duel.opponent_id : duel.creator_id;
-  const opponentWpm = isCreator ? duel.opponent_wpm : duel.creator_wpm;
-  const haveSubmitted = myWpm !== null;
-  const bothFinished = duel.creator_wpm !== null && duel.opponent_wpm !== null;
+  // The invite was withdrawn — either side revisiting.
+  if (duel.status === 'cancelled') {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 pb-16">
+        <p className="text-[var(--text-correct)] font-semibold">This invite was cancelled.</p>
+        <Link to="/duel" className="text-sm text-[var(--accent)] hover:underline">
+          start a new one
+        </Link>
+      </div>
+    );
+  }
 
-  if (!haveSubmitted) {
+  // Whoever we're waiting on (accept, or a finished result) disconnected.
+  if (matchCancelled) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 pb-16">
+        <p className="text-[var(--text-correct)] font-semibold">Match cancelled</p>
+        <p className="text-[var(--text-muted)] text-sm">The other player disconnected.</p>
+        <Link to="/duel" className="text-sm text-[var(--accent)] hover:underline">
+          start a new one
+        </Link>
+      </div>
+    );
+  }
+
+  // I'm the creator of a friend invite that hasn't been accepted yet.
+  if (waitingForAccept) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
+        <p className="text-[var(--text-correct)] font-semibold">
+          Waiting for {players[duel.opponent_id ?? '']?.username ?? duel.opponent_name ?? 'them'} to accept…
+        </p>
+      </div>
+    );
+  }
+
+  const myName = isCreator
+    ? (players[duel.creator_id ?? '']?.username ?? duel.creator_name ?? 'you')
+    : (players[duel.opponent_id ?? '']?.username ?? duel.opponent_name ?? 'you');
+  const opponentName = isCreator
+    ? (players[duel.opponent_id ?? '']?.username ?? duel.opponent_name ?? 'opponent')
+    : (players[duel.creator_id ?? '']?.username ?? duel.creator_name ?? 'opponent');
+  const myAvatar = isCreator ? players[duel.creator_id ?? ''] : players[duel.opponent_id ?? ''];
+  const opponentAvatar = isCreator ? players[duel.opponent_id ?? ''] : players[duel.creator_id ?? ''];
+  const myWpm = isCreator ? duel.creator_wpm : duel.opponent_wpm;
+  const opponentWpm = isCreator ? duel.opponent_wpm : duel.creator_wpm;
+
+  if (!haveSubmittedResult) {
     return (
       <div className="flex-1 flex items-center justify-center px-6 py-10">
         <div className="relative w-[92%] sm:w-[80%] lg:w-[65%]">
@@ -327,16 +519,16 @@ export default function DuelMatch() {
 
       <div className="w-full max-w-lg flex gap-4">
         <ResultCard
-          label="you"
-          player={players[user.id]}
+          name={myName}
+          avatar={myAvatar}
           wpm={myWpm}
           accuracy={isCreator ? duel.creator_accuracy : duel.opponent_accuracy}
           rawWpm={isCreator ? duel.creator_raw_wpm : duel.opponent_raw_wpm}
           winner={bothFinished && myWpm !== null && opponentWpm !== null && myWpm > opponentWpm}
         />
         <ResultCard
-          label="opponent"
-          player={opponentIdKnown ? players[opponentIdKnown] : undefined}
+          name={opponentName}
+          avatar={opponentAvatar}
           wpm={opponentWpm}
           accuracy={isCreator ? duel.opponent_accuracy : duel.creator_accuracy}
           rawWpm={isCreator ? duel.opponent_raw_wpm : duel.creator_raw_wpm}
@@ -344,7 +536,7 @@ export default function DuelMatch() {
         />
       </div>
 
-      {!duel.opponent_id && (
+      {opponentSlotOpen && (
         <button
           type="button"
           onClick={copyLink}
