@@ -124,7 +124,7 @@ export default function Ranked() {
     <div className="flex-1 relative flex flex-col items-center justify-center gap-6 py-10 px-6 text-center">
       <div className="flex flex-col items-center gap-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-correct)] mb-2">ranked</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--text-correct)] mb-2">ranked</h1>
           <RankBadge elo={stats.elo} rankedGamesPlayed={stats.rankedGamesPlayed} className="justify-center" />
           {!tier && (
             <p className="text-[var(--text-muted)] text-xs mt-2">

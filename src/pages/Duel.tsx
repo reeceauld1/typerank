@@ -85,7 +85,7 @@ function DuelSettingsPicker({
           words
         </button>
       </div>
-      <div className="flex items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm">
+      <div className="flex flex-wrap items-center justify-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm">
         {presets.map(preset => (
           <button key={preset} type="button" onClick={() => onChange(mode, preset)} className={pill(!isCustom && value === preset)}>
             {mode === 'words' ? preset : `${preset}s`}
@@ -343,7 +343,7 @@ export default function Duel() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
         <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
-          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h1>
+          <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h1>
           <p className="text-[var(--text-muted)] text-sm mb-6">
             {guestStep === 'pick-count' ? 'Pick words or time.' : "What's your name?"}
           </p>
@@ -442,7 +442,7 @@ export default function Duel() {
       )}
 
       <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h1>
+        <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h1>
         <p className="text-[var(--text-muted)] text-sm mb-6">Pick words or time, then challenge a friend or share a link.</p>
 
         <DuelSettingsPicker mode={mode} value={value} onChange={(m, v) => { setMode(m); setValue(v); }} />

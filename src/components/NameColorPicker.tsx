@@ -48,7 +48,7 @@ export default function NameColorPicker({ onClose, readOnly = false }: NameColor
         <h2 className="text-lg font-semibold text-[var(--text-correct)] mb-1">name color</h2>
         <p className="text-[var(--text-muted)] text-sm mb-4">Unlocked by reaching ranked tiers.</p>
         {error && <p className="text-[var(--text-incorrect)] text-sm mb-3">{error}</p>}
-        <div className="grid grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3 mb-6">
           {NAME_COLOR_CATALOG.map(color => {
             const unlocked = readOnly || admin || color.isUnlocked(stats);
             const equipped = !readOnly && stats.equippedNameColor === color.id;
@@ -67,7 +67,7 @@ export default function NameColorPicker({ onClose, readOnly = false }: NameColor
                   type="button"
                   disabled={readOnly || !unlocked}
                   onClick={() => void handleEquip(color.id)}
-                  className={`relative w-full flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped, readOnly)}`}
+                  className={`relative w-full flex flex-col items-center gap-1.5 rounded-lg border p-2 sm:p-3 transition-colors ${cellClass(unlocked, equipped, readOnly)}`}
                 >
                   {!readOnly && !unlocked && (
                     <span className="absolute top-1.5 right-1.5 text-[var(--text-muted)]">

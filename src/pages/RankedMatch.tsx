@@ -56,11 +56,11 @@ function ResultCard({
 }) {
   return (
     <div
-      className={`flex-1 rounded-xl border px-6 py-5 text-center ${
+      className={`flex-1 min-w-0 rounded-xl border px-6 py-5 text-center ${
         winner ? 'border-[var(--accent)] bg-[var(--accent-soft)]' : 'border-[var(--border)] bg-[var(--surface)]'
       }`}
     >
-      <div className="flex items-center justify-center gap-2 mb-3">
+      <div className="flex items-center justify-center gap-2 mb-3 min-w-0">
         {avatar && <Avatar avatarId={avatar.equippedAvatar} borderId={avatar.equippedBorder} size="sm" />}
         <UsernameText username={name} colorId={avatar?.equippedNameColor ?? 'default'} className="text-sm truncate" />
         <UsernameBadge badgeId={avatar?.equippedBadge} />
@@ -329,7 +329,7 @@ export default function RankedMatch() {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-correct)]">
+      <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--text-correct)]">
         {bothFinished ? 'ranked results' : 'waiting for opponent…'}
       </h1>
 

@@ -98,8 +98,8 @@ export default function ProfileStats({ stats: statsProp }: ProfileStatsProps = {
           <h3 className="text-lg font-semibold text-[var(--text-correct)] mb-4">Recent Tests</h3>
           <div className="space-y-2">
             {stats.testHistory.slice(0, 5).map(test => (
-              <div key={test.id} className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-3">
-                <div className="flex items-center gap-4 text-sm">
+              <div key={test.id} className="flex flex-wrap items-center justify-between gap-y-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-3">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                   <div className="text-[var(--text-muted)] w-12">
                     {test.value === 0 ? '∞' : test.mode === 'time' ? `${test.value}s` : `${test.value}w`}
                   </div>

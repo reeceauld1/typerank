@@ -288,12 +288,15 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
         </div>
 
         {pendingCustomHex && (
-          <div ref={confirmBarRef} className="mt-3 flex items-center gap-3 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-3">
+          <div
+            ref={confirmBarRef}
+            className="mt-3 flex flex-wrap items-center gap-3 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-3"
+          >
             <div
               className="w-6 h-6 rounded-full border-2 border-[var(--border)] shrink-0"
               style={{ backgroundColor: pendingCustomHex }}
             />
-            <span className="text-sm text-[var(--text-secondary)] flex-1">use this custom color?</span>
+            <span className="text-sm text-[var(--text-secondary)] flex-1 min-w-0">use this custom color?</span>
             <button
               type="button"
               onClick={() => void handleConfirmCustomColor()}
