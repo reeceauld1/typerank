@@ -1396,6 +1396,13 @@ begin
   update public.user_stats
   set username = p_new_username, username_changed_at = now(), updated_at = now()
   where user_id = v_user_id;
+
+  -- Keeps auth.users' signup-time metadata in sync too, purely so the
+  -- Supabase dashboard's Auth > Users view doesn't show a stale username —
+  -- nothing in the app itself reads username from auth.users.
+  update auth.users
+  set raw_user_meta_data = raw_user_meta_data || jsonb_build_object('username', p_new_username)
+  where id = v_user_id;
 end;
 $$;
 
