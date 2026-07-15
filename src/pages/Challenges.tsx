@@ -22,7 +22,7 @@ export default function Challenges() {
 
   return (
     <div className="flex-1 py-10 px-6">
-      <div className="max-w-4xl mx-auto flex items-center justify-between mb-8">
+      <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">challenges</h1>
         <Link
           to="/"

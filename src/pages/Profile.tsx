@@ -174,7 +174,7 @@ export default function Profile() {
 
   return (
     <div className="flex-1 flex flex-col py-10 px-6">
-      <div className="max-w-4xl w-full mx-auto flex items-center justify-between mb-8">
+      <div className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">profile</h1>
         <Link
           to="/"
@@ -187,7 +187,7 @@ export default function Profile() {
       {user ? (
         <>
           <div className="max-w-4xl w-full mx-auto mb-6">
-            <div className="flex items-center justify-between bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
               <div className="flex items-center gap-4">
                 <Avatar avatarId={stats.equippedAvatar} borderId={stats.equippedBorder} size="md" />
                 <div className="flex items-center gap-2">

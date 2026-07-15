@@ -254,7 +254,7 @@ export default function Leaderboard() {
 
   return (
     <div className="flex-1 flex flex-col py-10 px-6">
-      <div className="max-w-4xl w-full mx-auto flex items-center justify-between mb-8">
+      <div className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">leaderboard</h1>
         <Link
           to="/"
@@ -328,23 +328,25 @@ export default function Leaderboard() {
             rankedRows.map((row, i) => (
               <div
                 key={row.userId}
-                className={`flex items-center gap-4 rounded-lg px-4 py-3 border ${
+                className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 rounded-lg px-4 py-3 border ${
                   row.userId === user?.id
                     ? 'border-[var(--accent)] bg-[var(--accent-soft)]'
                     : 'border-[var(--border)] bg-[var(--surface)]'
                 }`}
               >
-                <RankBadge rank={i + 1} />
-                <Link
-                  to={`/u/${row.username}`}
-                  state={{ from: 'leaderboard' }}
-                  className="flex items-center gap-3 flex-1 min-w-0 group"
-                >
-                  <Avatar avatarId={row.equippedAvatar} borderId={row.equippedBorder} size="sm" />
-                  <UsernameText username={row.username} colorId={row.equippedNameColor} className="truncate" />
-                  <UsernameBadge badgeId={row.equippedBadge} />
-                </Link>
-                <TierBadge elo={row.elo} rankedGamesPlayed={row.rankedGamesPlayed} className="shrink-0" />
+                <div className="flex items-center gap-4 min-w-0">
+                  <RankBadge rank={i + 1} />
+                  <Link
+                    to={`/u/${row.username}`}
+                    state={{ from: 'leaderboard' }}
+                    className="flex items-center gap-3 flex-1 min-w-0 group"
+                  >
+                    <Avatar avatarId={row.equippedAvatar} borderId={row.equippedBorder} size="sm" />
+                    <UsernameText username={row.username} colorId={row.equippedNameColor} className="truncate" />
+                    <UsernameBadge badgeId={row.equippedBadge} />
+                  </Link>
+                </div>
+                <TierBadge elo={row.elo} rankedGamesPlayed={row.rankedGamesPlayed} className="shrink-0 pl-11 sm:pl-0 sm:ml-auto" />
               </div>
             ))
           )
@@ -357,13 +359,15 @@ export default function Leaderboard() {
             personalRows.map((run, i) => (
               <div
                 key={run.id}
-                className="flex items-center gap-4 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3"
+                className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3"
               >
-                <RankBadge rank={i + 1} />
-                <span className="flex-1 min-w-0 truncate text-sm text-[var(--text-muted)]">
-                  {new Date(run.createdAt).toLocaleDateString()} {new Date(run.createdAt).toLocaleTimeString()}
-                </span>
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-4 min-w-0">
+                  <RankBadge rank={i + 1} />
+                  <span className="flex-1 min-w-0 truncate text-sm text-[var(--text-muted)]">
+                    {new Date(run.createdAt).toLocaleDateString()} {new Date(run.createdAt).toLocaleTimeString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 pl-11 sm:pl-0 sm:ml-auto">
                   <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">{run.accuracy}% acc</span>
                   <span className="text-lg font-semibold text-[var(--text-correct)] tabular-nums whitespace-nowrap">
                     {run.wpm} <span className="text-xs font-normal text-[var(--text-muted)]">wpm</span>
@@ -380,23 +384,25 @@ export default function Leaderboard() {
           userRows.map((row, i) => (
             <div
               key={row.userId}
-              className={`flex items-center gap-4 rounded-lg px-4 py-3 border ${
+              className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 rounded-lg px-4 py-3 border ${
                 row.userId === user?.id
                   ? 'border-[var(--accent)] bg-[var(--accent-soft)]'
                   : 'border-[var(--border)] bg-[var(--surface)]'
               }`}
             >
-              <RankBadge rank={i + 1} />
-              <Link
-                to={`/u/${row.username}`}
-                state={{ from: 'leaderboard' }}
-                className="flex items-center gap-3 flex-1 min-w-0 group"
-              >
-                <Avatar avatarId={row.equippedAvatar} borderId={row.equippedBorder} size="sm" />
-                <UsernameText username={row.username} colorId={row.equippedNameColor} className="truncate" />
-                <UsernameBadge badgeId={row.equippedBadge} />
-              </Link>
-              <span className="text-lg font-semibold text-[var(--text-correct)] tabular-nums shrink-0 whitespace-nowrap">
+              <div className="flex items-center gap-4 min-w-0">
+                <RankBadge rank={i + 1} />
+                <Link
+                  to={`/u/${row.username}`}
+                  state={{ from: 'leaderboard' }}
+                  className="flex items-center gap-3 flex-1 min-w-0 group"
+                >
+                  <Avatar avatarId={row.equippedAvatar} borderId={row.equippedBorder} size="sm" />
+                  <UsernameText username={row.username} colorId={row.equippedNameColor} className="truncate" />
+                  <UsernameBadge badgeId={row.equippedBadge} />
+                </Link>
+              </div>
+              <span className="text-lg font-semibold text-[var(--text-correct)] tabular-nums shrink-0 whitespace-nowrap pl-11 sm:pl-0 sm:ml-auto">
                 {row.wpm} <span className="text-xs font-normal text-[var(--text-muted)]">wpm</span>
               </span>
             </div>
