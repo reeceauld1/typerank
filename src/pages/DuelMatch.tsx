@@ -240,11 +240,12 @@ export default function DuelMatch() {
     await loadDuel();
   };
 
-  const handleGuestJoin = async () => {
-    if (!supabase || !id || !joinName.trim()) return;
+  const handleGuestJoin = async (nameOverride?: string) => {
+    const name = (nameOverride ?? joinName).trim();
+    if (!supabase || !id || !name) return;
     setResponding(true);
     setRespondError(null);
-    const { data, error } = await supabase.rpc('join_guest_duel', { p_duel_id: id, p_name: joinName.trim() });
+    const { data, error } = await supabase.rpc('join_guest_duel', { p_duel_id: id, p_name: name });
     setResponding(false);
     if (error || !data) {
       setRespondError("Couldn't join — try again.");
@@ -334,45 +335,31 @@ export default function DuelMatch() {
     );
   }
 
-  // Guest duels don't need an account at all — only authenticated ones
-  // (friend invites, or an open link created while signed in) do.
-  if (!isGuestDuel && !user) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16">
-        <AuthForm />
-      </div>
-    );
-  }
-
   const isParticipant = isCreator || isOpponent;
   const opponentSlotOpen = !duel.opponent_id && !duel.opponent_name;
+  const challengerName = players[duel.creator_id ?? '']?.username ?? duel.creator_name ?? 'someone';
 
   // Not part of this duel at all.
   if (!isParticipant) {
     if (duel.status === 'open' && opponentSlotOpen) {
-      if (isGuestDuel) {
+      // Any open duel — whether created by a guest or an account holder —
+      // can be joined either way: an account holder links their real
+      // account (avatar, profile) via join_duel, no name needed; a guest
+      // enters a name and joins via join_guest_duel.
+      if (user) {
         return (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
             <p className="text-[var(--text-correct)] font-semibold">
-              {duel.creator_name ?? 'someone'} challenged you to a {duel.word_count}-word duel.
+              {challengerName} challenged you to a {duel.word_count}-word duel.
             </p>
-            <input
-              type="text"
-              autoFocus
-              maxLength={20}
-              placeholder="your name"
-              value={joinName}
-              onChange={e => setJoinName(e.target.value)}
-              className="w-full max-w-xs bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-center text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
-            />
             {respondError && <p className="text-[var(--text-incorrect)] text-sm">{respondError}</p>}
             <button
               type="button"
-              disabled={responding || !joinName.trim()}
-              onClick={() => void handleGuestJoin()}
+              disabled={responding}
+              onClick={() => void handleJoin()}
               className="bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
             >
-              {responding ? '...' : 'confirm'}
+              {responding ? '...' : 'accept duel'}
             </button>
           </div>
         );
@@ -380,17 +367,36 @@ export default function DuelMatch() {
       return (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
           <p className="text-[var(--text-correct)] font-semibold">
-            {players[duel.creator_id ?? '']?.username ?? 'someone'} challenged you to a {duel.word_count}-word duel.
+            {challengerName} challenged you to a {duel.word_count}-word duel.
           </p>
+          <input
+            type="text"
+            autoFocus
+            maxLength={20}
+            placeholder="your name"
+            value={joinName}
+            onChange={e => setJoinName(e.target.value)}
+            className="w-full max-w-xs bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-center text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
+          />
           {respondError && <p className="text-[var(--text-incorrect)] text-sm">{respondError}</p>}
           <button
             type="button"
-            disabled={responding}
-            onClick={() => void handleJoin()}
+            disabled={responding || !joinName.trim()}
+            onClick={() => void handleGuestJoin()}
             className="bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
           >
-            {responding ? '...' : 'accept duel'}
+            {responding ? '...' : 'confirm'}
           </button>
+        </div>
+      );
+    }
+    // A targeted friend invite (opponent slot already claimed by a
+    // specific account) — only that account can accept it, so a
+    // signed-out visitor needs to sign in to find out if it's them.
+    if (duel.status === 'pending' && !opponentSlotOpen && !user) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16">
+          <AuthForm />
         </div>
       );
     }

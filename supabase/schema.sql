@@ -586,21 +586,26 @@ declare
   v_user_id uuid := auth.uid();
   v_creator_id uuid;
   v_opponent_id uuid;
+  v_opponent_name text;
 begin
   if v_user_id is null then
     raise exception 'not authenticated';
   end if;
 
-  select creator_id, opponent_id into v_creator_id, v_opponent_id
+  select creator_id, opponent_id, opponent_name into v_creator_id, v_opponent_id, v_opponent_name
   from public.duels where id = p_duel_id for update;
 
-  if v_creator_id is null then
+  if not found then
     raise exception 'duel not found';
   end if;
   if v_creator_id = v_user_id then
     raise exception 'cannot join your own duel';
   end if;
-  if v_opponent_id is not null and v_opponent_id != v_user_id then
+  if v_opponent_id is not null then
+    if v_opponent_id != v_user_id then
+      raise exception 'duel already has an opponent';
+    end if;
+  elsif v_opponent_name is not null then
     raise exception 'duel already has an opponent';
   end if;
 
@@ -723,21 +728,21 @@ language plpgsql
 security definer set search_path = public
 as $$
 declare
+  v_opponent_id uuid;
   v_opponent_name text;
-  v_creator_id uuid;
   v_token uuid := gen_random_uuid();
 begin
   if p_name is null or length(trim(p_name)) = 0 then
     raise exception 'name required';
   end if;
 
-  select opponent_name, creator_id into v_opponent_name, v_creator_id
+  select opponent_id, opponent_name into v_opponent_id, v_opponent_name
   from public.duels where id = p_duel_id for update;
 
-  if v_creator_id is not null then
-    raise exception 'not a guest duel';
+  if not found then
+    raise exception 'duel not found';
   end if;
-  if v_opponent_name is not null then
+  if v_opponent_id is not null or v_opponent_name is not null then
     raise exception 'duel already has an opponent';
   end if;
 
@@ -809,7 +814,7 @@ begin
   select creator_id, opponent_id into v_creator_id, v_opponent_id
   from public.duels where id = p_duel_id for update;
 
-  if v_creator_id is null then
+  if not found then
     raise exception 'duel not found';
   end if;
 
