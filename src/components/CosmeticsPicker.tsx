@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { UserStats } from '../types/index.js';
 import { useUser } from '../hooks/useUser.js';
 import { useAuth } from '../hooks/useAuth.js';
-import { AVATAR_CATALOG, BORDER_CATALOG, isAdminEmail } from '../utils/cosmetics.js';
+import { AVATAR_CATALOG, BORDER_CATALOG, NAME_COLOR_CATALOG, isAdminEmail } from '../utils/cosmetics.js';
 import { ACCENT_COLOR_CATALOG } from '../utils/accentColors.js';
 import Tooltip from './Tooltip.js';
 
@@ -31,7 +31,7 @@ interface CosmeticsPickerProps {
 }
 
 export default function CosmeticsPicker({ statsOverride, readOnly = false }: CosmeticsPickerProps = {}) {
-  const { stats: ownStats, setEquippedCosmetics, setEquippedAccentColor } = useUser();
+  const { stats: ownStats, setEquippedCosmetics, setEquippedAccentColor, setEquippedNameColor } = useUser();
   const { user } = useAuth();
   const stats = statsOverride ?? ownStats;
   const admin = !readOnly && isAdminEmail(user?.email);
@@ -77,6 +77,13 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
     if (!ok) setError("Couldn't equip that color — try again.");
   };
 
+  const handleEquipNameColor = async (id: string) => {
+    if (readOnly || id === stats.equippedNameColor) return;
+    setError(null);
+    const ok = await setEquippedNameColor(id);
+    if (!ok) setError("Couldn't equip that name color — try again.");
+  };
+
   // Picking is local-only until confirmed — the native color input fires
   // onChange continuously while dragging around the color wheel, and
   // calling setEquippedAccentColor (an RPC + full stats refresh) on every
@@ -96,6 +103,7 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
   const unlockedAvatars = admin ? AVATAR_CATALOG.length : AVATAR_CATALOG.filter(a => a.isUnlocked(stats)).length;
   const unlockedBorders = admin ? BORDER_CATALOG.length : BORDER_CATALOG.filter(b => b.isUnlocked(stats)).length;
   const unlockedColors = admin ? ACCENT_COLOR_CATALOG.length : ACCENT_COLOR_CATALOG.filter(c => c.isUnlocked(stats)).length;
+  const unlockedNameColors = admin ? NAME_COLOR_CATALOG.length : NAME_COLOR_CATALOG.filter(c => c.isUnlocked(stats)).length;
 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
@@ -165,6 +173,41 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
                     <div className={`w-10 h-10 border-2 rounded-full bg-[var(--bg-elevated)] ${border.className}`} />
                   </div>
                   <span className="text-[10px] text-[var(--text-muted)] text-center leading-tight">{border.name}</span>
+                </button>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </section>
+
+      <section>
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 className="text-lg font-semibold text-[var(--text-correct)]">name colors</h3>
+          <span className="text-xs text-[var(--text-muted)] tabular-nums">
+            {unlockedNameColors} / {NAME_COLOR_CATALOG.length} unlocked
+          </span>
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-8 gap-3">
+          {NAME_COLOR_CATALOG.map(color => {
+            const unlocked = admin || color.isUnlocked(stats);
+            const equipped = stats.equippedNameColor === color.id;
+            return (
+              <Tooltip key={color.id} content={unlocked ? `${color.name} — Unlocked: ${color.description}` : `${color.name} — ${color.description}`}>
+                <button
+                  type="button"
+                  disabled={!unlocked || readOnly}
+                  onClick={() => void handleEquipNameColor(color.id)}
+                  className={`relative w-full flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped, readOnly)}`}
+                >
+                  {!unlocked && (
+                    <span className="absolute top-1.5 right-1.5 text-[var(--text-muted)]">
+                      <LockIcon />
+                    </span>
+                  )}
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--bg-elevated)]">
+                    <span className={`text-sm font-bold ${color.className}`}>Aa</span>
+                  </div>
+                  <span className="text-[10px] text-[var(--text-muted)] text-center leading-tight">{color.name}</span>
                 </button>
               </Tooltip>
             );
