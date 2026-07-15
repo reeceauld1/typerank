@@ -7,6 +7,7 @@ import { generateDuelWordList } from '../utils/words.js';
 import { type DuelMode, WORD_PRESETS, TIME_PRESETS, formatDuelSetting } from '../utils/duels.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import Avatar from '../components/Avatar.js';
+import UsernameText from '../components/UsernameText.js';
 
 // Custom (non-preset) duels aren't ranked and earn half XP — see
 // DuelMatch.tsx's handleComplete — so the range is otherwise generous
@@ -406,7 +407,7 @@ export default function Duel() {
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Avatar avatarId={friend.equippedAvatar} borderId={friend.equippedBorder} size="sm" />
-                  <span className="text-sm text-[var(--text-correct)] truncate">{friend.username}</span>
+                  <UsernameText username={friend.username} colorId={friend.equippedNameColor} className="text-sm truncate" />
                 </div>
                 <button
                   type="button"

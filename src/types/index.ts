@@ -74,6 +74,7 @@ export interface FriendEntry {
   username: string;
   equippedAvatar: string;
   equippedBorder: string;
+  equippedNameColor: string;
 }
 
 export interface LeaderboardEntry {

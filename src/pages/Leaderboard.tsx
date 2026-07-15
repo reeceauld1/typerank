@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useFriends } from '../hooks/useFriends.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
+import UsernameText from '../components/UsernameText.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 type Scope = 'global' | 'friends' | 'personal';
@@ -31,6 +32,7 @@ interface RankedUser {
   username: string;
   equippedAvatar: string;
   equippedBorder: string;
+  equippedNameColor: string;
   wpm: number;
 }
 
@@ -88,6 +90,7 @@ export default function Leaderboard() {
             username: row.username as string,
             equippedAvatar: row.equipped_avatar as string,
             equippedBorder: row.equipped_border as string,
+            equippedNameColor: (row.equipped_name_color as string) ?? 'default',
             wpm: (row[cat.column] as number) ?? 0,
           }))
         );
@@ -102,6 +105,7 @@ export default function Leaderboard() {
         username: row.username as string,
         equippedAvatar: row.equipped_avatar as string,
         equippedBorder: row.equipped_border as string,
+        equippedNameColor: (row.equipped_name_color as string) ?? 'default',
         wpm: (row[cat.column] as number) ?? 0,
       }));
       rows.sort((a, b) => b.wpm - a.wpm);
@@ -256,9 +260,7 @@ export default function Leaderboard() {
                 className="flex items-center gap-3 flex-1 min-w-0 group"
               >
                 <Avatar avatarId={row.equippedAvatar} borderId={row.equippedBorder} size="sm" />
-                <span className="font-medium text-[var(--text-correct)] truncate group-hover:text-[var(--accent)] transition-colors">
-                  {row.username}
-                </span>
+                <UsernameText username={row.username} colorId={row.equippedNameColor} className="truncate" />
               </Link>
               <span className="text-lg font-semibold text-[var(--text-correct)] tabular-nums shrink-0 whitespace-nowrap">
                 {row.wpm} <span className="text-xs font-normal text-[var(--text-muted)]">wpm</span>

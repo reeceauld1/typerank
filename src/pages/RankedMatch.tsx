@@ -9,6 +9,7 @@ import { generateSeededWordList } from '../utils/words.js';
 import { getRankTier } from '../utils/rank.js';
 import TypingTest from '../components/TypingTest.js';
 import Avatar from '../components/Avatar.js';
+import UsernameText from '../components/UsernameText.js';
 
 interface RankedMatchRow {
   id: string;
@@ -33,6 +34,7 @@ interface PlayerInfo {
   username: string;
   equippedAvatar: string;
   equippedBorder: string;
+  equippedNameColor: string;
 }
 
 function ResultCard({
@@ -58,7 +60,7 @@ function ResultCard({
     >
       <div className="flex items-center justify-center gap-2 mb-3">
         {avatar && <Avatar avatarId={avatar.equippedAvatar} borderId={avatar.equippedBorder} size="sm" />}
-        <span className="text-sm font-medium text-[var(--text-correct)] truncate">{name}</span>
+        <UsernameText username={name} colorId={avatar?.equippedNameColor ?? 'default'} className="text-sm truncate" />
         {winner && <span className="text-xs font-semibold text-[var(--accent)]">winner</span>}
       </div>
       {wpm === null ? (
@@ -99,7 +101,10 @@ export default function RankedMatch() {
 
   const loadPlayers = useCallback(async (ids: string[]) => {
     if (!supabase || ids.length === 0) return;
-    const { data } = await supabase.from('user_stats').select('user_id, username, equipped_avatar, equipped_border').in('user_id', ids);
+    const { data } = await supabase
+      .from('user_stats')
+      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color')
+      .in('user_id', ids);
     if (!data) return;
     setPlayers(prev => {
       const next = { ...prev };
@@ -108,6 +113,7 @@ export default function RankedMatch() {
           username: row.username as string,
           equippedAvatar: row.equipped_avatar as string,
           equippedBorder: row.equipped_border as string,
+          equippedNameColor: (row.equipped_name_color as string) ?? 'default',
         };
       }
       return next;
@@ -281,7 +287,9 @@ export default function RankedMatch() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
         <p className="text-[var(--text-correct)] font-semibold">
-          You're matched against {opponentName} ({(isPlayer1 ? match.player2_elo_before : match.player1_elo_before).toLocaleString()} elo).
+          You're matched against{' '}
+          <UsernameText username={opponentName} colorId={opponentAvatar?.equippedNameColor ?? 'default'} /> (
+          {(isPlayer1 ? match.player2_elo_before : match.player1_elo_before).toLocaleString()} elo).
         </p>
         <button
           type="button"

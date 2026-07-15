@@ -10,6 +10,7 @@ import { type DuelMode, isRankedDuelValue, formatDuelSetting } from '../utils/du
 import TypingTest from '../components/TypingTest.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
+import UsernameText from '../components/UsernameText.js';
 
 type DuelStatus = 'open' | 'pending' | 'accepted' | 'declined' | 'cancelled';
 
@@ -42,6 +43,7 @@ interface PlayerInfo {
   username: string;
   equippedAvatar: string;
   equippedBorder: string;
+  equippedNameColor: string;
 }
 
 function ResultCard({
@@ -67,7 +69,7 @@ function ResultCard({
     >
       <div className="flex items-center justify-center gap-2 mb-3">
         {avatar && <Avatar avatarId={avatar.equippedAvatar} borderId={avatar.equippedBorder} size="sm" />}
-        <span className="text-sm font-medium text-[var(--text-correct)] truncate">{name}</span>
+        <UsernameText username={name} colorId={avatar?.equippedNameColor ?? 'default'} className="text-sm truncate" />
         {winner && <span className="text-xs font-semibold text-[var(--accent)]">winner</span>}
       </div>
       {wpm === null ? (
@@ -118,7 +120,10 @@ export default function DuelMatch() {
 
   const loadPlayers = useCallback(async (ids: string[]) => {
     if (!supabase || ids.length === 0) return;
-    const { data } = await supabase.from('user_stats').select('user_id, username, equipped_avatar, equipped_border').in('user_id', ids);
+    const { data } = await supabase
+      .from('user_stats')
+      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color')
+      .in('user_id', ids);
     if (!data) return;
     setPlayers(prev => {
       const next = { ...prev };
@@ -127,6 +132,7 @@ export default function DuelMatch() {
           username: row.username as string,
           equippedAvatar: row.equipped_avatar as string,
           equippedBorder: row.equipped_border as string,
+          equippedNameColor: (row.equipped_name_color as string) ?? 'default',
         };
       }
       return next;
@@ -195,6 +201,11 @@ export default function DuelMatch() {
     duel && ((user && user.id === duel.opponent_id) || (guestToken && guestToken === duel.opponent_token))
   );
   const waitingForAccept = isCreator && duel?.status === 'pending';
+  // The invited player, looking at the still-unanswered invite — tracked
+  // separately from waitingForAccept (which is the creator's own side of
+  // the same 'pending' status) so each side watches the other's presence
+  // below, not their own.
+  const waitingForMyDecision = isOpponent && duel?.status === 'pending';
   const haveSubmittedResult = Boolean(
     duel && ((isCreator && duel.creator_wpm !== null) || (isOpponent && duel.opponent_wpm !== null))
   );
@@ -220,7 +231,9 @@ export default function DuelMatch() {
   // either side is signed in or a guest.
   const myRole: 'creator' | 'opponent' | null = isCreator ? 'creator' : isOpponent ? 'opponent' : null;
   const waitingOnRole: 'creator' | 'opponent' | null =
-    waitingForAccept || waitingForOpponentToFinish ? (isCreator ? 'opponent' : 'creator') : null;
+    waitingForAccept || waitingForOpponentToFinish || waitingForMyDecision
+      ? (isCreator ? 'opponent' : 'creator')
+      : null;
 
   // Tracks whether whoever we're waiting on is actually still connected —
   // lets us tell "they haven't shown up yet" (normal, keep waiting) apart
@@ -251,6 +264,20 @@ export default function DuelMatch() {
   }, [id, myRole, waitingOnRole]);
 
   const matchCancelled = waitingOnRole !== null && opponentEverPresent && opponentPresent === false;
+
+  // Complements the creator-side unmount cleanup below, which only fires on
+  // a normal in-app navigation — it can't run if the sender just closes the
+  // tab or leaves the site outright. Presence catches that case instead:
+  // once the invited player notices (via matchCancelled above) that the
+  // creator who was here has disconnected, they expire the invite
+  // themselves, so it stops showing up as pending everywhere (invite
+  // badge, /duel list) even though the sender's own client never got the
+  // chance to withdraw it.
+  useEffect(() => {
+    if (matchCancelled && waitingForMyDecision && id && supabase) {
+      void supabase.rpc('expire_duel_invite', { p_duel_id: id });
+    }
+  }, [matchCancelled, waitingForMyDecision, id]);
 
   // If the creator navigates away from a friend invite before it's been
   // accepted, withdraw it — otherwise the recipient's pending-invite badge
@@ -435,6 +462,7 @@ export default function DuelMatch() {
 
   const isParticipant = isCreator || isOpponent;
   const challengerName = players[duel.creator_id ?? '']?.username ?? duel.creator_name ?? 'someone';
+  const challengerColor = players[duel.creator_id ?? '']?.equippedNameColor ?? 'default';
 
   // Not part of this duel at all.
   if (!isParticipant) {
@@ -447,7 +475,8 @@ export default function DuelMatch() {
         return (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
             <p className="text-[var(--text-correct)] font-semibold">
-              {challengerName} challenged you to a {formatDuelSetting(duel.mode, duel.value)} duel.
+              <UsernameText username={challengerName} colorId={challengerColor} /> challenged you to a{' '}
+              {formatDuelSetting(duel.mode, duel.value)} duel.
             </p>
             {respondError && <p className="text-[var(--text-incorrect)] text-sm">{respondError}</p>}
             <button
@@ -464,7 +493,8 @@ export default function DuelMatch() {
       return (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
           <p className="text-[var(--text-correct)] font-semibold">
-            {challengerName} challenged you to a {formatDuelSetting(duel.mode, duel.value)} duel.
+            <UsernameText username={challengerName} colorId={challengerColor} /> challenged you to a{' '}
+            {formatDuelSetting(duel.mode, duel.value)} duel.
           </p>
           <input
             type="text"
@@ -507,13 +537,34 @@ export default function DuelMatch() {
     );
   }
 
+  // Whoever we're waiting on (accept, or a finished result) disconnected —
+  // checked before the "still pending" branch below so a vanished sender
+  // shows up immediately via presence, rather than the invite still
+  // rendering accept/decline buttons until expire_duel_invite's status
+  // update round-trips back.
+  if (matchCancelled) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 pb-16">
+        <p className="text-[var(--text-correct)] font-semibold">Match cancelled</p>
+        <p className="text-[var(--text-muted)] text-sm">The other player disconnected.</p>
+        <Link to="/duel" className="text-sm text-[var(--accent)] hover:underline">
+          start a new one
+        </Link>
+      </div>
+    );
+  }
+
   // Invited by a friend, haven't responded yet (auth-only — guest duels
   // never have a 'pending' status).
   if (isOpponent && duel.status === 'pending') {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
         <p className="text-[var(--text-correct)] font-semibold">
-          {players[duel.creator_id ?? '']?.username ?? 'someone'} challenged you to a {formatDuelSetting(duel.mode, duel.value)} duel.
+          <UsernameText
+            username={players[duel.creator_id ?? '']?.username ?? 'someone'}
+            colorId={players[duel.creator_id ?? '']?.equippedNameColor ?? 'default'}
+          />{' '}
+          challenged you to a {formatDuelSetting(duel.mode, duel.value)} duel.
         </p>
         {respondError && <p className="text-[var(--text-incorrect)] text-sm">{respondError}</p>}
         <div className="flex items-center gap-2">
@@ -543,7 +594,11 @@ export default function DuelMatch() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 pb-16">
         <p className="text-[var(--text-correct)] font-semibold">
-          {players[duel.opponent_id ?? '']?.username ?? duel.opponent_name ?? 'they'} declined this duel.
+          <UsernameText
+            username={players[duel.opponent_id ?? '']?.username ?? duel.opponent_name ?? 'they'}
+            colorId={players[duel.opponent_id ?? '']?.equippedNameColor ?? 'default'}
+          />{' '}
+          declined this duel.
         </p>
         <Link to="/duel" className="text-sm text-[var(--accent)] hover:underline">
           start a new one
@@ -564,25 +619,17 @@ export default function DuelMatch() {
     );
   }
 
-  // Whoever we're waiting on (accept, or a finished result) disconnected.
-  if (matchCancelled) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 pb-16">
-        <p className="text-[var(--text-correct)] font-semibold">Match cancelled</p>
-        <p className="text-[var(--text-muted)] text-sm">The other player disconnected.</p>
-        <Link to="/duel" className="text-sm text-[var(--accent)] hover:underline">
-          start a new one
-        </Link>
-      </div>
-    );
-  }
-
   // I'm the creator of a friend invite that hasn't been accepted yet.
   if (waitingForAccept) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 text-center px-6">
         <p className="text-[var(--text-correct)] font-semibold">
-          Waiting for {players[duel.opponent_id ?? '']?.username ?? duel.opponent_name ?? 'them'} to accept…
+          Waiting for{' '}
+          <UsernameText
+            username={players[duel.opponent_id ?? '']?.username ?? duel.opponent_name ?? 'them'}
+            colorId={players[duel.opponent_id ?? '']?.equippedNameColor ?? 'default'}
+          />{' '}
+          to accept…
         </p>
       </div>
     );
