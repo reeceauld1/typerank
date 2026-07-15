@@ -82,10 +82,10 @@ export default function Footer() {
           <TikTokIcon />
           tiktok
         </a>
-        <a href="mailto:contact@typeladder.com" className={LINK_CLASS}>
+        <Link to="/contact" className={LINK_CLASS}>
           <EmailIcon />
           contact
-        </a>
+        </Link>
         <Link to="/report-bug" className={LINK_CLASS}>
           <BugIcon />
           report a bug

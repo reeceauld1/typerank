@@ -51,6 +51,17 @@ export default function PrivacyPolicy() {
             details from that — the Supporter badge is only added to your account by hand, after you let us know
             which account is yours.
           </p>
+          <p className="mt-3">
+            Learn mode (letter-by-letter typing practice) works without an account too. Signed in, we store which
+            letters you've unlocked and your per-letter accuracy so it follows you across devices. As a guest, that
+            same data stays in your browser's local storage only — we never see it.
+          </p>
+          <p className="mt-3">
+            If you submit a bug report or a message through the contact form, we store what you wrote, your account
+            (if you're signed in — otherwise nothing identifying), the reply email you optionally give us, and the
+            page/browser you sent it from, so we can follow up and fix things. These are readable only by us, not by
+            other users.
+          </p>
         </section>
 
         <section>
@@ -141,7 +152,11 @@ export default function PrivacyPolicy() {
         <section>
           <h2 className="text-[var(--text-correct)] font-semibold mb-2">Contact</h2>
           <p>
-            Questions about this policy or your data?{' '}
+            Questions about this policy or your data? Use the{' '}
+            <Link to="/contact" className="text-[var(--accent)] hover:underline">
+              contact form
+            </Link>{' '}
+            or email{' '}
             <a href="mailto:contact@typeladder.com" className="text-[var(--accent)] hover:underline">
               contact@typeladder.com
             </a>
