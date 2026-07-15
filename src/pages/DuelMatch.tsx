@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { TestConfig } from '../types/index.js';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
@@ -89,6 +89,7 @@ export default function DuelMatch() {
   useDocumentTitle('duel');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isConfigured } = useAuth();
   const { addTestResult } = useUser();
 
@@ -106,9 +107,14 @@ export default function DuelMatch() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    // A rematch already had both players confirm "start" on the duel it
+    // replaced — landing on the fresh duel from that flow (see the
+    // rematch_duel_id effect below) skips the ready gate and goes straight
+    // into typing, rather than making both players click "start" again.
+    const state = location.state as { fromRematch?: boolean } | null;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setReady(false);
-  }, [id]);
+    setReady(Boolean(state?.fromRematch));
+  }, [id, location.state]);
 
   const loadPlayers = useCallback(async (ids: string[]) => {
     if (!supabase || ids.length === 0) return;
@@ -399,7 +405,7 @@ export default function DuelMatch() {
       if (myNewToken) {
         sessionStorage.setItem(`duel_token_${duel.rematch_duel_id}`, myNewToken);
       }
-      navigate(`/duel/${duel.rematch_duel_id}`);
+      navigate(`/duel/${duel.rematch_duel_id}`, { state: { fromRematch: true } });
     }
   }, [duel?.rematch_duel_id, duel?.creator_rematch_token, duel?.opponent_rematch_token, isCreator, isOpponent, navigate]);
 
