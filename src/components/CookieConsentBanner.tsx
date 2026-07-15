@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { loadGoogleAnalytics } from '../utils/analytics.js';
 
 const CONSENT_KEY = 'analyticsConsent';
 
 export default function CookieConsentBanner() {
+  const location = useLocation();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export default function CookieConsentBanner() {
       <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-[var(--text-secondary)]">
           We use Google Analytics to understand how the site is used. See our{' '}
-          <Link to="/privacy" className="text-[var(--accent)] hover:underline">
+          <Link to="/privacy" state={{ from: location.pathname }} className="text-[var(--accent)] hover:underline">
             privacy policy
           </Link>
           .

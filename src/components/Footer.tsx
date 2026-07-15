@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 function EmailIcon() {
   return (
@@ -66,6 +66,7 @@ function PadlockIcon() {
 const LINK_CLASS = 'flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors';
 
 export default function Footer() {
+  const location = useLocation();
   return (
     <footer className="py-6 px-6">
       <div className="flex flex-wrap items-center justify-start gap-x-6 gap-y-2 text-xs">
@@ -93,7 +94,7 @@ export default function Footer() {
           <KofiIcon />
           support on ko-fi
         </a>
-        <Link to="/privacy" className={LINK_CLASS}>
+        <Link to="/privacy" state={{ from: location.pathname }} className={LINK_CLASS}>
           <PadlockIcon />
           privacy
         </Link>

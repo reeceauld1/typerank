@@ -1,19 +1,25 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 const LAST_UPDATED = 'July 15, 2026';
 
 export default function PrivacyPolicy() {
   useDocumentTitle('privacy policy');
+  const location = useLocation();
+  // Reached from the footer/cookie banner on almost any page — go back to
+  // wherever that actually was instead of always assuming settings.
+  const from = (location.state as { from?: string } | null)?.from;
+  const backTo = from ?? '/settings';
+  const backLabel = from ? 'back' : 'back to settings';
   return (
     <div className="flex-1 flex flex-col py-10 px-6">
-      <div className="max-w-3xl w-full mx-auto flex items-center justify-between mb-8">
+      <div className="max-w-3xl w-full mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">privacy policy</h1>
         <Link
-          to="/settings"
+          to={backTo}
           className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors"
         >
-          back to settings
+          {backLabel}
         </Link>
       </div>
 
@@ -26,7 +32,7 @@ export default function PrivacyPolicy() {
             If you create an account, we collect your email address, a username you choose, and a password (handled
             entirely by our authentication provider, Supabase — we never see or store your password ourselves). We
             also store your typing test results (WPM, accuracy, mode, and timestamp), your level and total XP, and
-            which cosmetics (avatars, borders, accent colors, name colors) you've unlocked and equipped.
+            which cosmetics (avatars, borders, accent colors, name colors, and badges) you've unlocked and equipped.
           </p>
           <p className="mt-3">
             Duels work without an account too. If you start or join one as a guest, we store the display name you
@@ -38,6 +44,12 @@ export default function PrivacyPolicy() {
             Ranked matches pair you with a random opponent near your skill level instead of someone you chose — this
             requires an account (no guest option, since your rating needs to persist between matches). We store your
             elo rating, rank tier progress, and the results (WPM, accuracy, opponent, outcome) of each ranked match.
+          </p>
+          <p className="mt-3">
+            Some badges are earned automatically from your stats (being an early account, or a top score). If you
+            support the project through Ko-fi, we don't automatically receive or store any payment or donation
+            details from that — the Supporter badge is only added to your account by hand, after you let us know
+            which account is yours.
           </p>
         </section>
 
@@ -54,7 +66,7 @@ export default function PrivacyPolicy() {
         <section>
           <h2 className="text-[var(--text-correct)] font-semibold mb-2">What's public</h2>
           <p>
-            Your username, level, equipped cosmetics, and best WPM scores are visible to other users — on the
+            Your username, level, equipped cosmetics (including any badges), and best WPM scores are visible to other users — on the
             leaderboard, your profile page, and to anyone you add as a friend (or who finds you by username search).
             Whoever you duel — including a stranger via a shared link — sees your name (or username, if signed in)
             and results for that duel. Your elo rating and rank tier are visible on the ranked leaderboard and to
