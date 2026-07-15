@@ -1,5 +1,6 @@
 import type { UserStats } from '../types/index.js';
 import { RANK_TIERS, PLACEMENT_GAMES } from './rank.js';
+import ShineIcon from '../components/ShineIcon.js';
 
 // Bypasses every unlock condition below — every avatar/border shows as
 // unlocked for this account. Cosmetic-only, no other admin privileges.
@@ -448,20 +449,19 @@ export interface BadgeDef {
   isUnlocked: (stats: UserStats) => boolean;
 }
 
-function fillIcon(paths: React.ReactElement) {
-  return ({ className }: { className?: string }) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-      {paths}
-    </svg>
-  );
-}
-
 export const BADGE_CATALOG: BadgeDef[] = [
   {
     id: 'founder',
     name: 'Founder',
     description: 'One of the first 25 people to join typeladder.',
-    icon: fillIcon(<path d="M12 2.5l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7-5.4-4.7 7.1-.6z" />),
+    icon: ({ className }) => (
+      <ShineIcon
+        className={className}
+        variant="fill"
+        color="#ffd24a"
+        paths={<path d="M12 2.5l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7-5.4-4.7 7.1-.6z" />}
+      />
+    ),
     color: '#ffd24a',
     isUnlocked: stats => stats.isFounder,
   },
@@ -473,9 +473,12 @@ export const BADGE_CATALOG: BadgeDef[] = [
     // 24x24 viewBox) fills a larger fraction of its width than its height —
     // rendered at the same size as the other badge icons, that made it read
     // as sitting off-center horizontally. scaleX narrows it to match the
-    // vertical fill ratio instead of the raw square box.
+    // vertical fill ratio instead of the raw square box. The heartbeat
+    // keyframes (index.css) bake that same scaleX(0.92) into every frame,
+    // since a CSS animation targeting `transform` overrides the inline
+    // style here rather than combining with it.
     icon: ({ className }) => (
-      <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={{ transform: 'scaleX(0.92)' }}>
+      <svg viewBox="0 0 24 24" fill="currentColor" className={`${className ?? ''} badge-heartbeat`}>
         <path d="M12 21.35 10.55 20.03C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54Z" />
       </svg>
     ),
@@ -486,14 +489,40 @@ export const BADGE_CATALOG: BadgeDef[] = [
     id: 'fast_typer',
     name: 'Fast Typer',
     description: 'Top 3 globally in wpm on any test length.',
-    icon: icon(
-      <>
-        <rect x="2.5" y="6" width="19" height="13" rx="2" />
-        <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12" />
-      </>
+    icon: ({ className }) => (
+      <ShineIcon
+        className={className}
+        variant="stroke"
+        color="#5b9bd9"
+        paths={
+          <>
+            <rect x="2.5" y="6" width="19" height="13" rx="2" />
+            <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12" />
+          </>
+        }
+      />
     ),
     color: '#5b9bd9',
     isUnlocked: stats => stats.isFastTyper,
+  },
+  {
+    id: 'dev',
+    name: 'Dev',
+    description: 'Built typeladder.',
+    icon: ({ className }) => (
+      <ShineIcon
+        className={className}
+        variant="fill"
+        color="#b8bcc4"
+        flip
+        paths={<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />}
+      />
+    ),
+    color: '#b8bcc4',
+    // Hardcoded to one account (yvernxyz@gmail.com, username "yvern") —
+    // username alone is enough since it's unique (case-insensitive) and
+    // UserStats doesn't carry email at all.
+    isUnlocked: stats => stats.username?.toLowerCase() === 'yvern',
   },
 ];
 

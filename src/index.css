@@ -248,6 +248,37 @@ body.is-typing * {
   }
 }
 
+/* Supporter badge's pulsing heart (see BADGE_CATALOG in cosmetics.tsx). The
+   scaleX(0.92) horizontal squeeze that badge's icon needs (the heart path's
+   own bounding box isn't square) is baked into every keyframe rather than
+   left as the element's inline style, since a CSS animation targeting
+   `transform` overrides — doesn't compose with — an inline transform. Two
+   quick beats then a longer rest, like a real heartbeat rather than a
+   steady pulse. */
+@keyframes badge-heartbeat {
+  0%,
+  100% {
+    transform: scaleX(0.92) scale(1);
+  }
+  15% {
+    transform: scaleX(0.92) scale(1.2);
+  }
+  30% {
+    transform: scaleX(0.92) scale(1);
+  }
+  45% {
+    transform: scaleX(0.92) scale(1.2);
+  }
+  60% {
+    transform: scaleX(0.92) scale(1);
+  }
+}
+
+.badge-heartbeat {
+  transform-origin: center;
+  animation: badge-heartbeat 1.8s ease-in-out infinite;
+}
+
 @keyframes rainbow-glow-cycle {
   0% {
     text-shadow: 0 0 8px #ff5f6d80;
@@ -268,3 +299,4 @@ body.is-typing * {
     text-shadow: 0 0 8px #ff5f6d80;
   }
 }
+

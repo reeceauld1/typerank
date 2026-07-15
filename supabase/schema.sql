@@ -1417,7 +1417,7 @@ grant execute on function public.change_username to authenticated;
 -- boolean here instead of a client-side isUnlocked(stats) check.
 create table public.badge_catalog (id text primary key);
 
-insert into public.badge_catalog (id) values ('founder'), ('supporter'), ('fast_typer');
+insert into public.badge_catalog (id) values ('founder'), ('supporter'), ('fast_typer'), ('dev');
 
 alter table public.user_stats
   add column is_founder boolean not null default false,
@@ -1497,14 +1497,15 @@ begin
   end if;
 
   if p_badge_id is not null then
-    if p_badge_id not in ('founder', 'supporter', 'fast_typer') then
+    if p_badge_id not in ('founder', 'supporter', 'fast_typer', 'dev') then
       raise exception 'unknown badge';
     end if;
 
     select * into v_row from public.user_stats where user_id = v_user_id;
     if (p_badge_id = 'founder' and not v_row.is_founder)
       or (p_badge_id = 'supporter' and not v_row.is_supporter)
-      or (p_badge_id = 'fast_typer' and not v_row.is_fast_typer) then
+      or (p_badge_id = 'fast_typer' and not v_row.is_fast_typer)
+      or (p_badge_id = 'dev' and lower(v_row.username) <> 'yvern') then
       raise exception 'badge not unlocked';
     end if;
   end if;
