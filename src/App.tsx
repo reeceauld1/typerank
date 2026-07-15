@@ -16,6 +16,8 @@ import Leaderboard from './pages/Leaderboard.js';
 import ResetPassword from './pages/ResetPassword.js';
 import PrivacyPolicy from './pages/PrivacyPolicy.js';
 import BugReport from './pages/BugReport.js';
+import Duel from './pages/Duel.js';
+import DuelMatch from './pages/DuelMatch.js';
 
 function App() {
   return (
@@ -37,6 +39,8 @@ function App() {
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/report-bug" element={<BugReport />} />
+                  <Route path="/duel" element={<Duel />} />
+                  <Route path="/duel/:id" element={<DuelMatch />} />
                 </Routes>
                 <Footer />
                 <CookieConsentBanner />

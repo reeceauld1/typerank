@@ -8,7 +8,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface TypingTestProps {
   config: TestConfig;
-  onComplete?: () => void;
+  // Used by duels: both players type the same shared word list instead of
+  // each generating their own random one.
+  fixedText?: string;
+  // Duels don't count toward personal stats/XP/leaderboard — they're a
+  // separate track (see the duel_records tally instead).
+  skipStatsSave?: boolean;
+  onComplete?: (stats: { wpm: number; accuracy: number; rawWpm: number; timeElapsed: number }) => void;
   onRestart?: () => void;
   onTypingActiveChange?: (active: boolean) => void;
 }
@@ -24,14 +30,21 @@ type CharStatus = 'pending' | 'correct' | 'incorrect' | 'extra' | 'missed';
 const CARET_WIDTH = 16;
 const CARET_FILLER = 'W'.repeat(20);
 
-export default function TypingTest({ config, onComplete, onRestart, onTypingActiveChange }: TypingTestProps) {
+export default function TypingTest({
+  config,
+  fixedText,
+  skipStatsSave,
+  onComplete,
+  onRestart,
+  onTypingActiveChange,
+}: TypingTestProps) {
   const { addTestResult } = useUser();
   const { keyboardLayout, spaceStyle } = useSettings();
   const isInfinite = config.mode === 'time' && config.value === 'infinite';
   // Home.tsx remounts this component (via a `key` bump) on every config
   // change, so `config` is effectively fixed for this instance's lifetime —
   // safe to seed the initial text lazily instead of via a mount effect.
-  const [text, setText] = useState(() => generateText(config.mode === 'words' ? config.value : 100));
+  const [text, setText] = useState(() => fixedText ?? generateText(config.mode === 'words' ? config.value : 100));
   const [input, setInput] = useState('');
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isActive, setIsActive] = useState(false);
@@ -60,7 +73,7 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
 
   const resetTest = () => {
     const wordCount = config.mode === 'words' ? config.value : 100;
-    setText(generateText(wordCount));
+    setText(fixedText ?? generateText(wordCount));
     setInput('');
     setStartTime(null);
     setIsActive(false);
@@ -279,22 +292,24 @@ export default function TypingTest({ config, onComplete, onRestart, onTypingActi
     // best-wpm/leaderboard column) and earns half the usual XP. isInfinite
     // already proves config.value is 'infinite' only in that case — TS just
     // can't follow that through a separately-computed boolean.
-    const submittedValue = isInfinite ? 0 : (config.value as number);
-    void addTestResult(
-      {
-        mode: config.mode,
-        value: submittedValue,
-        wpm: finalStats.wpm,
-        accuracy: finalStats.accuracy,
-        rawWpm: finalStats.rawWpm,
-        correctChars,
-        incorrectChars,
-        timeElapsed,
-      },
-      isInfinite ? 0.5 : 1
-    );
+    if (!skipStatsSave) {
+      const submittedValue = isInfinite ? 0 : (config.value as number);
+      void addTestResult(
+        {
+          mode: config.mode,
+          value: submittedValue,
+          wpm: finalStats.wpm,
+          accuracy: finalStats.accuracy,
+          rawWpm: finalStats.rawWpm,
+          correctChars,
+          incorrectChars,
+          timeElapsed,
+        },
+        isInfinite ? 0.5 : 1
+      );
+    }
 
-    onComplete?.();
+    onComplete?.({ ...finalStats, timeElapsed });
   };
 
   useEffect(() => {

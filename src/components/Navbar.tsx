@@ -80,6 +80,15 @@ function FriendsIcon() {
   );
 }
 
+function DuelIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M4 4l7 7M20 4l-7 7M4 20l7-7M20 20l-7-7" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 interface NavItem {
   to: string;
   label: string;
@@ -126,6 +135,7 @@ export default function Navbar() {
       isActive: p => p === '/friends' || p.startsWith('/u/'),
       requiresUser: true,
     },
+    { to: '/duel', label: 'duel', icon: DuelIcon, isActive: p => p.startsWith('/duel'), requiresUser: true },
     { to: '/profile', label: 'profile', icon: ProfileIcon, isActive: p => p === '/profile' },
     { to: '/settings', label: 'settings', icon: SettingsIcon, isActive: p => p === '/settings' },
   ];
@@ -214,6 +224,23 @@ export default function Navbar() {
                 </span>
               )}
               {(location.pathname === '/friends' || location.pathname.startsWith('/u/')) && (
+                <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
+              )}
+            </Link>
+          )}
+          {user && (
+            <Link
+              to="/duel"
+              aria-label="Duel"
+              title="Duel"
+              className={`relative p-1 transition-colors ${
+                location.pathname.startsWith('/duel')
+                  ? 'text-[var(--text-correct)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+              }`}
+            >
+              <DuelIcon />
+              {location.pathname.startsWith('/duel') && (
                 <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
               )}
             </Link>
