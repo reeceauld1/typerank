@@ -637,6 +637,7 @@ export default function TypingTest({
                     const isPastWord = wordIdx < currentWordIndex;
                     const wordHasMistake =
                       isPastWord && chars.some(c => c.status === 'incorrect' || c.status === 'extra' || c.status === 'missed');
+                    const isLastWord = wordIdx === words.length - 1;
                     return (
                       // A wrapping outer span (rather than a Fragment) makes the word and
                       // its trailing separator a single atomic unit for line-wrapping — the
@@ -667,10 +668,10 @@ export default function TypingTest({
                           }`}
                           style={{ width: CARET_WIDTH, height: '1em' }}
                         >
-                          {spaceStyle === 'underscore' && (
+                          {!isLastWord && spaceStyle === 'underscore' && (
                             <span className="block bg-[var(--text-muted)]" style={{ width: 14, height: 3 }} />
                           )}
-                          {spaceStyle === 'dot' && (
+                          {!isLastWord && spaceStyle === 'dot' && (
                             <span className="block rounded-full bg-[var(--text-muted)]" style={{ width: 4, height: 4 }} />
                           )}
                         </span>
