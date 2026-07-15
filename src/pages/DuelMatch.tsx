@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { TestConfig } from '../types/index.js';
 import { supabase } from '../lib/supabase.js';
@@ -265,37 +265,19 @@ export default function DuelMatch() {
 
   const matchCancelled = waitingOnRole !== null && opponentEverPresent && opponentPresent === false;
 
-  // Complements the creator-side unmount cleanup below, which only fires on
-  // a normal in-app navigation — it can't run if the sender just closes the
-  // tab or leaves the site outright. Presence catches that case instead:
-  // once the invited player notices (via matchCancelled above) that the
-  // creator who was here has disconnected, they expire the invite
-  // themselves, so it stops showing up as pending everywhere (invite
-  // badge, /duel list) even though the sender's own client never got the
-  // chance to withdraw it.
+  // The sender leaving this page no longer cancels the invite (see
+  // PendingDuelWatcher, mounted at the app root, which keeps their
+  // presence alive on this duel's channel regardless of what page they're
+  // on) — but if they close the tab or leave the site outright, presence
+  // still drops for real. Once the invited player notices that (via
+  // matchCancelled above), they expire the invite themselves, so it stops
+  // showing up as pending everywhere (invite badge, /duel list) even
+  // though the sender's own client never got the chance to withdraw it.
   useEffect(() => {
     if (matchCancelled && waitingForMyDecision && id && supabase) {
       void supabase.rpc('expire_duel_invite', { p_duel_id: id });
     }
   }, [matchCancelled, waitingForMyDecision, id]);
-
-  // If the creator navigates away from a friend invite before it's been
-  // accepted, withdraw it — otherwise the recipient's pending-invite badge
-  // and /duel list would keep showing it indefinitely. Tracked via a ref
-  // (rather than effect deps) so this only fires on a true unmount, not on
-  // every status change while the page stays open.
-  const latestCancelInfoRef = useRef({ id, isCreator, status: duel?.status });
-  useEffect(() => {
-    latestCancelInfoRef.current = { id, isCreator, status: duel?.status };
-  });
-  useEffect(() => {
-    return () => {
-      const { id: duelId, isCreator: wasCreator, status } = latestCancelInfoRef.current;
-      if (wasCreator && status === 'pending' && duelId && supabase) {
-        void supabase.rpc('cancel_duel_invite', { p_duel_id: duelId });
-      }
-    };
-  }, []);
 
   const handleJoin = async () => {
     if (!supabase || !id) return;
