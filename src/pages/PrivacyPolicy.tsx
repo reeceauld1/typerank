@@ -91,8 +91,8 @@ export default function PrivacyPolicy() {
           <p>
             You can delete your test history from your profile at any time. To delete your account entirely, or to
             ask what data we hold about you, email us at{' '}
-            <a href="mailto:info@typeladder.com" className="text-[var(--accent)] hover:underline">
-              info@typeladder.com
+            <a href="mailto:contact@typeladder.com" className="text-[var(--accent)] hover:underline">
+              contact@typeladder.com
             </a>{' '}
             and we'll take care of it.
           </p>
@@ -115,8 +115,8 @@ export default function PrivacyPolicy() {
           <h2 className="text-[var(--text-correct)] font-semibold mb-2">Contact</h2>
           <p>
             Questions about this policy or your data?{' '}
-            <a href="mailto:info@typeladder.com" className="text-[var(--accent)] hover:underline">
-              info@typeladder.com
+            <a href="mailto:contact@typeladder.com" className="text-[var(--accent)] hover:underline">
+              contact@typeladder.com
             </a>
           </p>
         </section>

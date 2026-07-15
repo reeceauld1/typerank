@@ -163,6 +163,8 @@ export default function Settings() {
             ))}
           </div>
         </div>
+
+        <p className="text-center text-xs text-[var(--text-muted)] mt-2">created by yvern</p>
       </div>
     </div>
   );
