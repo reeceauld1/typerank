@@ -13,20 +13,30 @@ function LockIcon() {
   );
 }
 
-function cellClass(unlocked: boolean, equipped: boolean): string {
+function cellClass(unlocked: boolean, equipped: boolean, readOnly: boolean): string {
+  if (readOnly) return 'border-[var(--border)] bg-[var(--surface)] cursor-not-allowed';
   if (equipped) return 'border-[var(--accent)] bg-[var(--accent-soft)]';
   if (unlocked) return 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] cursor-pointer';
   return 'border-[var(--border)] bg-[var(--surface)] opacity-40 cursor-not-allowed';
 }
 
-export default function NameColorPicker({ onClose }: { onClose: () => void }) {
+interface NameColorPickerProps {
+  onClose: () => void;
+  // Showcase mode (used on the Ranked page) — every color renders at full
+  // color as if unlocked, so it works as a preview of what's earnable, but
+  // clicking is disabled (cursor-not-allowed) since this isn't the place to
+  // actually equip one. The real picker (Profile page) leaves this off.
+  readOnly?: boolean;
+}
+
+export default function NameColorPicker({ onClose, readOnly = false }: NameColorPickerProps) {
   const { stats, setEquippedNameColor } = useUser();
   const { user } = useAuth();
-  const admin = isAdminEmail(user?.email);
+  const admin = !readOnly && isAdminEmail(user?.email);
   const [error, setError] = useState<string | null>(null);
 
   const handleEquip = async (id: string) => {
-    if (id === stats.equippedNameColor) return;
+    if (readOnly || id === stats.equippedNameColor) return;
     setError(null);
     const ok = await setEquippedNameColor(id);
     if (!ok) setError("Couldn't equip that color — try again.");
@@ -40,20 +50,26 @@ export default function NameColorPicker({ onClose }: { onClose: () => void }) {
         {error && <p className="text-[var(--text-incorrect)] text-sm mb-3">{error}</p>}
         <div className="grid grid-cols-4 gap-3 mb-6">
           {NAME_COLOR_CATALOG.map(color => {
-            const unlocked = admin || color.isUnlocked(stats);
-            const equipped = stats.equippedNameColor === color.id;
+            const unlocked = readOnly || admin || color.isUnlocked(stats);
+            const equipped = !readOnly && stats.equippedNameColor === color.id;
             return (
               <Tooltip
                 key={color.id}
-                content={unlocked ? `${color.name} — Unlocked: ${color.description}` : `${color.name} — ${color.description}`}
+                content={
+                  readOnly
+                    ? `${color.name} — ${color.description}`
+                    : unlocked
+                      ? `${color.name} — Unlocked: ${color.description}`
+                      : `${color.name} — ${color.description}`
+                }
               >
                 <button
                   type="button"
-                  disabled={!unlocked}
+                  disabled={readOnly || !unlocked}
                   onClick={() => void handleEquip(color.id)}
-                  className={`relative w-full flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped)}`}
+                  className={`relative w-full flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${cellClass(unlocked, equipped, readOnly)}`}
                 >
-                  {!unlocked && (
+                  {!readOnly && !unlocked && (
                     <span className="absolute top-1.5 right-1.5 text-[var(--text-muted)]">
                       <LockIcon />
                     </span>

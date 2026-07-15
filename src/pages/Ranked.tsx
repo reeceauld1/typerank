@@ -115,8 +115,14 @@ export default function Ranked() {
   const tier = getRankTier(stats.elo, stats.rankedGamesPlayed);
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row items-center lg:items-start justify-center gap-10 py-10 px-6">
-      <div className="flex flex-col items-center gap-6 text-center">
+    // relative so the sidebar (absolute on lg+, see below) anchors to this
+    // page rather than the nearest positioned ancestor further up the
+    // tree. Once it's absolute it's out of flow entirely, so it no longer
+    // affects how this flex container centers everything else — the main
+    // column stays centered on the full page, not on the combined width of
+    // itself plus the sidebar.
+    <div className="flex-1 relative flex flex-col items-center justify-center gap-6 py-10 px-6 text-center">
+      <div className="flex flex-col items-center gap-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-correct)] mb-2">ranked</h1>
           <RankBadge elo={stats.elo} rankedGamesPlayed={stats.rankedGamesPlayed} className="justify-center" />
@@ -165,10 +171,10 @@ export default function Ranked() {
           rewards
         </button>
 
-        {showRewards && <NameColorPicker onClose={() => setShowRewards(false)} />}
+        {showRewards && <NameColorPicker onClose={() => setShowRewards(false)} readOnly />}
       </div>
 
-      <div className="w-full max-w-xs bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
+      <div className="w-full max-w-xs bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 text-left lg:absolute lg:right-6 lg:top-1/2 lg:-translate-y-1/2">
         <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">rank thresholds</h2>
         <div className="flex flex-col gap-2">
           {[...RANK_TIERS].reverse().map((t, i, arr) => {
