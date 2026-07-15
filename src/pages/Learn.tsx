@@ -6,6 +6,7 @@ import { useSettings } from '../hooks/useSettings.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import TypingTest from '../components/TypingTest.js';
 import KeyboardDisplay from '../components/KeyboardDisplay.js';
+import Toggle from '../components/Toggle.js';
 import { KEYBOARD_LAYOUTS, getLayoutRowCodes, getLayoutRows } from '../utils/keyboardLayouts.js';
 import {
   anchorLetters,
@@ -52,7 +53,12 @@ function saveLocalProgress(layout: string, progress: StoredProgress) {
 export default function Learn() {
   useDocumentTitle('learn');
   const { user } = useAuth();
-  const { keyboardLayout, keyboardKeyColors, showKeyboard } = useSettings();
+  const { keyboardLayout } = useSettings();
+  // Independent from the main typing page's on-screen-keyboard settings —
+  // this page's keyboard is either fully on (colors + finger labels, since
+  // that's the whole point here) or fully off, a local toggle rather than
+  // anything in Settings.
+  const [showKeyboardDisplay, setShowKeyboardDisplay] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [unlockedLetters, setUnlockedLetters] = useState<string[]>([]);
@@ -299,13 +305,18 @@ export default function Learn() {
           )}
         </div>
 
-        {showKeyboard && (
-          <div className="w-[92%] sm:w-[80%] lg:w-[65%] mt-10">
+        <div className="max-w-4xl w-full mt-10 flex items-center justify-between">
+          <p className="text-sm font-medium text-[var(--text-secondary)]">on-screen keyboard</p>
+          <Toggle checked={showKeyboardDisplay} onChange={setShowKeyboardDisplay} />
+        </div>
+
+        {showKeyboardDisplay && (
+          <div className="w-[92%] sm:w-[80%] lg:w-[65%] mt-4">
             <KeyboardDisplay
               keyboardLayout={keyboardLayout}
               dimmedCodes={dimmedCodes}
               accuracyByCode={accuracyByCode}
-              keyColors={keyboardKeyColors}
+              keyColors="colors-and-text"
             />
           </div>
         )}

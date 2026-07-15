@@ -5,26 +5,7 @@ import { FONT_OPTIONS } from '../utils/fonts.js';
 import { WORD_LIST_OPTIONS } from '../utils/words.js';
 import type { KeyboardKeyColors, SpaceStyle } from '../context/SettingsContextBase.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
-
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative w-11 h-6 rounded-full transition-colors cursor-pointer shrink-0 ${
-        checked ? 'bg-[var(--accent)]' : 'bg-[var(--bg-elevated)] border border-[var(--border)]'
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-[var(--bg)] transition-transform ${
-          checked ? 'translate-x-5' : 'translate-x-0'
-        }`}
-      />
-    </button>
-  );
-}
+import Toggle from '../components/Toggle.js';
 
 const THEME_OPTIONS: { id: 'system' | 'light' | 'dark'; label: string }[] = [
   { id: 'system', label: 'System' },
