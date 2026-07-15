@@ -433,6 +433,67 @@ export function getAvatar(id: string): AvatarDef {
   return AVATAR_CATALOG.find(a => a.id === id) ?? AVATAR_CATALOG[0];
 }
 
+// Badges: a small icon+label chip next to a username (see UsernameBadge.tsx).
+// Unlike every other cosmetic here, unlock state isn't derivable purely from
+// stats already on the row client-side — signup order, a real donation, and
+// global top-3 rank all need server-side facts — so each is backed by its
+// own persisted boolean (is_founder/is_supporter/is_fast_typer) rather than
+// an isUnlocked(stats) function.
+export interface BadgeDef {
+  id: string;
+  name: string;
+  description: string;
+  icon: (props: { className?: string }) => React.ReactElement;
+  color: string;
+  isUnlocked: (stats: UserStats) => boolean;
+}
+
+function fillIcon(paths: React.ReactElement) {
+  return ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      {paths}
+    </svg>
+  );
+}
+
+export const BADGE_CATALOG: BadgeDef[] = [
+  {
+    id: 'founder',
+    name: 'Founder',
+    description: 'One of the first 25 people to join typeladder.',
+    icon: fillIcon(<path d="M12 2.5l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7-5.4-4.7 7.1-.6z" />),
+    color: '#ffd24a',
+    isUnlocked: stats => stats.isFounder,
+  },
+  {
+    id: 'supporter',
+    name: 'Supporter',
+    description: 'Supported typeladder with a Ko-fi donation.',
+    icon: fillIcon(
+      <path d="M12 21s-7.5-4.6-10-9.1C.3 8.8 1.7 5 5.4 4.2c2-.4 4 .4 5.2 2.1 1.2-1.7 3.2-2.5 5.2-2.1C19.5 5 20.9 8.8 19.2 12 16.7 16.4 12 21 12 21z" />
+    ),
+    color: '#ec4899',
+    isUnlocked: stats => stats.isSupporter,
+  },
+  {
+    id: 'fast_typer',
+    name: 'Fast Typer',
+    description: 'Top 3 globally in wpm on any test length.',
+    icon: icon(
+      <>
+        <rect x="2.5" y="6" width="19" height="13" rx="2" />
+        <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12" />
+      </>
+    ),
+    color: '#5b9bd9',
+    isUnlocked: stats => stats.isFastTyper,
+  },
+];
+
+export function getBadge(id: string): BadgeDef | null {
+  return BADGE_CATALOG.find(b => b.id === id) ?? null;
+}
+
 export function getBorder(id: string): BorderDef {
   return BORDER_CATALOG.find(b => b.id === id) ?? BORDER_CATALOG[0];
 }

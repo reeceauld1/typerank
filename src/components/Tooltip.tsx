@@ -6,9 +6,10 @@ import type { ReactNode, MouseEvent } from 'react';
 interface TooltipProps {
   content: string;
   children: ReactNode;
+  className?: string;
 }
 
-export default function Tooltip({ content, children }: TooltipProps) {
+export default function Tooltip({ content, children, className = '' }: TooltipProps) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
@@ -16,7 +17,7 @@ export default function Tooltip({ content, children }: TooltipProps) {
   };
 
   return (
-    <div onMouseMove={handleMouseMove} onMouseLeave={() => setPos(null)}>
+    <div className={className} onMouseMove={handleMouseMove} onMouseLeave={() => setPos(null)}>
       {children}
       {createPortal(
         <AnimatePresence>

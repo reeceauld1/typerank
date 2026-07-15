@@ -19,6 +19,7 @@ export interface UserContextType {
   setEquippedCosmetics: (avatarId: string, borderId: string) => Promise<boolean>;
   setEquippedAccentColor: (colorId: string, customHex?: string) => Promise<boolean>;
   setEquippedNameColor: (colorId: string) => Promise<boolean>;
+  setEquippedBadge: (badgeId: string | null) => Promise<boolean>;
   refreshStats: () => Promise<void>;
 }
 

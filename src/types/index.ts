@@ -51,6 +51,10 @@ export interface UserStats {
   equippedAccentColor: string;
   customAccentHex: string | null;
   equippedNameColor: string;
+  equippedBadge: string | null;
+  isFounder: boolean;
+  isSupporter: boolean;
+  isFastTyper: boolean;
   elo: number;
   peakElo: number;
   rankedGamesPlayed: number;
@@ -77,6 +81,7 @@ export interface FriendEntry {
   equippedAvatar: string;
   equippedBorder: string;
   equippedNameColor: string;
+  equippedBadge: string | null;
 }
 
 export interface LeaderboardEntry {

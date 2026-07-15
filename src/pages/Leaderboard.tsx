@@ -6,6 +6,7 @@ import { useFriends } from '../hooks/useFriends.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
 import UsernameText from '../components/UsernameText.js';
+import UsernameBadge from '../components/UsernameBadge.js';
 import TierBadge from '../components/RankBadge.js';
 import { PLACEMENT_GAMES } from '../utils/rank.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
@@ -35,6 +36,7 @@ interface RankedUser {
   equippedAvatar: string;
   equippedBorder: string;
   equippedNameColor: string;
+  equippedBadge: string | null;
   wpm: number;
 }
 
@@ -51,6 +53,7 @@ interface RankedRow {
   equippedAvatar: string;
   equippedBorder: string;
   equippedNameColor: string;
+  equippedBadge: string | null;
   elo: number;
   rankedGamesPlayed: number;
 }
@@ -111,6 +114,7 @@ export default function Leaderboard() {
             equippedAvatar: row.equipped_avatar as string,
             equippedBorder: row.equipped_border as string,
             equippedNameColor: (row.equipped_name_color as string) ?? 'default',
+            equippedBadge: (row.equipped_badge as string | null) ?? null,
             elo: (row.elo as number) ?? 1000,
             rankedGamesPlayed: (row.ranked_games_played as number) ?? 0,
           }))
@@ -131,6 +135,7 @@ export default function Leaderboard() {
         equippedAvatar: row.equipped_avatar as string,
         equippedBorder: row.equipped_border as string,
         equippedNameColor: (row.equipped_name_color as string) ?? 'default',
+        equippedBadge: (row.equipped_badge as string | null) ?? null,
         elo: (row.elo as number) ?? 1000,
         rankedGamesPlayed: (row.ranked_games_played as number) ?? 0,
       }));
@@ -161,6 +166,7 @@ export default function Leaderboard() {
             equippedAvatar: row.equipped_avatar as string,
             equippedBorder: row.equipped_border as string,
             equippedNameColor: (row.equipped_name_color as string) ?? 'default',
+            equippedBadge: (row.equipped_badge as string | null) ?? null,
             wpm: (row[cat.column] as number) ?? 0,
           }))
         );
@@ -176,6 +182,7 @@ export default function Leaderboard() {
         equippedAvatar: row.equipped_avatar as string,
         equippedBorder: row.equipped_border as string,
         equippedNameColor: (row.equipped_name_color as string) ?? 'default',
+        equippedBadge: (row.equipped_badge as string | null) ?? null,
         wpm: (row[cat.column] as number) ?? 0,
       }));
       rows.sort((a, b) => b.wpm - a.wpm);
@@ -335,6 +342,7 @@ export default function Leaderboard() {
                 >
                   <Avatar avatarId={row.equippedAvatar} borderId={row.equippedBorder} size="sm" />
                   <UsernameText username={row.username} colorId={row.equippedNameColor} className="truncate" />
+                  <UsernameBadge badgeId={row.equippedBadge} />
                 </Link>
                 <TierBadge elo={row.elo} rankedGamesPlayed={row.rankedGamesPlayed} className="shrink-0" />
               </div>
@@ -386,6 +394,7 @@ export default function Leaderboard() {
               >
                 <Avatar avatarId={row.equippedAvatar} borderId={row.equippedBorder} size="sm" />
                 <UsernameText username={row.username} colorId={row.equippedNameColor} className="truncate" />
+                <UsernameBadge badgeId={row.equippedBadge} />
               </Link>
               <span className="text-lg font-semibold text-[var(--text-correct)] tabular-nums shrink-0 whitespace-nowrap">
                 {row.wpm} <span className="text-xs font-normal text-[var(--text-muted)]">wpm</span>

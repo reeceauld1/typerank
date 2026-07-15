@@ -10,6 +10,7 @@ import { getRankTier } from '../utils/rank.js';
 import TypingTest from '../components/TypingTest.js';
 import Avatar from '../components/Avatar.js';
 import UsernameText from '../components/UsernameText.js';
+import UsernameBadge from '../components/UsernameBadge.js';
 
 interface RankedMatchRow {
   id: string;
@@ -35,6 +36,7 @@ interface PlayerInfo {
   equippedAvatar: string;
   equippedBorder: string;
   equippedNameColor: string;
+  equippedBadge: string | null;
 }
 
 function ResultCard({
@@ -61,6 +63,7 @@ function ResultCard({
       <div className="flex items-center justify-center gap-2 mb-3">
         {avatar && <Avatar avatarId={avatar.equippedAvatar} borderId={avatar.equippedBorder} size="sm" />}
         <UsernameText username={name} colorId={avatar?.equippedNameColor ?? 'default'} className="text-sm truncate" />
+        <UsernameBadge badgeId={avatar?.equippedBadge} />
         {winner && <span className="text-xs font-semibold text-[var(--accent)]">winner</span>}
       </div>
       {wpm === null ? (
@@ -103,7 +106,7 @@ export default function RankedMatch() {
     if (!supabase || ids.length === 0) return;
     const { data } = await supabase
       .from('user_stats')
-      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color')
+      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color, equipped_badge')
       .in('user_id', ids);
     if (!data) return;
     setPlayers(prev => {
@@ -114,6 +117,7 @@ export default function RankedMatch() {
           equippedAvatar: row.equipped_avatar as string,
           equippedBorder: row.equipped_border as string,
           equippedNameColor: (row.equipped_name_color as string) ?? 'default',
+          equippedBadge: (row.equipped_badge as string | null) ?? null,
         };
       }
       return next;

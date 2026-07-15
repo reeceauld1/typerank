@@ -32,6 +32,10 @@ const defaultStats: UserStats = {
   equippedAccentColor: 'blue',
   customAccentHex: null,
   equippedNameColor: 'default',
+  equippedBadge: null,
+  isFounder: false,
+  isSupporter: false,
+  isFastTyper: false,
   elo: 1000,
   peakElo: 1000,
   rankedGamesPlayed: 0,
@@ -297,6 +301,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const setEquippedBadge = async (badgeId: string | null): Promise<boolean> => {
+    if (!isAccountSynced || !user || !supabase) return false;
+
+    const { error } = await supabase.rpc('set_equipped_badge', { p_badge_id: badgeId });
+    if (error) {
+      console.error('setEquippedBadge failed:', error.message);
+      return false;
+    }
+    await refreshRemoteStats();
+    return true;
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -316,6 +332,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setEquippedCosmetics,
         setEquippedAccentColor,
         setEquippedNameColor,
+        setEquippedBadge,
         // Ranked matches call submit_ranked_result directly (it updates
         // both players' elo server-side, unlike addTestResult which only
         // ever touches the caller's own row) — this just exposes the same

@@ -8,6 +8,7 @@ import { type DuelMode, WORD_PRESETS, TIME_PRESETS, formatDuelSetting } from '..
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import Avatar from '../components/Avatar.js';
 import UsernameText from '../components/UsernameText.js';
+import UsernameBadge from '../components/UsernameBadge.js';
 
 // Custom (non-preset) duels aren't ranked and earn half XP — see
 // DuelMatch.tsx's handleComplete — so the range is otherwise generous
@@ -31,6 +32,15 @@ interface PendingInvite {
   id: string;
   mode: DuelMode;
   value: number;
+  creatorId: string;
+}
+
+interface InviteSender {
+  username: string;
+  equippedAvatar: string;
+  equippedBorder: string;
+  equippedNameColor: string;
+  equippedBadge: string | null;
 }
 
 function DuelSettingsPicker({
@@ -164,6 +174,7 @@ export default function Duel() {
   const [error, setError] = useState<string | null>(null);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState(true);
+  const [inviteSenders, setInviteSenders] = useState<Record<string, InviteSender>>({});
 
   // Shared by both the account and guest "create a link" flows — a popup
   // with the link, a copy button, and a close button that takes you into
@@ -183,11 +194,37 @@ export default function Duel() {
     if (!supabase || !user) return;
     const { data } = await supabase
       .from('duels')
-      .select('id, mode, value')
+      .select('id, mode, value, creator_id')
       .eq('opponent_id', user.id)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
-    setInvites((data ?? []).map(row => ({ id: row.id as string, mode: row.mode as DuelMode, value: row.value as number })));
+    const rows = (data ?? []).map(row => ({
+      id: row.id as string,
+      mode: row.mode as DuelMode,
+      value: row.value as number,
+      creatorId: row.creator_id as string,
+    }));
+    setInvites(rows);
+
+    const creatorIds = Array.from(new Set(rows.map(r => r.creatorId)));
+    if (creatorIds.length === 0) return;
+    const { data: senderRows } = await supabase
+      .from('user_stats')
+      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color, equipped_badge')
+      .in('user_id', creatorIds);
+    setInviteSenders(prev => {
+      const next = { ...prev };
+      for (const row of senderRows ?? []) {
+        next[row.user_id as string] = {
+          username: row.username as string,
+          equippedAvatar: row.equipped_avatar as string,
+          equippedBorder: row.equipped_border as string,
+          equippedNameColor: (row.equipped_name_color as string) ?? 'default',
+          equippedBadge: (row.equipped_badge as string | null) ?? null,
+        };
+      }
+      return next;
+    });
   }, [user]);
 
   useEffect(() => {
@@ -376,16 +413,30 @@ export default function Duel() {
         <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
           <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">duel invites</h2>
           <div className="flex flex-col gap-2">
-            {invites.map(invite => (
-              <Link
-                key={invite.id}
-                to={`/duel/${invite.id}`}
-                className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm hover:border-[var(--accent)] transition-colors"
-              >
-                <span className="text-[var(--text-secondary)]">{formatDuelSetting(invite.mode, invite.value)} duel</span>
-                <span className="text-[var(--accent)] text-xs font-semibold">respond</span>
-              </Link>
-            ))}
+            {invites.map(invite => {
+              const sender = inviteSenders[invite.creatorId];
+              return (
+                <Link
+                  key={invite.id}
+                  to={`/duel/${invite.id}`}
+                  className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm hover:border-[var(--accent)] transition-colors"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {sender && <Avatar avatarId={sender.equippedAvatar} borderId={sender.equippedBorder} size="sm" />}
+                    <div className="flex flex-col min-w-0">
+                      {sender && (
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <UsernameText username={sender.username} colorId={sender.equippedNameColor} className="text-xs truncate" />
+                          <UsernameBadge badgeId={sender.equippedBadge} />
+                        </div>
+                      )}
+                      <span className="text-[var(--text-secondary)] truncate">{formatDuelSetting(invite.mode, invite.value)} duel</span>
+                    </div>
+                  </div>
+                  <span className="text-[var(--accent)] text-xs font-semibold shrink-0">respond</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}
@@ -408,6 +459,7 @@ export default function Duel() {
                 <div className="flex items-center gap-2 min-w-0">
                   <Avatar avatarId={friend.equippedAvatar} borderId={friend.equippedBorder} size="sm" />
                   <UsernameText username={friend.username} colorId={friend.equippedNameColor} className="text-sm truncate" />
+                  <UsernameBadge badgeId={friend.equippedBadge} />
                 </div>
                 <button
                   type="button"

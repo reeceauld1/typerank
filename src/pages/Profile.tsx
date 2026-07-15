@@ -5,26 +5,13 @@ import AuthForm from '../components/AuthForm.js';
 import Avatar from '../components/Avatar.js';
 import CosmeticsPicker from '../components/CosmeticsPicker.js';
 import UsernameText from '../components/UsernameText.js';
-import NameColorPicker from '../components/NameColorPicker.js';
+import UsernameBadge from '../components/UsernameBadge.js';
+import BadgePicker from '../components/BadgePicker.js';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useUser } from '../hooks/useUser.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { validateUsername, nextUsernameChangeAt } from '../utils/username.js';
-
-function PaintbrushIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-      <path d="M20 4 13 11" />
-      <rect x="10.5" y="9.5" width="3.2" height="3.2" rx="0.6" transform="rotate(45 12.1 11.1)" fill="currentColor" stroke="none" />
-      <path
-        d="M11 12.3c-1.7-.3-3.5.4-4.6 1.8-1.1 1.5-1.4 3.4-.8 5.1.1.4.6.5.9.2.8-.8 1.9-1.1 3-.9 1.8.4 3.6-.7 4-2.5.3-1.5-.2-3-1.3-4.1-.4-.4-.8-.6-1.2-.6Z"
-        fill="currentColor"
-        stroke="none"
-      />
-    </svg>
-  );
-}
 
 function DeleteAccountModal({
   deleting,
@@ -167,8 +154,8 @@ export default function Profile() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showNameColorPicker, setShowNameColorPicker] = useState(false);
   const [showChangeUsername, setShowChangeUsername] = useState(false);
+  const [showBadgePicker, setShowBadgePicker] = useState(false);
   const nextChangeAt = nextUsernameChangeAt(stats.usernameChangedAt);
 
   const handleDeleteAccount = async () => {
@@ -203,17 +190,18 @@ export default function Profile() {
             <div className="flex items-center justify-between bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
               <div className="flex items-center gap-4">
                 <Avatar avatarId={stats.equippedAvatar} borderId={stats.equippedBorder} size="md" />
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <p>
                     <UsernameText username={stats.username || 'account'} colorId={stats.equippedNameColor} />
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowNameColorPicker(true)}
-                    aria-label="Change name color"
-                    className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors cursor-pointer"
-                  >
-                    <PaintbrushIcon />
+                  <button type="button" onClick={() => setShowBadgePicker(true)} aria-label="Change badge" className="cursor-pointer">
+                    {stats.equippedBadge ? (
+                      <UsernameBadge badgeId={stats.equippedBadge} circle />
+                    ) : (
+                      <span className="inline-flex items-center text-[10px] font-medium text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] border border-dashed border-[var(--border)] rounded-full px-1.5 py-0.5 transition-colors">
+                        + badge
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -280,11 +268,11 @@ export default function Profile() {
             />
           )}
 
-          {showNameColorPicker && <NameColorPicker onClose={() => setShowNameColorPicker(false)} />}
-
           {showChangeUsername && (
             <ChangeUsernameModal currentUsername={stats.username} onClose={() => setShowChangeUsername(false)} />
           )}
+
+          {showBadgePicker && <BadgePicker onClose={() => setShowBadgePicker(false)} />}
         </>
       ) : isConfigured ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16">

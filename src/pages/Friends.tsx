@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
 import UsernameText from '../components/UsernameText.js';
+import UsernameBadge from '../components/UsernameBadge.js';
 import type { FriendEntry } from '../types/index.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
@@ -24,6 +25,7 @@ function FriendRow({
       <Link to={`/u/${entry.username}`} className="flex items-center gap-3 min-w-0 group">
         <Avatar avatarId={entry.equippedAvatar} borderId={entry.equippedBorder} size="sm" />
         <UsernameText username={entry.username} colorId={entry.equippedNameColor} className="truncate" />
+        <UsernameBadge badgeId={entry.equippedBadge} />
       </Link>
       <div className="flex items-center gap-2 shrink-0">{children}</div>
     </div>
@@ -76,7 +78,7 @@ function FindPeople() {
     setMessage(null);
     const { data, error } = await supabase
       .from('user_stats')
-      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color')
+      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color, equipped_badge')
       .ilike('username', `%${query.trim()}%`)
       .neq('user_id', user.id)
       .limit(15);
@@ -91,6 +93,7 @@ function FindPeople() {
           equippedAvatar: row.equipped_avatar as string,
           equippedBorder: row.equipped_border as string,
           equippedNameColor: (row.equipped_name_color as string) ?? 'default',
+          equippedBadge: (row.equipped_badge as string | null) ?? null,
         }))
       );
       if ((data ?? []).length === 0) setMessage('No users found.');

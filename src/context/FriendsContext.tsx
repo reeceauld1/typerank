@@ -16,6 +16,7 @@ interface StatsRow {
   equipped_avatar: string;
   equipped_border: string;
   equipped_name_color: string;
+  equipped_badge: string | null;
 }
 
 export function FriendsProvider({ children }: { children: React.ReactNode }) {
@@ -46,7 +47,7 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
 
     const { data: statRows } = await supabase
       .from('user_stats')
-      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color')
+      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color, equipped_badge')
       .in('user_id', otherIds);
     const statsById = new Map((statRows as StatsRow[] | null ?? []).map(row => [row.user_id, row]));
 
@@ -64,6 +65,7 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
         equippedAvatar: stat.equipped_avatar,
         equippedBorder: stat.equipped_border,
         equippedNameColor: stat.equipped_name_color ?? 'default',
+        equippedBadge: stat.equipped_badge ?? null,
       };
       if (row.status === 'accepted') nextFriends.push(entry);
       else if (row.requester_id === user.id) nextOutgoing.push(entry);

@@ -9,6 +9,7 @@ import Avatar from '../components/Avatar.js';
 import ProfileStats from '../components/ProfileStats.js';
 import CosmeticsPicker from '../components/CosmeticsPicker.js';
 import UsernameText from '../components/UsernameText.js';
+import UsernameBadge from '../components/UsernameBadge.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 interface TargetProfile {
@@ -110,9 +111,12 @@ export default function UserProfile() {
         <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
           <div className="flex items-center gap-4 min-w-0">
             <Avatar avatarId={profile.stats.equippedAvatar} borderId={profile.stats.equippedBorder} size="md" />
-            <p className="truncate">
-              <UsernameText username={profile.username} colorId={profile.stats.equippedNameColor} />
-            </p>
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="truncate">
+                <UsernameText username={profile.username} colorId={profile.stats.equippedNameColor} />
+              </p>
+              <UsernameBadge badgeId={profile.stats.equippedBadge} />
+            </div>
           </div>
 
           {user && (
