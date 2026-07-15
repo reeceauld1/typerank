@@ -6,6 +6,8 @@ import { useFriends } from '../hooks/useFriends.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
 import UsernameText from '../components/UsernameText.js';
+import TierBadge from '../components/RankBadge.js';
+import { PLACEMENT_GAMES } from '../utils/rank.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 type Scope = 'global' | 'friends' | 'personal';
@@ -43,6 +45,22 @@ interface PersonalRun {
   createdAt: string;
 }
 
+interface RankedRow {
+  userId: string;
+  username: string;
+  equippedAvatar: string;
+  equippedBorder: string;
+  equippedNameColor: string;
+  elo: number;
+  rankedGamesPlayed: number;
+}
+
+// Not a real Category (no mode/value/test_history equivalent), so it's kept
+// out of the CATEGORIES array and handled as its own branch throughout —
+// only a global/friends elo ranking makes sense, there's no "personal"
+// equivalent the way a single test mode/value has past runs.
+const RANKED_KEY = 'ranked';
+
 // Matches the border-catalog gold/silver/bronze colors in cosmetics.tsx, so
 // a top-3 leaderboard placement visually echoes the earnable border tiers.
 const RANK_COLORS: Record<number, string> = { 1: '#ffd24a', 2: '#c7ccd1', 3: '#b08d57' };
@@ -63,12 +81,64 @@ export default function Leaderboard() {
   const { user, isConfigured } = useAuth();
   const { friends } = useFriends();
   const [scope, setScope] = useState<Scope>('global');
-  const [categoryKey, setCategoryKey] = useState(CATEGORIES[1].key);
+  const [categoryKey, setCategoryKey] = useState<string>(CATEGORIES[1].key);
   const [userRows, setUserRows] = useState<RankedUser[]>([]);
   const [personalRows, setPersonalRows] = useState<PersonalRun[]>([]);
+  const [rankedRows, setRankedRows] = useState<RankedRow[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const isRanked = categoryKey === RANKED_KEY;
   const category = useMemo(() => CATEGORIES.find(c => c.key === categoryKey) ?? CATEGORIES[1], [categoryKey]);
+
+  const loadRankedRows = useCallback(
+    async (targetScope: 'global' | 'friends') => {
+      if (!supabase || (targetScope === 'friends' && !user)) {
+        setRankedRows([]);
+        return;
+      }
+
+      if (targetScope === 'global') {
+        const { data } = await supabase
+          .from('user_stats')
+          .select('*')
+          .gte('ranked_games_played', PLACEMENT_GAMES)
+          .order('elo', { ascending: false })
+          .limit(25);
+        setRankedRows(
+          (data ?? []).map((row: Record<string, unknown>) => ({
+            userId: row.user_id as string,
+            username: row.username as string,
+            equippedAvatar: row.equipped_avatar as string,
+            equippedBorder: row.equipped_border as string,
+            equippedNameColor: (row.equipped_name_color as string) ?? 'default',
+            elo: (row.elo as number) ?? 1000,
+            rankedGamesPlayed: (row.ranked_games_played as number) ?? 0,
+          }))
+        );
+        return;
+      }
+
+      if (!user) return;
+      const ids = Array.from(new Set([user.id, ...friends.map(f => f.userId)]));
+      const { data } = await supabase
+        .from('user_stats')
+        .select('*')
+        .in('user_id', ids)
+        .gte('ranked_games_played', PLACEMENT_GAMES);
+      const rows = (data ?? []).map((row: Record<string, unknown>) => ({
+        userId: row.user_id as string,
+        username: row.username as string,
+        equippedAvatar: row.equipped_avatar as string,
+        equippedBorder: row.equipped_border as string,
+        equippedNameColor: (row.equipped_name_color as string) ?? 'default',
+        elo: (row.elo as number) ?? 1000,
+        rankedGamesPlayed: (row.ranked_games_played as number) ?? 0,
+      }));
+      rows.sort((a, b) => b.elo - a.elo);
+      setRankedRows(rows.slice(0, 25));
+    },
+    [user, friends]
+  );
 
   const loadUserRows = useCallback(
     async (targetScope: 'global' | 'friends', cat: Category) => {
@@ -146,12 +216,23 @@ export default function Leaderboard() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUserRows([]);
       setPersonalRows([]);
+      setRankedRows([]);
       return;
     }
     setLoading(true);
-    const load = scope === 'personal' ? loadPersonalRows(category) : loadUserRows(scope, category);
+    // Ranked has no personal (per-run) equivalent — elo isn't a per-test
+    // score the way wpm is, so 'personal' scope falls back to 'global'
+    // rather than calling loadPersonalRows with a category that doesn't
+    // exist. (The ranked button also resets scope away from 'personal'
+    // when clicked, so this fallback only matters if scope changes while
+    // ranked is already selected.)
+    const load = isRanked
+      ? loadRankedRows(scope === 'personal' ? 'global' : scope)
+      : scope === 'personal'
+        ? loadPersonalRows(category)
+        : loadUserRows(scope, category);
     load.finally(() => setLoading(false));
-  }, [scope, category, user, loadUserRows, loadPersonalRows]);
+  }, [scope, category, isRanked, user, loadUserRows, loadPersonalRows, loadRankedRows]);
 
   if (!isConfigured) {
     return (
@@ -178,7 +259,11 @@ export default function Leaderboard() {
 
       <div className="max-w-4xl w-full mx-auto flex flex-col gap-4 mb-6">
         <div className="flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg p-1 text-sm">
-          {(['global', 'friends', 'personal'] as Scope[]).map(s => (
+          {(
+            // Ranked has no personal (per-run) equivalent — elo isn't a
+            // per-test score the way wpm is.
+            (isRanked ? ['global', 'friends'] : ['global', 'friends', 'personal']) as Scope[]
+          ).map(s => (
             <button
               key={s}
               onClick={() => setScope(s)}
@@ -205,6 +290,18 @@ export default function Leaderboard() {
               </button>
             </Fragment>
           ))}
+          <span className="w-px h-4 bg-[var(--border)] mx-1" />
+          <button
+            onClick={() => {
+              setCategoryKey(RANKED_KEY);
+              if (scope === 'personal') setScope('global');
+            }}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+              isRanked ? 'text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+            }`}
+          >
+            ranked
+          </button>
         </div>
       </div>
 
@@ -215,6 +312,34 @@ export default function Leaderboard() {
           </div>
         ) : loading ? (
           <p className="text-sm text-[var(--text-muted)] text-center py-8">loading…</p>
+        ) : isRanked ? (
+          rankedRows.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] text-center py-8">
+              {scope === 'friends' ? 'no ranked friends yet.' : 'no ranked players yet — be the first.'}
+            </p>
+          ) : (
+            rankedRows.map((row, i) => (
+              <div
+                key={row.userId}
+                className={`flex items-center gap-4 rounded-lg px-4 py-3 border ${
+                  row.userId === user?.id
+                    ? 'border-[var(--accent)] bg-[var(--accent-soft)]'
+                    : 'border-[var(--border)] bg-[var(--surface)]'
+                }`}
+              >
+                <RankBadge rank={i + 1} />
+                <Link
+                  to={`/u/${row.username}`}
+                  state={{ from: 'leaderboard' }}
+                  className="flex items-center gap-3 flex-1 min-w-0 group"
+                >
+                  <Avatar avatarId={row.equippedAvatar} borderId={row.equippedBorder} size="sm" />
+                  <UsernameText username={row.username} colorId={row.equippedNameColor} className="truncate" />
+                </Link>
+                <TierBadge elo={row.elo} rankedGamesPlayed={row.rankedGamesPlayed} className="shrink-0" />
+              </div>
+            ))
+          )
         ) : scope === 'personal' ? (
           personalRows.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)] text-center py-8">

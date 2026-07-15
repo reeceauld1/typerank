@@ -1,14 +1,4 @@
-import { getRankTier, PLACEMENT_GAMES } from '../utils/rank.js';
-
-const TIER_COLORS: Record<string, string> = {
-  bronze: '#b08d57',
-  silver: '#c7ccd1',
-  gold: '#ffd24a',
-  platinum: '#7dd3fc',
-  diamond: '#3b9ee0',
-  master: '#b967ff',
-  grandmaster: '#f43f5e',
-};
+import { getRankTier, PLACEMENT_GAMES, TIER_COLORS } from '../utils/rank.js';
 
 interface RankBadgeProps {
   elo: number;

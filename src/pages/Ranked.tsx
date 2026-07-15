@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useUser } from '../hooks/useUser.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
-import { getRankTier, PLACEMENT_GAMES } from '../utils/rank.js';
+import { getRankTier, PLACEMENT_GAMES, RANK_TIERS, TIER_COLORS } from '../utils/rank.js';
 import RankBadge from '../components/RankBadge.js';
 import AuthForm from '../components/AuthForm.js';
 import NameColorPicker from '../components/NameColorPicker.js';
@@ -115,56 +115,87 @@ export default function Ranked() {
   const tier = getRankTier(stats.elo, stats.rankedGamesPlayed);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-6 pb-16 px-6 text-center">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-correct)] mb-2">ranked</h1>
-        <RankBadge elo={stats.elo} rankedGamesPlayed={stats.rankedGamesPlayed} className="justify-center" />
-        {!tier && (
-          <p className="text-[var(--text-muted)] text-xs mt-2">
-            {PLACEMENT_GAMES - stats.rankedGamesPlayed} placement {PLACEMENT_GAMES - stats.rankedGamesPlayed === 1 ? 'match' : 'matches'} left
-          </p>
-        )}
-      </div>
+    <div className="flex-1 flex flex-col lg:flex-row items-center lg:items-start justify-center gap-10 py-10 px-6">
+      <div className="flex flex-col items-center gap-6 text-center">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-correct)] mb-2">ranked</h1>
+          <RankBadge elo={stats.elo} rankedGamesPlayed={stats.rankedGamesPlayed} className="justify-center" />
+          {!tier && (
+            <p className="text-[var(--text-muted)] text-xs mt-2">
+              {PLACEMENT_GAMES - stats.rankedGamesPlayed} placement {PLACEMENT_GAMES - stats.rankedGamesPlayed === 1 ? 'match' : 'matches'} left
+            </p>
+          )}
+        </div>
 
-      {error && <p className="text-[var(--text-incorrect)] text-sm">{error}</p>}
+        {error && <p className="text-[var(--text-incorrect)] text-sm">{error}</p>}
 
-      {searching ? (
-        <div className="flex flex-col items-center gap-4">
-          <p className="text-[var(--text-secondary)] text-sm">
-            searching for an opponent… <span className="tabular-nums">{elapsed}s</span>
-          </p>
+        {searching ? (
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-[var(--text-secondary)] text-sm">
+              searching for an opponent… <span className="tabular-nums">{elapsed}s</span>
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleCancel()}
+              className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
+            >
+              cancel
+            </button>
+          </div>
+        ) : (
           <button
             type="button"
-            onClick={() => void handleCancel()}
-            className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
+            onClick={handleFindMatch}
+            className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
           >
-            cancel
+            find match
           </button>
-        </div>
-      ) : (
+        )}
+
+        <p className="text-[var(--text-muted)] text-xs max-w-sm">
+          30-second time test, one fixed format for everyone. Win to gain elo, lose to drop — closer opponents move
+          your rating more than lopsided matches.
+        </p>
+
         <button
           type="button"
-          onClick={handleFindMatch}
-          className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+          onClick={() => setShowRewards(true)}
+          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
         >
-          find match
+          rewards
         </button>
-      )}
 
-      <p className="text-[var(--text-muted)] text-xs max-w-sm">
-        30-second time test, one fixed format for everyone. Win to gain elo, lose to drop — closer opponents move your
-        rating more than lopsided matches.
-      </p>
+        {showRewards && <NameColorPicker onClose={() => setShowRewards(false)} />}
+      </div>
 
-      <button
-        type="button"
-        onClick={() => setShowRewards(true)}
-        className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
-      >
-        rewards
-      </button>
-
-      {showRewards && <NameColorPicker onClose={() => setShowRewards(false)} />}
+      <div className="w-full max-w-xs bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">rank thresholds</h2>
+        <div className="flex flex-col gap-2">
+          {[...RANK_TIERS].reverse().map((t, i, arr) => {
+            const nextMin = i > 0 ? arr[i - 1].min : null;
+            const isMine = tier?.id === t.id;
+            return (
+              <div
+                key={t.id}
+                className={`flex items-center justify-between rounded-lg px-3 py-2 ${
+                  isMine ? 'bg-[var(--accent-soft)]' : ''
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: TIER_COLORS[t.id] }} />
+                  <span className="text-sm font-medium" style={{ color: TIER_COLORS[t.id] }}>
+                    {t.name}
+                  </span>
+                </span>
+                <span className="text-xs text-[var(--text-muted)] tabular-nums whitespace-nowrap">
+                  {t.min.toLocaleString()}
+                  {nextMin !== null ? `–${(nextMin - 1).toLocaleString()}` : '+'} elo
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

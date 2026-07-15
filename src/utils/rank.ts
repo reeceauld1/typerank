@@ -18,6 +18,18 @@ export const RANK_TIERS: RankTier[] = [
   { id: 'grandmaster', name: 'Grandmaster', min: 1700 },
 ];
 
+// Shared across RankBadge, the Ranked page's threshold sidebar, and the
+// name-color reward swatches, so all three always agree on a tier's color.
+export const TIER_COLORS: Record<string, string> = {
+  bronze: '#b08d57',
+  silver: '#c7ccd1',
+  gold: '#ffd24a',
+  platinum: '#7dd3fc',
+  diamond: '#3b9ee0',
+  master: '#b967ff',
+  grandmaster: '#f43f5e',
+};
+
 // Placements: the first 5 ranked games are unranked regardless of elo —
 // elo still updates during them (at a higher K-factor server-side, see
 // submit_ranked_result), so by the time placements finish the rating is
