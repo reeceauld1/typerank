@@ -5,6 +5,7 @@ import { FriendsProvider } from './context/FriendsContext.js';
 import { SettingsProvider } from './context/SettingsContext.js';
 import Navbar from './components/Navbar.js';
 import Footer from './components/Footer.js';
+import CookieConsentBanner from './components/CookieConsentBanner.js';
 import Home from './pages/Home.js';
 import Profile from './pages/Profile.js';
 import Challenges from './pages/Challenges.js';
@@ -36,6 +37,7 @@ function App() {
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                 </Routes>
                 <Footer />
+                <CookieConsentBanner />
               </div>
             </FriendsProvider>
           </UserProvider>

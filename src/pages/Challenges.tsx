@@ -6,10 +6,12 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useUser } from '../hooks/useUser.js';
 import { AVATAR_CATALOG, BORDER_CATALOG, isAdminEmail } from '../utils/cosmetics.js';
 import { ACCENT_COLOR_CATALOG } from '../utils/accentColors.js';
+import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 const PREVIEW_SIZE = 'w-10 h-10';
 
 export default function Challenges() {
+  useDocumentTitle('challenges');
   const { user, loading } = useAuth();
   const { stats } = useUser();
   const admin = isAdminEmail(user?.email);

@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
 import type { FriendEntry } from '../types/index.js';
+import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 type Tab = 'requests' | 'friends' | 'find';
 
@@ -146,6 +147,7 @@ function FindPeople() {
 }
 
 export default function Friends() {
+  useDocumentTitle('friends');
   const { user, isConfigured } = useAuth();
   const { friends, incomingRequests, outgoingRequests, acceptRequest, declineRequest, removeFriend } = useFriends();
   const [tab, setTab] = useState<Tab>('friends');

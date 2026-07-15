@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
+import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 export default function ResetPassword() {
+  useDocumentTitle('reset password');
   const { user, loading, isConfigured, updatePassword } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

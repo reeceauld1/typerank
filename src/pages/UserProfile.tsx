@@ -8,6 +8,7 @@ import { useFriends } from '../hooks/useFriends.js';
 import Avatar from '../components/Avatar.js';
 import ProfileStats from '../components/ProfileStats.js';
 import CosmeticsPicker from '../components/CosmeticsPicker.js';
+import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 interface TargetProfile {
   userId: string;
@@ -17,6 +18,7 @@ interface TargetProfile {
 
 export default function UserProfile() {
   const { username } = useParams<{ username: string }>();
+  useDocumentTitle(username ? `${username}'s profile` : 'profile');
   const location = useLocation();
   const { user } = useAuth();
   const { friends, incomingRequests, outgoingRequests, sendRequest, acceptRequest, declineRequest, removeFriend } = useFriends();

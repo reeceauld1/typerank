@@ -3,6 +3,7 @@ import { useSettings } from '../hooks/useSettings.js';
 import { KEYBOARD_LAYOUT_OPTIONS } from '../utils/keyboardLayouts.js';
 import { FONT_OPTIONS } from '../utils/fonts.js';
 import type { SpaceStyle } from '../context/SettingsContextBase.js';
+import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) {
   return (
@@ -37,6 +38,7 @@ const SPACE_STYLE_OPTIONS: { id: SpaceStyle; label: string }[] = [
 ];
 
 export default function Settings() {
+  useDocumentTitle('settings');
   const {
     showKeyboard,
     setShowKeyboard,

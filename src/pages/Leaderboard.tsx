@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useFriends } from '../hooks/useFriends.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
+import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 type Scope = 'global' | 'friends' | 'personal';
 
@@ -56,6 +57,7 @@ function RankBadge({ rank }: { rank: number }) {
 }
 
 export default function Leaderboard() {
+  useDocumentTitle('leaderboard');
   const { user, isConfigured } = useAuth();
   const { friends } = useFriends();
   const [scope, setScope] = useState<Scope>('global');

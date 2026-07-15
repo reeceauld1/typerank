@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
+import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 const LAST_UPDATED = 'July 15, 2026';
 
 export default function PrivacyPolicy() {
+  useDocumentTitle('privacy policy');
   return (
     <div className="flex-1 flex flex-col py-10 px-6">
       <div className="max-w-3xl w-full mx-auto flex items-center justify-between mb-8">
@@ -33,7 +35,8 @@ export default function PrivacyPolicy() {
           <p>
             Your data is used to track your progress and stats, save your test history, run the daily and weekly
             challenges, power the friends system, and show your scores on the leaderboard. We don't sell your data or
-            use it for advertising — there are no ads or trackers on this site.
+            use it for advertising — there are no ads on this site, and the only tracking is the optional analytics
+            described below.
           </p>
         </section>
 
@@ -50,17 +53,36 @@ export default function PrivacyPolicy() {
           <h2 className="text-[var(--text-correct)] font-semibold mb-2">Cookies and local storage</h2>
           <p>
             We use your browser's local storage to remember your preferences — theme, font, keyboard layout, and
-            similar settings — and to keep you signed in. This is all functional, not tracking: we don't use
-            third-party analytics or advertising cookies.
+            similar settings — and to keep you signed in. This is all functional, not tracking, and doesn't require
+            consent.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-[var(--text-correct)] font-semibold mb-2">Analytics</h2>
+          <p>
+            If you accept the cookie banner, we use Google Analytics to understand how the site is used — pages
+            visited, device/browser type, and general usage patterns. Google Analytics only loads after you accept;
+            if you decline (or don't respond), it never runs. You can change your mind at any time by clearing your
+            browser's local storage for this site. See{' '}
+            <a
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--accent)] hover:underline"
+            >
+              Google's privacy policy
+            </a>{' '}
+            for how they handle this data.
           </p>
         </section>
 
         <section>
           <h2 className="text-[var(--text-correct)] font-semibold mb-2">Third parties</h2>
           <p>
-            We use Supabase to handle authentication and store your account data, and Hostinger to send account
-            emails (confirmation, password reset) from info@typeladder.com. Neither is used for anything beyond
-            running the site.
+            We use Supabase to handle authentication and store your account data, Hostinger to send account emails
+            (confirmation, password reset) from info@typeladder.com, and — only if you accept analytics cookies —
+            Google Analytics to understand site usage.
           </p>
         </section>
 

@@ -6,8 +6,10 @@ import Avatar from '../components/Avatar.js';
 import CosmeticsPicker from '../components/CosmeticsPicker.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useUser } from '../hooks/useUser.js';
+import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 export default function Profile() {
+  useDocumentTitle('profile');
   const { user, isConfigured, signOut } = useAuth();
   const { stats } = useUser();
   const [tab, setTab] = useState<'stats' | 'customize'>('stats');
