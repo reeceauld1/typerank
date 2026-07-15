@@ -35,22 +35,26 @@ export default function Home() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center px-6 py-10">
-      <div className="relative w-[92%] sm:w-[80%] lg:w-[65%]">
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-6">
-          <AnimatePresence>
-            {!typingActive && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ModeSelector config={config} onChange={handleConfigChange} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+    // items-center-safe (native CSS "safe center" alignment) falls back to
+    // start-alignment instead of centering-and-overflowing when the content
+    // is taller than the available space (e.g. zoomed in, or a short
+    // viewport) — without it, the mode selector above TypingTest could get
+    // pushed up past the top of the screen with no way to reach it.
+    <div className="flex-1 flex items-center-safe justify-center px-6 py-10">
+      <div className="w-[92%] sm:w-[80%] lg:w-[65%]">
+        <AnimatePresence>
+          {!typingActive && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex justify-center mb-6"
+            >
+              <ModeSelector config={config} onChange={handleConfigChange} />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <TypingTest
           key={key}
