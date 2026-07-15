@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import confetti from 'canvas-confetti';
 import type { TestConfig } from '../types/index.js';
 import { generateText } from '../utils/words.js';
 import { isRankedValue } from '../utils/xp.js';
@@ -55,7 +56,7 @@ export default function TypingTest({
   onCharacterResult,
   hidePracticeCaption,
 }: TypingTestProps) {
-  const { addTestResult } = useUser();
+  const { addTestResult, stats: userStats, isAccountSynced } = useUser();
   const { keyboardLayout, spaceStyle, wordListSize } = useSettings();
   const isInfinite = config.mode === 'time' && config.value === 'infinite';
   // Ranked = one of the fixed preset values (10/25/50 words, 10/30/60s) —
@@ -80,6 +81,13 @@ export default function TypingTest({
   const [isFocused, setIsFocused] = useState(false);
   const [elapsedDisplay, setElapsedDisplay] = useState(0);
   const [stats, setStats] = useState({ wpm: 0, accuracy: 0, rawWpm: 0 });
+  const [isNewBest, setIsNewBest] = useState(false);
+  // Diff against the account's lifetime average, shown as +/- on the end
+  // screen. null means "no average to compare against yet" (guest, or a
+  // signed-in account's very first test) — distinct from a real 0 diff,
+  // which just isn't shown since it's neither an improvement nor a drop.
+  const [wpmDiff, setWpmDiff] = useState<number | null>(null);
+  const [accuracyDiff, setAccuracyDiff] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const linesRef = useRef<HTMLDivElement>(null);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -105,6 +113,9 @@ export default function TypingTest({
     setStartTime(null);
     setIsActive(false);
     setIsFinished(false);
+    setIsNewBest(false);
+    setWpmDiff(null);
+    setAccuracyDiff(null);
     setElapsedDisplay(0);
     setCurrentWordIndex(0);
     setScrollLine(0);
@@ -321,6 +332,34 @@ export default function TypingTest({
     };
 
     setStats(finalStats);
+
+    // A "new best" only means anything for a real ranked-value category
+    // (time10/30/60, words10/25/50) — those are the only keys bestWpm
+    // tracks (see addTestResult's 0-sentinel below). Guests never have a
+    // persisted bestWpm (isAccountSynced is false, so every value reads as
+    // 0), and previousBest === 0 also covers a signed-in user's first-ever
+    // run of a mode — both cases must NOT read as a new best.
+    const bestWpmKey = isRanked ? (`${config.mode}${config.value}` as keyof typeof userStats.bestWpm) : null;
+    const previousBest = bestWpmKey ? userStats.bestWpm[bestWpmKey] : 0;
+    const newBest = isAccountSynced && previousBest > 0 && finalStats.wpm > previousBest;
+    setIsNewBest(newBest);
+    if (newBest) {
+      confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } });
+    }
+
+    // Same guard as bestWpm above: userStats here is still the pre-refresh
+    // value (addTestResult below is fire-and-forget), so totalTests/sums
+    // reflect the account's history *before* this run — exactly the
+    // average to diff this run's result against.
+    if (isAccountSynced && userStats.totalTests > 0) {
+      const avgWpm = userStats.totalWpmSum / userStats.totalTests;
+      const avgAccuracy = userStats.totalAccuracySum / userStats.totalTests;
+      setWpmDiff(Math.round(finalStats.wpm - avgWpm));
+      setAccuracyDiff(Math.round(finalStats.accuracy - avgAccuracy));
+    } else {
+      setWpmDiff(null);
+      setAccuracyDiff(null);
+    }
 
     // Unranked runs (infinite mode, or any custom word count/duration) have
     // no fixed category to rank against, so they're saved under a 0
@@ -542,6 +581,25 @@ export default function TypingTest({
   const timeRemaining =
     config.mode === 'time' && config.value !== 'infinite' ? Math.max(0, config.value - elapsedDisplay) : null;
 
+  // Renders the +/- diff against the account's average shown beneath a
+  // stat on the end screen — green above average, red below, nothing when
+  // there's no average yet to compare against or the run landed exactly on
+  // it. #5bc16f matches the "green" entry in accentColors.ts so this stays
+  // consistent with the rest of the site's palette rather than inventing a
+  // new hex.
+  const renderDiff = (diff: number | null, suffix = '') => {
+    if (diff === null || diff === 0) return null;
+    return (
+      <div
+        className="text-xs font-semibold mt-1 tabular-nums"
+        style={{ color: diff > 0 ? '#5bc16f' : 'var(--text-incorrect)' }}
+      >
+        {diff > 0 ? `+${diff}` : diff}
+        {suffix}
+      </div>
+    );
+  };
+
   let textOpacity = 1;
   let textFilter = 'none';
   if (!isFocused) {
@@ -606,15 +664,20 @@ export default function TypingTest({
               >
                 <div className="grid grid-cols-3 gap-6 mb-8 text-center">
                   <div>
+                    <div className="text-2xl sm:text-4xl font-semibold text-[var(--text-correct)] tabular-nums">{stats.accuracy}%</div>
+                    <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">accuracy</div>
+                    {renderDiff(accuracyDiff, '%')}
+                  </div>
+                  <div>
                     <div className="text-3xl sm:text-5xl font-semibold text-[var(--accent)] tabular-nums">{stats.wpm}</div>
                     <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">wpm</div>
+                    {isNewBest && (
+                      <div className="text-xs font-semibold text-[var(--accent)] mt-1 tracking-widest uppercase">new best!</div>
+                    )}
+                    {renderDiff(wpmDiff)}
                   </div>
                   <div>
-                    <div className="text-3xl sm:text-5xl font-semibold text-[var(--text-correct)] tabular-nums">{stats.accuracy}%</div>
-                    <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">accuracy</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl sm:text-5xl font-semibold text-[var(--text-secondary)] tabular-nums">{stats.rawWpm}</div>
+                    <div className="text-2xl sm:text-4xl font-semibold text-[var(--text-correct)] tabular-nums">{stats.rawWpm}</div>
                     <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">raw</div>
                   </div>
                 </div>
