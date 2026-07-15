@@ -36,8 +36,10 @@ export function calculateXP(wpm: number, accuracy: number, mode: TestMode, value
 // XP required to go from `level` to `level + 1`. This is the single source
 // of truth for level math — every other function here derives from it, so
 // the level number and the progress bar can never disagree with each other.
-function xpRequiredForLevel(level: number): number {
-  return Math.floor(100 * Math.pow(level, 1.5));
+// Flat — every level takes the same 2500 xp to clear, so level 100 lands at
+// exactly 99 * 2500 = 247,500 total xp.
+function xpRequiredForLevel(): number {
+  return 2500;
 }
 
 // Calculate level from total XP
@@ -45,8 +47,8 @@ export function calculateLevel(totalXp: number): number {
   let level = 1;
   let xpConsumed = 0;
 
-  while (totalXp >= xpConsumed + xpRequiredForLevel(level)) {
-    xpConsumed += xpRequiredForLevel(level);
+  while (totalXp >= xpConsumed + xpRequiredForLevel()) {
+    xpConsumed += xpRequiredForLevel();
     level++;
   }
 
@@ -54,21 +56,17 @@ export function calculateLevel(totalXp: number): number {
 }
 
 // Get XP needed to go from this level to the next
-export function getXpForNextLevel(level: number): number {
-  return xpRequiredForLevel(level);
+export function getXpForNextLevel(): number {
+  return xpRequiredForLevel();
 }
 
 // Get current level progress
 export function getLevelProgress(totalXp: number): { current: number; needed: number; percentage: number } {
   const level = calculateLevel(totalXp);
-  let xpConsumed = 0;
-
-  for (let l = 1; l < level; l++) {
-    xpConsumed += xpRequiredForLevel(l);
-  }
+  const xpConsumed = (level - 1) * xpRequiredForLevel();
 
   const xpInCurrentLevel = totalXp - xpConsumed;
-  const xpNeededForNext = xpRequiredForLevel(level);
+  const xpNeededForNext = xpRequiredForLevel();
 
   return {
     current: xpInCurrentLevel,
