@@ -45,6 +45,15 @@ function BugIcon() {
   );
 }
 
+function KofiIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d="M3 5h13v9a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V5Z" />
+      <path d="M16 8h1.5a3 3 0 0 1 0 6H16" />
+    </svg>
+  );
+}
+
 function PadlockIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -80,6 +89,10 @@ export default function Footer() {
           <BugIcon />
           report a bug
         </Link>
+        <a href="https://ko-fi.com/typeladder" target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
+          <KofiIcon />
+          support on ko-fi
+        </a>
         <Link to="/privacy" className={LINK_CLASS}>
           <PadlockIcon />
           privacy
