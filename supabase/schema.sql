@@ -1417,12 +1417,13 @@ grant execute on function public.change_username to authenticated;
 -- boolean here instead of a client-side isUnlocked(stats) check.
 create table public.badge_catalog (id text primary key);
 
-insert into public.badge_catalog (id) values ('founder'), ('supporter'), ('fast_typer'), ('dev');
+insert into public.badge_catalog (id) values ('founder'), ('supporter'), ('fast_typer'), ('dev'), ('goat');
 
 alter table public.user_stats
   add column is_founder boolean not null default false,
   add column is_supporter boolean not null default false,
   add column is_fast_typer boolean not null default false,
+  add column is_goat boolean not null default false,
   add column equipped_badge text references public.badge_catalog (id);
 
 -- Backfill Founder for accounts that already existed before this migration
@@ -1432,6 +1433,9 @@ update public.user_stats us
 set is_founder = true
 from (select id from auth.users order by created_at asc limit 25) f
 where us.user_id = f.id;
+
+-- GOAT has no automatic grant — toggled by hand in the SQL Editor per
+-- account (see schema_032), same as Supporter.
 
 -- Fast Typer: best wpm in any of the 6 categories is currently top-3
 -- globally (user_stats is public-readable, see "select any stats" policy).
@@ -1497,7 +1501,7 @@ begin
   end if;
 
   if p_badge_id is not null then
-    if p_badge_id not in ('founder', 'supporter', 'fast_typer', 'dev') then
+    if p_badge_id not in ('founder', 'supporter', 'fast_typer', 'dev', 'goat') then
       raise exception 'unknown badge';
     end if;
 
@@ -1505,7 +1509,8 @@ begin
     if (p_badge_id = 'founder' and not v_row.is_founder)
       or (p_badge_id = 'supporter' and not v_row.is_supporter)
       or (p_badge_id = 'fast_typer' and not v_row.is_fast_typer)
-      or (p_badge_id = 'dev' and lower(v_row.username) <> 'yvern') then
+      or (p_badge_id = 'dev' and lower(v_row.username) <> 'yvern')
+      or (p_badge_id = 'goat' and not v_row.is_goat) then
       raise exception 'badge not unlocked';
     end if;
   end if;

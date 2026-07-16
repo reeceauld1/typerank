@@ -524,6 +524,38 @@ export const BADGE_CATALOG: BadgeDef[] = [
     // UserStats doesn't carry email at all.
     isUnlocked: stats => stats.username?.toLowerCase() === 'yvern',
   },
+  {
+    id: 'goat',
+    name: 'GOAT',
+    description: 'Secret. If you have it, you know why.',
+    icon: ({ className }) => (
+      <ShineIcon
+        className={className}
+        variant="fill"
+        color="#9aa0ab"
+        paths={
+          // A single path with the eyes/nose as extra subpaths, cut out of
+          // the skull via fillRule="evenodd" rather than drawn as separate
+          // shapes — punches through to whatever's behind the icon instead
+          // of needing to match a specific background color.
+          <path
+            fillRule="evenodd"
+            d="M12 3c-4 0-7 3-7 7v2.5c0 1 .4 1.8 1.2 2.3.3.2.5.5.5.9v1.8c0 .6.5 1 1 .8l1.3-.5c.3-.1.6.1.6.4v1c0 .4.3.7.7.7h3.4c.4 0 .7-.3.7-.7v-1c0-.3.3-.5.6-.4l1.3.5c.5.2 1-.2 1-.8v-1.8c0-.4.2-.7.5-.9.8-.5 1.2-1.3 1.2-2.3V10c0-4-3-7-7-7z
+               M10.5 11a1.5 1.5 0 1 1 -3 0 1.5 1.5 0 0 1 3 0z
+               M16.5 11a1.5 1.5 0 1 1 -3 0 1.5 1.5 0 0 1 3 0z
+               M12 12.5l-1 2h2z
+               M11.1 18.6h.5v1.5h-.5z
+               M12.6 18.6h.5v1.5h-.5z"
+          />
+        }
+      />
+    ),
+    color: '#9aa0ab',
+    // Granted by hand to two accounts (see schema_032) — no derivable
+    // criteria, same one-off pattern as Dev, just a real is_goat column
+    // instead of a username check since it isn't a single hardcoded account.
+    isUnlocked: stats => stats.isGoat,
+  },
 ];
 
 export function getBadge(id: string): BadgeDef | null {

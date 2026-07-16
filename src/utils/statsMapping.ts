@@ -29,6 +29,7 @@ export function mapStatsRow(row: Record<string, number | string> | null): Omit<U
     isFounder: Boolean(row?.is_founder),
     isSupporter: Boolean(row?.is_supporter),
     isFastTyper: Boolean(row?.is_fast_typer),
+    isGoat: Boolean(row?.is_goat),
     elo: (row?.elo as number) ?? 1000,
     peakElo: (row?.peak_elo as number) ?? 1000,
     rankedGamesPlayed: (row?.ranked_games_played as number) ?? 0,
