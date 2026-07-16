@@ -13,9 +13,9 @@ const RECENT_LETTER_BOOST = 2; // how many extra times a recent-letter word is d
 // shortfall.
 const MIN_REPS_PER_LETTER = 3;
 export const ROUND_WORD_COUNT = 20; // deliberately not a WORD_PRESETS value (10/25/50) so isRanked stays false
-const EMA_ALPHA = 0.1;
-const UNLOCK_ACCURACY_THRESHOLD = 0.9;
-const UNLOCK_MIN_REPS = 30;
+const EMA_ALPHA = 0.15;
+const UNLOCK_ACCURACY_THRESHOLD = 0.85;
+const UNLOCK_MIN_REPS = 20;
 
 export function anchorLetters(layoutId: KeyboardLayoutId): string[] {
   return getAnchorLetters(layoutId);

@@ -52,7 +52,7 @@ function saveLocalProgress(layout: string, progress: StoredProgress) {
 
 export default function Learn() {
   useDocumentTitle('learn', 'Learn to type from scratch on typeladder with a keybr-style lesson mode — start on the home row and unlock new letters as your accuracy improves.');
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   // Supabase hands back a brand new `user` object on every token refresh
   // (a routine background event, not just sign-in/out) — depending the load
   // effect below on `user` itself made it refire on those refreshes too,
@@ -98,6 +98,16 @@ export default function Learn() {
     };
 
     const load = async () => {
+      // Still resolving whether there's a session at all — auth.getSession()
+      // is async, so on every fresh page load userId briefly reads as null
+      // before it does. Deciding "guest" here was the bug behind progress
+      // silently not reaching the account: a round finished (and saved
+      // locally) in that window before userId flipped to signed-in never
+      // gets picked up by the account row, which then looks stuck to a
+      // user who's actually signed in the whole time. Same hazard
+      // UserContext's refresh effect guards against for stats/cosmetics.
+      if (authLoading) return;
+
       setLoading(true);
 
       if (userId && supabase) {
@@ -125,7 +135,7 @@ export default function Learn() {
     return () => {
       cancelled = true;
     };
-  }, [userId, keyboardLayout]);
+  }, [userId, keyboardLayout, authLoading]);
 
   const saveProgress = (nextUnlocked: string[], nextAccuracy: LetterAccuracy, nextReps: number) => {
     if (userId && supabase) {
