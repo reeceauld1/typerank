@@ -154,8 +154,15 @@ grant execute on function public.record_test_result to authenticated;
 -- Creates the user_stats row (with username) the moment an account is
 -- created, using the username captured at signup time
 -- (supabase.auth.signUp({ options: { data: { username } } })). If it's
--- missing, malformed, or already taken, this raises and the whole signup
+-- malformed or already taken, this raises and the whole signup
 -- transaction — including the auth.users row itself — rolls back.
+--
+-- OAuth sign-ins (Discord, etc.) never set that 'username' key, and the
+-- provider-native handle they do supply can contain characters our
+-- [A-Za-z0-9]{3,20} rule rejects — a missing key is synthesized into a
+-- placeholder from whatever name the provider gave us instead of failing
+-- the signup. The user renames it via the normal change-name flow, which
+-- starts the usual 7-day cooldown only once they actually use it.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -164,13 +171,40 @@ set search_path = public
 as $$
 declare
   v_existing_count integer;
+  v_username text;
+  v_base text;
+  v_suffix text;
+  v_attempt integer := 0;
 begin
   -- Founder badge: one of the first 25 accounts ever created (see
   -- badge_catalog / is_founder further down) — decided once, here, from
   -- how many user_stats rows already exist at signup time.
   select count(*) into v_existing_count from public.user_stats;
+
+  v_username := new.raw_user_meta_data ->> 'username';
+
+  if v_username is null then
+    v_base := regexp_replace(
+      coalesce(new.raw_user_meta_data ->> 'user_name', new.raw_user_meta_data ->> 'full_name', ''),
+      '[^A-Za-z0-9]', '', 'g'
+    );
+    if length(v_base) < 3 then
+      v_base := 'user';
+    end if;
+    v_base := left(v_base, 14);
+
+    loop
+      v_suffix := lpad(floor(random() * 100000)::text, 5, '0');
+      v_username := left(v_base, 20 - length(v_suffix)) || v_suffix;
+      v_attempt := v_attempt + 1;
+      exit when v_attempt > 20 or not exists (
+        select 1 from public.user_stats where lower(username) = lower(v_username)
+      );
+    end loop;
+  end if;
+
   insert into public.user_stats (user_id, username, is_founder)
-  values (new.id, new.raw_user_meta_data ->> 'username', v_existing_count < 25);
+  values (new.id, v_username, v_existing_count < 25);
   return new;
 end;
 $$;

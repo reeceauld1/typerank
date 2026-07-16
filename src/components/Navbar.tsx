@@ -35,6 +35,18 @@ function ProfileIcon() {
   );
 }
 
+function PaletteIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M12 3a9 8 0 0 0 0 16c1.1 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a4.5 4.5 0 0 0 4.5-4.5C20.5 5.9 16.7 3 12 3Z" />
+      <circle cx="7.2" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="8.8" cy="8" r="1" fill="currentColor" stroke="none" />
+      <circle cx="13" cy="6.8" r="1" fill="currentColor" stroke="none" />
+      <circle cx="16.5" cy="8.8" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 function SettingsIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -162,6 +174,7 @@ export default function Navbar() {
       requiresUser: true,
     },
     { to: '/profile', label: 'profile', icon: ProfileIcon, isActive: p => p === '/profile' },
+    { to: '/cosmetics', label: 'cosmetics', icon: PaletteIcon, isActive: p => p === '/cosmetics', requiresUser: true },
     { to: '/settings', label: 'settings', icon: SettingsIcon, isActive: p => p === '/settings' },
   ];
   const visibleNavItems = navItems.filter(item => !item.requiresUser || user);
@@ -345,6 +358,23 @@ export default function Navbar() {
               )}
             </AnimatePresence>
           </Link>
+          {user && (
+            <Link
+              to="/cosmetics"
+              aria-label="Cosmetics"
+              title="Cosmetics"
+              className={`relative p-1 transition-colors ${
+                location.pathname === '/cosmetics'
+                  ? 'text-[var(--text-correct)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+              }`}
+            >
+              <PaletteIcon />
+              {location.pathname === '/cosmetics' && (
+                <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
+              )}
+            </Link>
+          )}
           <Link
             to="/settings"
             aria-label="Settings"

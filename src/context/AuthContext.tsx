@@ -54,6 +54,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error?.message ?? null };
   };
 
+  const signInWithDiscord = async () => {
+    if (!supabase) return { error: 'Accounts are not configured yet.' };
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'discord',
+      options: { redirectTo: window.location.origin },
+    });
+    return { error: error?.message ?? null };
+  };
+
+  // Links a Discord identity to the currently signed-in account (as opposed
+  // to signInWithDiscord, which starts/continues a session). Requires
+  // "Enable manual linking" turned on in the Supabase dashboard's auth
+  // settings, or this comes back with an error.
+  const linkDiscord = async () => {
+    if (!supabase) return { error: 'Accounts are not configured yet.' };
+    const { error } = await supabase.auth.linkIdentity({
+      provider: 'discord',
+      options: { redirectTo: `${window.location.origin}/profile` },
+    });
+    return { error: error?.message ?? null };
+  };
+
+  const unlinkDiscord = async () => {
+    if (!supabase) return { error: 'Accounts are not configured yet.' };
+    const { data, error: identitiesError } = await supabase.auth.getUserIdentities();
+    if (identitiesError) return { error: identitiesError.message };
+    const discordIdentity = data.identities.find(i => i.provider === 'discord');
+    if (!discordIdentity) return { error: 'No linked Discord account found.' };
+    const { error } = await supabase.auth.unlinkIdentity(discordIdentity);
+    return { error: error?.message ?? null };
+  };
+
   const signOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -88,6 +120,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isConfigured: isSupabaseConfigured,
         signUp,
         signIn,
+        signInWithDiscord,
+        linkDiscord,
+        unlinkDiscord,
         signOut,
         sendPasswordReset,
         updatePassword,

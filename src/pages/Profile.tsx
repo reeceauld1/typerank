@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import ProfileStats from '../components/ProfileStats.js';
 import AuthForm from '../components/AuthForm.js';
 import Avatar from '../components/Avatar.js';
-import CosmeticsPicker from '../components/CosmeticsPicker.js';
+import DiscordIcon from '../components/DiscordIcon.js';
 import UsernameText from '../components/UsernameText.js';
 import UsernameBadge from '../components/UsernameBadge.js';
 import BadgePicker from '../components/BadgePicker.js';
@@ -145,12 +145,74 @@ function ChangeUsernameModal({ currentUsername, onClose }: { currentUsername: st
   );
 }
 
+function DiscordLinkSection() {
+  const { user, linkDiscord, unlinkDiscord } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const linked = user?.identities?.some(i => i.provider === 'discord') ?? false;
+  const canUnlink = (user?.identities?.length ?? 0) > 1;
+
+  const handleLink = async () => {
+    setError(null);
+    setSubmitting(true);
+    const { error: linkError } = await linkDiscord();
+    if (linkError) {
+      setError(linkError);
+      setSubmitting(false);
+    }
+    // On success the browser navigates away to Discord, so there's nothing
+    // left to reset here — control never returns to this component.
+  };
+
+  const handleUnlink = async () => {
+    setError(null);
+    setSubmitting(true);
+    const { error: unlinkError } = await unlinkDiscord();
+    setSubmitting(false);
+    if (unlinkError) setError(unlinkError);
+  };
+
+  return (
+    <div className="max-w-4xl w-full mx-auto mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
+        <div className="flex items-center gap-3">
+          <DiscordIcon className="w-6 h-6 text-[#5865F2]" />
+          <div>
+            <p className="text-sm font-medium text-[var(--text-correct)]">Discord</p>
+            <p className="text-xs text-[var(--text-muted)]">{linked ? 'linked to your account' : 'not linked'}</p>
+          </div>
+        </div>
+        {linked ? (
+          <button
+            type="button"
+            onClick={() => void handleUnlink()}
+            disabled={submitting || !canUnlink}
+            title={!canUnlink ? "You signed up with Discord — you can't unlink your only sign-in method." : undefined}
+            className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-secondary)]"
+          >
+            {submitting ? '...' : 'unlink'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => void handleLink()}
+            disabled={submitting}
+            className="text-sm border border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-soft)] px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {submitting ? '...' : 'link Discord'}
+          </button>
+        )}
+      </div>
+      {error && <p className="text-[var(--text-incorrect)] text-sm mt-2">{error}</p>}
+    </div>
+  );
+}
+
 export default function Profile() {
   useDocumentTitle('profile');
   const navigate = useNavigate();
   const { user, isConfigured, signOut } = useAuth();
   const { stats } = useUser();
-  const [tab, setTab] = useState<'stats' | 'customize'>('stats');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -225,26 +287,9 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="max-w-4xl w-full mx-auto flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg p-1 mb-6 text-sm">
-            <button
-              onClick={() => setTab('stats')}
-              className={`flex-1 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                tab === 'stats' ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-            >
-              stats
-            </button>
-            <button
-              onClick={() => setTab('customize')}
-              className={`flex-1 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                tab === 'customize' ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-            >
-              customize
-            </button>
-          </div>
+          <DiscordLinkSection />
 
-          {tab === 'stats' ? <ProfileStats /> : <CosmeticsPicker />}
+          <ProfileStats />
 
           <div className="max-w-4xl w-full mx-auto mt-10 pt-6 border-t border-[var(--border)]">
             <button

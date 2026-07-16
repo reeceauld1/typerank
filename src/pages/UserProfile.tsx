@@ -8,6 +8,7 @@ import { useFriends } from '../hooks/useFriends.js';
 import Avatar from '../components/Avatar.js';
 import ProfileStats from '../components/ProfileStats.js';
 import CosmeticsPicker from '../components/CosmeticsPicker.js';
+import ConfirmModal from '../components/ConfirmModal.js';
 import UsernameText from '../components/UsernameText.js';
 import UsernameBadge from '../components/UsernameBadge.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
@@ -36,6 +37,7 @@ export default function UserProfile() {
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   const loadProfile = useCallback(async (targetUsername: string) => {
     setNotFound(false);
@@ -123,7 +125,7 @@ export default function UserProfile() {
             <div className="flex items-center gap-2 shrink-0">
               {status === 'friend' && (
                 <button
-                  onClick={() => void removeFriend(profile.userId)}
+                  onClick={() => setConfirmRemove(true)}
                   className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
                 >
                   remove friend
@@ -171,6 +173,19 @@ export default function UserProfile() {
       <div className="mt-6">
         <CosmeticsPicker statsOverride={profile.stats} readOnly />
       </div>
+
+      {confirmRemove && (
+        <ConfirmModal
+          title="remove this friend?"
+          message={`You'll need to send a new friend request to reconnect with ${profile.username}.`}
+          confirmLabel="remove friend"
+          onConfirm={() => {
+            void removeFriend(profile.userId);
+            setConfirmRemove(false);
+          }}
+          onClose={() => setConfirmRemove(false)}
+        />
+      )}
     </div>
   );
 }

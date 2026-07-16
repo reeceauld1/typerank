@@ -8,6 +8,9 @@ export interface AuthContextType {
   isConfigured: boolean;
   signUp: (email: string, password: string, username: string) => Promise<{ error: string | null }>;
   signIn: (identifier: string, password: string) => Promise<{ error: string | null }>;
+  signInWithDiscord: () => Promise<{ error: string | null }>;
+  linkDiscord: () => Promise<{ error: string | null }>;
+  unlinkDiscord: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   sendPasswordReset: (identifier: string) => Promise<{ error: string | null }>;
   updatePassword: (password: string) => Promise<{ error: string | null }>;

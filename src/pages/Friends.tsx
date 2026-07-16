@@ -6,6 +6,7 @@ import { useFriends } from '../hooks/useFriends.js';
 import { supabase } from '../lib/supabase.js';
 import Avatar from '../components/Avatar.js';
 import AuthForm from '../components/AuthForm.js';
+import ConfirmModal from '../components/ConfirmModal.js';
 import UsernameText from '../components/UsernameText.js';
 import UsernameBadge from '../components/UsernameBadge.js';
 import type { FriendEntry } from '../types/index.js';
@@ -154,6 +155,7 @@ export default function Friends() {
   const { user, isConfigured } = useAuth();
   const { friends, incomingRequests, outgoingRequests, acceptRequest, declineRequest, removeFriend } = useFriends();
   const [tab, setTab] = useState<Tab>('friends');
+  const [confirmRemove, setConfirmRemove] = useState<FriendEntry | null>(null);
 
   if (!isConfigured) {
     return (
@@ -250,7 +252,7 @@ export default function Friends() {
             <div className="flex flex-col gap-2">
               {friends.map(entry => (
                 <FriendRow key={entry.userId} entry={entry}>
-                  <ActionButton onClick={() => void removeFriend(entry.userId)}>remove</ActionButton>
+                  <ActionButton onClick={() => setConfirmRemove(entry)}>remove</ActionButton>
                 </FriendRow>
               ))}
             </div>
@@ -258,6 +260,19 @@ export default function Friends() {
 
         {tab === 'find' && <FindPeople />}
       </div>
+
+      {confirmRemove && (
+        <ConfirmModal
+          title="remove this friend?"
+          message={`You'll need to send a new friend request to reconnect with ${confirmRemove.username}.`}
+          confirmLabel="remove friend"
+          onConfirm={() => {
+            void removeFriend(confirmRemove.userId);
+            setConfirmRemove(null);
+          }}
+          onClose={() => setConfirmRemove(null)}
+        />
+      )}
     </div>
   );
 }

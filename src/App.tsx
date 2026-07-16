@@ -10,6 +10,7 @@ import CookieConsentBanner from './components/CookieConsentBanner.js';
 import PendingDuelWatcher from './components/PendingDuelWatcher.js';
 import Home from './pages/Home.js';
 import Profile from './pages/Profile.js';
+import Cosmetics from './pages/Cosmetics.js';
 import Challenges from './pages/Challenges.js';
 import Friends from './pages/Friends.js';
 import UserProfile from './pages/UserProfile.js';
@@ -39,6 +40,7 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/cosmetics" element={<Cosmetics />} />
                     <Route path="/challenges" element={<Challenges />} />
                     <Route path="/friends" element={<Friends />} />
                     <Route path="/u/:username" element={<UserProfile />} />
