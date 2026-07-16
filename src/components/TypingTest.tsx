@@ -46,6 +46,12 @@ type CharStatus = 'pending' | 'correct' | 'incorrect' | 'extra' | 'missed';
 const CARET_WIDTH = 16;
 const CARET_FILLER = 'W'.repeat(20);
 
+// Below this, a run doesn't count toward best-wpm/leaderboard — mirrors the
+// same floor record_test_result enforces server-side (supabase/schema.sql),
+// so a low-effort/mashed-keys run can't buy a leaderboard spot just because
+// its raw speed happened to be high.
+const LEADERBOARD_ACCURACY_FLOOR = 40;
+
 export default function TypingTest({
   config,
   fixedText,
@@ -88,6 +94,7 @@ export default function TypingTest({
   // which just isn't shown since it's neither an improvement nor a drop.
   const [wpmDiff, setWpmDiff] = useState<number | null>(null);
   const [accuracyDiff, setAccuracyDiff] = useState<number | null>(null);
+  const [lowAccuracy, setLowAccuracy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const linesRef = useRef<HTMLDivElement>(null);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -338,16 +345,20 @@ export default function TypingTest({
     };
 
     setStats(finalStats);
+    setLowAccuracy(finalStats.accuracy < LEADERBOARD_ACCURACY_FLOOR);
 
     // A "new best" only means anything for a real ranked-value category
     // (time10/30/60, words10/25/50) — those are the only keys bestWpm
     // tracks (see addTestResult's 0-sentinel below). Guests never have a
     // persisted bestWpm (isAccountSynced is false, so every value reads as
     // 0), and previousBest === 0 also covers a signed-in user's first-ever
-    // run of a mode — both cases must NOT read as a new best.
+    // run of a mode — both cases must NOT read as a new best. Also excluded:
+    // below the accuracy floor, since record_test_result won't actually
+    // persist this as the new best server-side either.
     const bestWpmKey = isRanked ? (`${config.mode}${config.value}` as keyof typeof userStats.bestWpm) : null;
     const previousBest = bestWpmKey ? userStats.bestWpm[bestWpmKey] : 0;
-    const newBest = isAccountSynced && previousBest > 0 && finalStats.wpm > previousBest;
+    const newBest =
+      isAccountSynced && previousBest > 0 && finalStats.wpm > previousBest && finalStats.accuracy >= LEADERBOARD_ACCURACY_FLOOR;
     setIsNewBest(newBest);
     if (newBest) {
       confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } });
@@ -687,6 +698,9 @@ export default function TypingTest({
                     <div className="text-xs text-[var(--text-muted)] mt-2 tracking-widest uppercase">raw</div>
                   </div>
                 </div>
+                {isRanked && !skipStatsSave && lowAccuracy && (
+                  <p className="text-center text-xs text-[var(--text-incorrect)] mb-4">accuracy too low — not added to leaderboard</p>
+                )}
                 {!isRanked && !hidePracticeCaption && (
                   <p className="text-center text-xs text-[var(--text-muted)] mb-4">practice mode — half xp, not ranked</p>
                 )}

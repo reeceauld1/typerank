@@ -91,6 +91,9 @@ create policy "insert own claims" on public.daily_challenge_claims
 -- running totals + per-mode best WPM. Called from the client via
 -- supabase.rpc('record_test_result', {...}) instead of doing a
 -- read-modify-write from JS, so concurrent submissions can't race.
+-- best_wpm_* updates require >=40% accuracy (see schema_033) so a mashed-
+-- keys/low-effort run can't buy a leaderboard spot on raw speed alone —
+-- everything else about the run (history, xp, totals) still records.
 create or replace function public.record_test_result(
   p_mode text,
   p_value integer,
@@ -129,17 +132,17 @@ begin
     total_time_typed = total_time_typed + p_time_elapsed,
     total_accuracy_sum = total_accuracy_sum + p_accuracy,
     total_wpm_sum = total_wpm_sum + p_wpm,
-    best_wpm_time10 = case when p_mode = 'time' and p_value = 10
+    best_wpm_time10 = case when p_mode = 'time' and p_value = 10 and p_accuracy >= 40
       then greatest(best_wpm_time10, p_wpm) else best_wpm_time10 end,
-    best_wpm_time30 = case when p_mode = 'time' and p_value = 30
+    best_wpm_time30 = case when p_mode = 'time' and p_value = 30 and p_accuracy >= 40
       then greatest(best_wpm_time30, p_wpm) else best_wpm_time30 end,
-    best_wpm_time60 = case when p_mode = 'time' and p_value = 60
+    best_wpm_time60 = case when p_mode = 'time' and p_value = 60 and p_accuracy >= 40
       then greatest(best_wpm_time60, p_wpm) else best_wpm_time60 end,
-    best_wpm_words10 = case when p_mode = 'words' and p_value = 10
+    best_wpm_words10 = case when p_mode = 'words' and p_value = 10 and p_accuracy >= 40
       then greatest(best_wpm_words10, p_wpm) else best_wpm_words10 end,
-    best_wpm_words25 = case when p_mode = 'words' and p_value = 25
+    best_wpm_words25 = case when p_mode = 'words' and p_value = 25 and p_accuracy >= 40
       then greatest(best_wpm_words25, p_wpm) else best_wpm_words25 end,
-    best_wpm_words50 = case when p_mode = 'words' and p_value = 50
+    best_wpm_words50 = case when p_mode = 'words' and p_value = 50 and p_accuracy >= 40
       then greatest(best_wpm_words50, p_wpm) else best_wpm_words50 end,
     updated_at = now()
   where user_id = v_user_id;
