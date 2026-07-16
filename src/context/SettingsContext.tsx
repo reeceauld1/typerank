@@ -13,6 +13,8 @@ const THEME_KEY = 'theme';
 const FONT_KEY = 'font';
 const SPACE_STYLE_KEY = 'spaceStyle';
 const WORD_LIST_SIZE_KEY = 'wordListSize';
+const SOUND_ENABLED_KEY = 'soundEnabled';
+const SOUND_VOLUME_KEY = 'soundVolume';
 
 function loadShowKeyboard(): boolean {
   try {
@@ -92,6 +94,27 @@ function loadWordListSize(): WordListSize {
   return '300';
 }
 
+function loadSoundEnabled(): boolean {
+  try {
+    return localStorage.getItem(SOUND_ENABLED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function loadSoundVolume(): number {
+  try {
+    const raw = localStorage.getItem(SOUND_VOLUME_KEY);
+    if (raw !== null) {
+      const saved = Number(raw);
+      if (Number.isFinite(saved)) return Math.min(100, Math.max(0, saved));
+    }
+  } catch {
+    // ignore malformed/unavailable storage, fall back to the default below
+  }
+  return 25;
+}
+
 function systemPrefersLight(): boolean {
   try {
     return window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -113,6 +136,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [font, setFont] = useState<string>(loadFont);
   const [spaceStyle, setSpaceStyle] = useState<SpaceStyle>(loadSpaceStyle);
   const [wordListSize, setWordListSize] = useState<WordListSize>(loadWordListSize);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(loadSoundEnabled);
+  const [soundVolume, setSoundVolume] = useState<number>(loadSoundVolume);
 
   useEffect(() => {
     localStorage.setItem(SHOW_KEYBOARD_KEY, String(showKeyboard));
@@ -148,6 +173,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [wordListSize]);
 
   useEffect(() => {
+    localStorage.setItem(SOUND_ENABLED_KEY, String(soundEnabled));
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem(SOUND_VOLUME_KEY, String(soundVolume));
+  }, [soundVolume]);
+
+  useEffect(() => {
     const apply = () => {
       if (resolveTheme(theme) === 'light') document.documentElement.dataset.theme = 'light';
       else delete document.documentElement.dataset.theme;
@@ -181,6 +214,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setSpaceStyle,
         wordListSize,
         setWordListSize,
+        soundEnabled,
+        setSoundEnabled,
+        soundVolume,
+        setSoundVolume,
       }}
     >
       {children}

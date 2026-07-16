@@ -6,6 +6,7 @@ import { isRankedValue } from '../utils/xp.js';
 import { useUser } from '../hooks/useUser.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { KEYBOARD_LAYOUTS } from '../utils/keyboardLayouts.js';
+import { playTypingSound } from '../utils/typingSounds.js';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TypingTestProps {
@@ -24,7 +25,11 @@ interface TypingTestProps {
     correctChars: number;
     incorrectChars: number;
   }) => void;
-  onRestart?: () => void;
+  // wasFinished: true when the restart happened from the end screen (Tab/
+  // Escape/"try again" after the run already completed) rather than
+  // mid-test — lets the parent know whether to keep the new test's caret
+  // suppressed until the first keystroke (see suppressCaretOnMount above).
+  onRestart?: (wasFinished: boolean) => void;
   onTypingActiveChange?: (active: boolean) => void;
   // Learn mode's per-letter accuracy tracking hooks in here — fired for
   // every character as it's scored, alongside (not instead of) the
@@ -33,6 +38,12 @@ interface TypingTestProps {
   // Learn mode always runs at 0 xp (not "half xp, practice"), so it hides
   // the practice-mode caption below rather than showing a misleading one.
   hidePracticeCaption?: boolean;
+  // True when this mount is a manual restart (Tab/Escape/"try again") rather
+  // than a fresh test or a config change — parents that remount TypingTest
+  // via a `key` bump on restart (see Home.tsx) need to pass this through,
+  // since resetTest()'s own suppressCaretRef write happens on the instance
+  // being discarded, not the new one.
+  suppressCaretOnMount?: boolean;
 }
 
 type CharStatus = 'pending' | 'correct' | 'incorrect' | 'extra' | 'missed';
@@ -61,9 +72,10 @@ export default function TypingTest({
   onTypingActiveChange,
   onCharacterResult,
   hidePracticeCaption,
+  suppressCaretOnMount,
 }: TypingTestProps) {
   const { addTestResult, stats: userStats, isAccountSynced } = useUser();
-  const { keyboardLayout, spaceStyle, wordListSize } = useSettings();
+  const { keyboardLayout, spaceStyle, wordListSize, soundEnabled, soundVolume } = useSettings();
   const isInfinite = config.mode === 'time' && config.value === 'infinite';
   // Ranked = one of the fixed preset values (10/25/50 words, 10/30/60s) —
   // anything else (a custom count/duration, or infinite) is unranked
@@ -103,6 +115,10 @@ export default function TypingTest({
   const [caretPos, setCaretPos] = useState<{ left: number; top: number; instant: boolean } | null>(null);
   const prevWordIndexRef = useRef(0);
   const prevTopRef = useRef<number | null>(null);
+  // Set on a manual restart (Tab/Escape/"try again") so the caret stays
+  // hidden at the reset position instead of immediately blinking there —
+  // cleared the moment the first keystroke actually moves it.
+  const suppressCaretRef = useRef(!!suppressCaretOnMount);
   const [isPaused, setIsPaused] = useState(false);
   const prevInputRef = useRef('');
   const totalKeystrokesRef = useRef(0);
@@ -114,7 +130,11 @@ export default function TypingTest({
 
   const finishTestRef = useRef<() => void>(() => {});
 
-  const resetTest = () => {
+  // suppressCaret: true while restarting mid-test (Tab/Escape typed over an
+  // in-progress run) — the caret stays hidden until the next keystroke moves
+  // it. Restarting from the end screen ("try again", or Tab/Escape once
+  // already finished) passes false so the fresh test's caret shows right away.
+  const resetTest = (suppressCaret: boolean) => {
     setText(fixedText ?? generateText(config.mode === 'words' ? config.value : 100, wordListSize));
     setInput('');
     setStartTime(null);
@@ -129,6 +149,7 @@ export default function TypingTest({
     setCaretPos(null);
     prevWordIndexRef.current = 0;
     prevTopRef.current = null;
+    suppressCaretRef.current = suppressCaret;
     setIsPaused(false);
     prevInputRef.current = '';
     totalKeystrokesRef.current = 0;
@@ -185,6 +206,13 @@ export default function TypingTest({
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.getModifierState) capsLockRef.current = e.getModifierState('CapsLock');
+
+    // Mechanical-click feedback: fires on every real character/backspace
+    // keydown, regardless of correctness or layout, and skips modifier
+    // combos (Ctrl+A, etc.) which shouldn't click.
+    if (soundEnabled && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key.length === 1 || e.key === 'Backspace')) {
+      playTypingSound(soundVolume / 100);
+    }
 
     if (keyboardLayout === 'qwerty') {
       // Block spacebar as the first keypress of a word — otherwise spamming
@@ -468,8 +496,8 @@ export default function TypingTest({
       }
       if (e.key === 'Escape' || (e.key === 'Tab' && !e.shiftKey)) {
         e.preventDefault();
-        resetTest();
-        onRestart?.();
+        resetTest(!isFinished);
+        onRestart?.(isFinished);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -549,7 +577,13 @@ export default function TypingTest({
     prevWordIndexRef.current = currentWordIndex;
     prevTopRef.current = top;
 
-    setCaretPos({ left, top, instant });
+    if (suppressCaretRef.current && input.length === 0) {
+      // Still sitting at the reset position with nothing typed yet — leave
+      // the caret hidden until a keystroke actually moves it.
+    } else {
+      suppressCaretRef.current = false;
+      setCaretPos({ left, top, instant });
+    }
 
     if (measuredLineHeight) {
       const currentLine = Math.round(top / measuredLineHeight);
@@ -617,14 +651,7 @@ export default function TypingTest({
     );
   };
 
-  let textOpacity = 1;
-  let textFilter = 'none';
-  if (!isFocused) {
-    textOpacity = 0.55;
-    textFilter = 'blur(1.5px)';
-  } else if (isPaused) {
-    textOpacity = 0.7;
-  }
+  const textOpacity = isPaused ? 0.7 : 1;
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -638,10 +665,7 @@ export default function TypingTest({
               : `${Math.min(currentWordIndex + 1, config.value)}/${config.value}`
             : ''}
         </div>
-        {!isFinished && !isFocused && (
-          <div className="text-xs text-[var(--text-muted)] tracking-wide">click to focus</div>
-        )}
-        {!isFinished && isFocused && isPaused && (
+        {!isFinished && isPaused && (
           <div className="text-xs text-[var(--text-muted)] tracking-wide">keep typing to resume</div>
         )}
       </div>
@@ -654,7 +678,12 @@ export default function TypingTest({
           onChange={handleInputChange}
           onKeyDown={handleInputKeyDown}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onBlur={() => {
+            setIsFocused(false);
+            // No "click to focus" wall — reclaim focus right away so the
+            // test stays typable instead of requiring a manual re-click.
+            if (!isFinished) requestAnimationFrame(() => inputRef.current?.focus());
+          }}
           disabled={isFinished}
           autoFocus
           spellCheck={false}
@@ -706,8 +735,10 @@ export default function TypingTest({
                 )}
                 <button
                   onClick={() => {
-                    resetTest();
-                    onRestart?.();
+                    // Always reached from the end screen, so the new test's
+                    // caret should show immediately, not stay suppressed.
+                    resetTest(false);
+                    onRestart?.(true);
                   }}
                   className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-3 rounded-lg font-semibold transition-all cursor-pointer"
                 >
@@ -722,7 +753,7 @@ export default function TypingTest({
                 animate={{ opacity: textOpacity }}
                 transition={{ duration: 0.2 }}
                 className="w-full overflow-hidden"
-                style={{ filter: textFilter, height: lineHeight * 4 }}
+                style={{ height: lineHeight * 4 }}
               >
                 <div
                   ref={linesRef}

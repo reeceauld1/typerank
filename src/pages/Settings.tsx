@@ -50,6 +50,10 @@ export default function Settings() {
     setSpaceStyle,
     wordListSize,
     setWordListSize,
+    soundEnabled,
+    setSoundEnabled,
+    soundVolume,
+    setSoundVolume,
   } = useSettings();
 
   return (
@@ -219,6 +223,35 @@ export default function Settings() {
                 {option.label}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[var(--text-correct)] font-medium">typing sound</p>
+              <p className="text-[var(--text-muted)] text-sm mt-0.5">plays a keystroke sound as you type.</p>
+            </div>
+            <Toggle checked={soundEnabled} onChange={setSoundEnabled} />
+          </div>
+
+          <div
+            className={`mt-4 pt-4 border-t border-[var(--border)] flex items-center gap-3 transition-opacity ${
+              soundEnabled ? '' : 'opacity-50'
+            }`}
+          >
+            <span className="text-[var(--text-muted)] text-sm">volume</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={soundVolume}
+              disabled={!soundEnabled}
+              onChange={e => setSoundVolume(Number(e.target.value))}
+              className="w-32 accent-[var(--accent)] disabled:cursor-not-allowed"
+            />
+            <span className="text-[var(--text-muted)] text-sm w-9 text-right">{soundVolume}%</span>
           </div>
         </div>
 

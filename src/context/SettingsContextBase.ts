@@ -28,6 +28,10 @@ export interface SettingsContextType {
   setSpaceStyle: (value: SpaceStyle) => void;
   wordListSize: WordListSize;
   setWordListSize: (value: WordListSize) => void;
+  soundEnabled: boolean;
+  setSoundEnabled: (value: boolean) => void;
+  soundVolume: number;
+  setSoundVolume: (value: number) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

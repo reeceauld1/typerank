@@ -166,11 +166,22 @@ export default function Navbar() {
   ];
   const visibleNavItems = navItems.filter(item => !item.requiresUser || user);
 
+  // Clicking the logo/typing-test link while already on "/" wouldn't
+  // otherwise do anything (react-router doesn't navigate/remount for a
+  // same-path Link) — dispatch an event Home listens for instead, so it
+  // reads the same as pressing Escape mid-test.
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (location.pathname === '/') {
+      e.preventDefault();
+      window.dispatchEvent(new Event('typeladder:reset-test'));
+    }
+  };
+
   return (
     <>
     <nav className="border-b border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur-sm relative z-10">
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-        <Link to="/" className="text-lg font-semibold tracking-tight text-[var(--accent)]">
+        <Link to="/" onClick={handleLogoClick} className="text-lg font-semibold tracking-tight text-[var(--accent)]">
           type<span className="text-[var(--text-correct)]">ladder</span>
         </Link>
 
@@ -186,6 +197,7 @@ export default function Navbar() {
         <div className="hidden sm:flex items-center gap-6 text-sm">
           <Link
             to="/"
+            onClick={handleLogoClick}
             aria-label="Typing test"
             title="Typing test"
             className={`relative p-1 transition-colors ${
@@ -391,6 +403,10 @@ export default function Navbar() {
                   <Link
                     key={item.to}
                     to={item.to}
+                    onClick={e => {
+                      if (item.to === '/') handleLogoClick(e);
+                      setMobileMenuOpen(false);
+                    }}
                     className={`relative flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
                       active
                         ? 'text-[var(--accent)] bg-[var(--accent-soft)]'
