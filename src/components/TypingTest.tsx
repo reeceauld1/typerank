@@ -44,6 +44,10 @@ interface TypingTestProps {
   // since resetTest()'s own suppressCaretRef write happens on the instance
   // being discarded, not the new one.
   suppressCaretOnMount?: boolean;
+  // Duels handle Tab/Escape themselves (forfeit/rematch/leave — see
+  // DuelMatch.tsx) instead of the usual restart-the-test shortcut, so this
+  // skips registering that behavior here and lets the keypress bubble up.
+  disableRestartShortcut?: boolean;
 }
 
 type CharStatus = 'pending' | 'correct' | 'incorrect' | 'extra' | 'missed';
@@ -73,6 +77,7 @@ export default function TypingTest({
   onCharacterResult,
   hidePracticeCaption,
   suppressCaretOnMount,
+  disableRestartShortcut,
 }: TypingTestProps) {
   const { addTestResult, stats: userStats, isAccountSynced } = useUser();
   const { keyboardLayout, spaceStyle, wordListSize, soundEnabled, soundVolume } = useSettings();
@@ -485,6 +490,7 @@ export default function TypingTest({
   }, [fixedText, config.mode, isActive, currentWordIndex, words.length, wordListSize]);
 
   useEffect(() => {
+    if (disableRestartShortcut) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Tab' && !e.shiftKey && isInfinite && isActive && !isFinished) {
         // Infinite mode has no natural end, so Tab finishes it and shows
@@ -503,7 +509,7 @@ export default function TypingTest({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInfinite, isActive, isFinished]);
+  }, [isInfinite, isActive, isFinished, disableRestartShortcut]);
 
   useEffect(() => {
     const shouldHideCursor = isActive && isFocused && !isPaused;
@@ -837,7 +843,11 @@ export default function TypingTest({
 
       {!isFinished && (
         <p className="hidden sm:block text-xs text-[var(--text-muted)] mt-8 tracking-wide">
-          {isInfinite && isActive ? 'esc — restart · tab — finish' : 'esc / tab — restart'}
+          {disableRestartShortcut
+            ? 'esc / tab twice — forfeit'
+            : isInfinite && isActive
+              ? 'esc — restart · tab — finish'
+              : 'esc / tab — restart'}
         </p>
       )}
     </div>

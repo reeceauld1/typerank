@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { TestConfig } from '../types/index.js';
 import { supabase } from '../lib/supabase.js';
@@ -110,6 +110,16 @@ export default function DuelMatch() {
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [joinName, setJoinName] = useState('');
   const [ready, setReady] = useState(false);
+  // Set the instant handleComplete fires (before the submit RPC even
+  // starts), so the page can jump straight to "waiting for opponent…" with
+  // my own score already showing, instead of flashing TypingTest's own
+  // results screen for however long that round trip takes.
+  const [localStats, setLocalStats] = useState<{ wpm: number; accuracy: number; rawWpm: number } | null>(null);
+  // Tracks whether the first of a Tab/Escape "press twice to forfeit" pair
+  // just happened, and the timer that disarms it if the second press never
+  // comes — see the keydown effect below.
+  const forfeitArmedRef = useRef(false);
+  const forfeitArmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // A rematch already had both players confirm "start" on the duel it
@@ -119,6 +129,9 @@ export default function DuelMatch() {
     const state = location.state as { fromRematch?: boolean } | null;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setReady(Boolean(state?.fromRematch));
+    // A new duel id (fresh match or rematch) — the previous round's
+    // optimistic local score shouldn't carry over into this one.
+    setLocalStats(null);
   }, [id, location.state]);
 
   const loadPlayers = useCallback(async (ids: string[]) => {
@@ -350,15 +363,12 @@ export default function DuelMatch() {
     navigate('/duel');
   };
 
-  const handleComplete = async (stats: {
-    wpm: number;
-    accuracy: number;
-    rawWpm: number;
-    timeElapsed: number;
-    correctChars: number;
-    incorrectChars: number;
-  }) => {
+  // Shared by a normal finish and a forfeit — writes my slot's result to the
+  // duel row. Doesn't touch personal xp/history; handleComplete below adds
+  // that on top for a real finish only, not an abandoned/forfeited run.
+  const submitDuelResult = async (stats: { wpm: number; accuracy: number; rawWpm: number; timeElapsed: number }) => {
     if (!supabase || !id || !duel) return;
+    setLocalStats({ wpm: stats.wpm, accuracy: stats.accuracy, rawWpm: stats.rawWpm });
     // Whether *my own* slot (whichever one I am) was filled via an account
     // or a guest token — not whether the duel as a whole was guest-created.
     const mySlotIsGuest = isCreator ? duel.creator_id === null : duel.opponent_id === null;
@@ -380,11 +390,27 @@ export default function DuelMatch() {
         p_raw_wpm: stats.rawWpm,
         p_time_elapsed: stats.timeElapsed,
       });
-      // Guests have no account to award xp/history to — only real
-      // participants earn it. Standard word/time counts (10/25/50,
-      // 10/30/60) rank and earn full xp, same as a solo test of that mode
-      // and value; anything custom is unranked practice at half xp, saved
-      // under the same 0 sentinel value solo's infinite mode already uses.
+    }
+    await loadDuel();
+  };
+
+  const handleComplete = async (stats: {
+    wpm: number;
+    accuracy: number;
+    rawWpm: number;
+    timeElapsed: number;
+    correctChars: number;
+    incorrectChars: number;
+  }) => {
+    if (!duel) return;
+    await submitDuelResult(stats);
+    // Guests have no account to award xp/history to — only real
+    // participants earn it. Standard word/time counts (10/25/50,
+    // 10/30/60) rank and earn full xp, same as a solo test of that mode
+    // and value; anything custom is unranked practice at half xp, saved
+    // under the same 0 sentinel value solo's infinite mode already uses.
+    const mySlotIsGuest = isCreator ? duel.creator_id === null : duel.opponent_id === null;
+    if (!mySlotIsGuest) {
       const ranked = isRankedDuelValue(duel.mode, duel.value);
       void addTestResult(
         {
@@ -400,7 +426,13 @@ export default function DuelMatch() {
         ranked ? 1 : 0.5
       );
     }
-    await loadDuel();
+  };
+
+  // Tab/Escape pressed twice in a row mid-duel (see the keydown effect
+  // below) — counts as a loss (0/0/0) without logging any xp/history, same
+  // as walking away and letting the clock run out would, just immediate.
+  const handleForfeit = async () => {
+    await submitDuelResult({ wpm: 0, accuracy: 0, rawWpm: 0, timeElapsed: 0 });
   };
 
   const copyLink = () => {
@@ -421,6 +453,68 @@ export default function DuelMatch() {
     }
     await loadDuel();
   };
+
+  // Tab/Escape shortcuts. TypingTest's own Tab/Escape restart is disabled
+  // for duels (see disableRestartShortcut on the <TypingTest> below), so
+  // this is the only place either key does anything here:
+  // - "You're racing X" screen: Tab starts, same as clicking the button.
+  // - Mid-duel: the first press arms a forfeit, the second (within 1.5s)
+  //   submits a 0/0/0 loss and jumps straight to the waiting/results screen.
+  // - Once my side has finished: Tab requests a rematch (once both sides
+  //   are in and I haven't already asked), Escape leaves for /duel.
+  useEffect(() => {
+    // Mirrors the "You're racing X" render guard (the !haveSubmittedResult
+    // && !ready branch) without needing isParticipant/status-declined/etc,
+    // which aren't in scope this early — status === 'accepted' plus the
+    // other guards already computed above rule out the pending/cancelled/
+    // spectator branches that would otherwise reach this same point.
+    const preDuel = Boolean(
+      duel && duel.status === 'accepted' && !matchCancelled && !opponentSlotOpen && !haveSubmittedResult && !ready
+    );
+    const midDuel = ready && !haveSubmittedResult && !localStats;
+    const postDuel = haveSubmittedResult || localStats !== null;
+    if (!preDuel && !midDuel && !postDuel) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' && !(e.key === 'Tab' && !e.shiftKey)) return;
+      e.preventDefault();
+
+      if (preDuel) {
+        if (e.key === 'Tab') setReady(true);
+        return;
+      }
+
+      if (midDuel) {
+        if (forfeitArmedRef.current) {
+          forfeitArmedRef.current = false;
+          if (forfeitArmTimerRef.current) clearTimeout(forfeitArmTimerRef.current);
+          void handleForfeit();
+        } else {
+          forfeitArmedRef.current = true;
+          if (forfeitArmTimerRef.current) clearTimeout(forfeitArmTimerRef.current);
+          forfeitArmTimerRef.current = setTimeout(() => {
+            forfeitArmedRef.current = false;
+          }, 1500);
+        }
+        return;
+      }
+
+      // postDuel
+      if (e.key === 'Tab') {
+        const alreadyRequested = isCreator ? duel?.creator_rematch : duel?.opponent_rematch;
+        if (bothFinished && !alreadyRequested) void handleRematch();
+      } else {
+        navigate('/duel');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (forfeitArmTimerRef.current) clearTimeout(forfeitArmTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, haveSubmittedResult, localStats, bothFinished, isCreator, duel, navigate, matchCancelled, opponentSlotOpen]);
 
   // Once both sides have requested a rematch, a fresh duel is created and
   // this fires on both clients (via the same Realtime subscription already
@@ -666,7 +760,12 @@ export default function DuelMatch() {
     : (players[duel.creator_id ?? '']?.username ?? duel.creator_name ?? 'opponent');
   const myAvatar = isCreator ? players[duel.creator_id ?? ''] : players[duel.opponent_id ?? ''];
   const opponentAvatar = isCreator ? players[duel.opponent_id ?? ''] : players[duel.creator_id ?? ''];
-  const myWpm = isCreator ? duel.creator_wpm : duel.opponent_wpm;
+  // Falls back to the locally-computed result until the server confirms it
+  // (see localStats above) — the opponent's side has no such fallback, so
+  // their card keeps showing "waiting…" until their row actually updates.
+  const myWpm = (isCreator ? duel.creator_wpm : duel.opponent_wpm) ?? localStats?.wpm ?? null;
+  const myAccuracy = (isCreator ? duel.creator_accuracy : duel.opponent_accuracy) ?? localStats?.accuracy ?? null;
+  const myRawWpm = (isCreator ? duel.creator_raw_wpm : duel.opponent_raw_wpm) ?? localStats?.rawWpm ?? null;
   const opponentWpm = isCreator ? duel.opponent_wpm : duel.creator_wpm;
 
   // Both players are in — a shared moment to see who you're racing before
@@ -683,11 +782,12 @@ export default function DuelMatch() {
         >
           start
         </button>
+        <p className="text-xs text-[var(--text-muted)] tracking-wide">tab — start</p>
       </div>
     );
   }
 
-  if (!haveSubmittedResult) {
+  if (!haveSubmittedResult && !localStats) {
     return (
       <div className="flex-1 flex items-center justify-center px-6 py-10">
         <div className="relative w-[92%] sm:w-[80%] lg:w-[65%]">
@@ -695,6 +795,7 @@ export default function DuelMatch() {
             config={{ mode: duel.mode, value: duel.value } as TestConfig}
             fixedText={duel.word_list}
             skipStatsSave
+            disableRestartShortcut
             onComplete={stats => void handleComplete(stats)}
           />
         </div>
@@ -713,8 +814,8 @@ export default function DuelMatch() {
           name={myName}
           avatar={myAvatar}
           wpm={myWpm}
-          accuracy={isCreator ? duel.creator_accuracy : duel.opponent_accuracy}
-          rawWpm={isCreator ? duel.creator_raw_wpm : duel.opponent_raw_wpm}
+          accuracy={myAccuracy}
+          rawWpm={myRawWpm}
           winner={bothFinished && myWpm !== null && opponentWpm !== null && myWpm > opponentWpm}
         />
         <ResultCard
@@ -738,6 +839,7 @@ export default function DuelMatch() {
           {Number(duel.creator_rematch) + Number(duel.opponent_rematch)}/2
         </button>
       )}
+      {bothFinished && <p className="text-xs text-[var(--text-muted)] tracking-wide">tab — rematch · esc — back to duels</p>}
 
       <Link
         to="/duel"
