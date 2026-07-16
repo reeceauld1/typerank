@@ -322,7 +322,13 @@ export default function TypingTest({
     const totalChars = correctChars + incorrectChars;
     const keystrokeTotal = totalKeystrokesRef.current;
     const accuracy = keystrokeTotal > 0 ? (correctKeystrokesRef.current / keystrokeTotal) * 100 : 0;
-    const wpm = Math.round(correctChars / 5 / (timeElapsed / 60));
+    // correctChars counts correct letters position-by-position even inside an
+    // otherwise-wrong word, so a run of one-typo words could still post a
+    // nonzero wpm despite not one of them being right. If literally no word
+    // came out fully correct, wpm reads as 0 rather than that leftover
+    // partial-credit number.
+    const anyWordCorrect = inputWords.some((typedWord, w) => typedWord === (words[w] ?? ''));
+    const wpm = anyWordCorrect ? Math.round(correctChars / 5 / (timeElapsed / 60)) : 0;
     const rawWpm = Math.round(totalChars / 5 / (timeElapsed / 60));
 
     const finalStats = {
