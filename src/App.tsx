@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.js';
 import { UserProvider } from './context/UserContext.js';
+import { LearnProgressProvider } from './context/LearnProgressContext.js';
 import { FriendsProvider } from './context/FriendsContext.js';
 import { SettingsProvider } from './context/SettingsContext.js';
 import Navbar from './components/Navbar.js';
@@ -30,32 +31,34 @@ function App() {
       <SettingsProvider>
         <AuthProvider>
           <UserProvider>
-            <FriendsProvider>
-              <div className="min-h-screen flex flex-col">
-                <PendingDuelWatcher />
-                <Navbar />
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/challenges" element={<Challenges />} />
-                  <Route path="/friends" element={<Friends />} />
-                  <Route path="/u/:username" element={<UserProfile />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/leaderboard" element={<Leaderboard />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/privacy" element={<PrivacyPolicy />} />
-                  <Route path="/report-bug" element={<BugReport />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/duel" element={<Duel />} />
-                  <Route path="/duel/:id" element={<DuelMatch />} />
-                  <Route path="/ranked" element={<Ranked />} />
-                  <Route path="/ranked/:id" element={<RankedMatch />} />
-                  <Route path="/learn" element={<Learn />} />
-                </Routes>
-                <Footer />
-                <CookieConsentBanner />
-              </div>
-            </FriendsProvider>
+            <LearnProgressProvider>
+              <FriendsProvider>
+                <div className="min-h-screen flex flex-col">
+                  <PendingDuelWatcher />
+                  <Navbar />
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/challenges" element={<Challenges />} />
+                    <Route path="/friends" element={<Friends />} />
+                    <Route path="/u/:username" element={<UserProfile />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/leaderboard" element={<Leaderboard />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/privacy" element={<PrivacyPolicy />} />
+                    <Route path="/report-bug" element={<BugReport />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/duel" element={<Duel />} />
+                    <Route path="/duel/:id" element={<DuelMatch />} />
+                    <Route path="/ranked" element={<Ranked />} />
+                    <Route path="/ranked/:id" element={<RankedMatch />} />
+                    <Route path="/learn" element={<Learn />} />
+                  </Routes>
+                  <Footer />
+                  <CookieConsentBanner />
+                </div>
+              </FriendsProvider>
+            </LearnProgressProvider>
           </UserProvider>
         </AuthProvider>
       </SettingsProvider>

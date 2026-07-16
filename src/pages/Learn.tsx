@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useSettings } from '../hooks/useSettings.js';
+import { useLearnProgress } from '../hooks/useLearnProgress.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import TypingTest from '../components/TypingTest.js';
 import KeyboardDisplay from '../components/KeyboardDisplay.js';
@@ -16,143 +16,41 @@ import {
   mergeLetterAccuracy,
   totalRepsInRound,
   ROUND_WORD_COUNT,
-  type LetterAccuracy,
   type LetterTally,
 } from '../utils/learnMode.js';
 
-const LOCAL_STORAGE_PREFIX = 'learnProgress_';
-
-interface StoredProgress {
-  unlockedLetters: string;
-  letterAccuracy: LetterAccuracy;
-  totalRepsSinceUnlock: number;
-}
-
-// Guests (and signed-in visits when Supabase isn't configured at all) keep
-// progress purely in the browser, per keyboard layout — same guest-friendly,
-// no-account-needed pattern as the theme/font/keyboard-layout prefs
-// themselves. Signed-in users get the account-synced version instead (see
-// the load/save effects below), so progress follows them across devices.
-function loadLocalProgress(layout: string): StoredProgress | null {
-  try {
-    const raw = localStorage.getItem(`${LOCAL_STORAGE_PREFIX}${layout}`);
-    return raw ? (JSON.parse(raw) as StoredProgress) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveLocalProgress(layout: string, progress: StoredProgress) {
-  try {
-    localStorage.setItem(`${LOCAL_STORAGE_PREFIX}${layout}`, JSON.stringify(progress));
-  } catch {
-    // ignore unavailable storage
-  }
-}
-
 export default function Learn() {
   useDocumentTitle('learn', 'Learn to type from scratch on typeladder with a keybr-style lesson mode — start on the home row and unlock new letters as your accuracy improves.');
-  const { user, loading: authLoading } = useAuth();
-  // Supabase hands back a brand new `user` object on every token refresh
-  // (a routine background event, not just sign-in/out) — depending the load
-  // effect below on `user` itself made it refire on those refreshes too,
-  // re-fetching from Supabase and reverting any not-yet-persisted unlock if
-  // that refetch raced the previous round's fire-and-forget save. `user.id`
-  // is stable across refreshes, so it only refires on an actual account
-  // change.
-  const userId = user?.id ?? null;
+  const { user } = useAuth();
   const { keyboardLayout } = useSettings();
+  const { unlockedLetters, letterAccuracy, totalRepsSinceUnlock, loading, saveProgress, resetProgress } = useLearnProgress();
   // Independent from the main typing page's on-screen-keyboard settings —
   // this page's keyboard is either fully on (colors + finger labels, since
   // that's the whole point here) or fully off, a local toggle rather than
   // anything in Settings.
   const [showKeyboardDisplay, setShowKeyboardDisplay] = useState(true);
 
-  const [loading, setLoading] = useState(true);
-  const [unlockedLetters, setUnlockedLetters] = useState<string[]>([]);
-  const [letterAccuracy, setLetterAccuracy] = useState<LetterAccuracy>({});
-  const [totalRepsSinceUnlock, setTotalRepsSinceUnlock] = useState(0);
   const [practiceText, setPracticeText] = useState('');
   const [roundKey, setRoundKey] = useState(0);
   const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const roundTalliesRef = useRef<LetterTally>({});
 
+  // Progress itself lives in LearnProgressContext (app-root, survives
+  // navigating away and back) — this just seeds a round of practice text
+  // once that data is ready, on this page's mount. Deliberately excludes
+  // unlockedLetters from deps: round completion/restart/reset below set
+  // practiceText themselves, and refiring here too on every letter unlock
+  // would generate (and discard) an extra round.
   useEffect(() => {
-    let cancelled = false;
-
-    const applyFresh = () => {
-      const fresh = anchorLetters(keyboardLayout);
-      setUnlockedLetters(fresh);
-      setLetterAccuracy({});
-      setTotalRepsSinceUnlock(0);
-      setPracticeText(generatePracticeText(fresh));
-    };
-
-    const applyStored = (unlocked: string, letterAcc: LetterAccuracy, reps: number) => {
-      const letters = unlocked.split('');
-      setUnlockedLetters(letters);
-      setLetterAccuracy(letterAcc ?? {});
-      setTotalRepsSinceUnlock(reps ?? 0);
-      setPracticeText(generatePracticeText(letters));
-    };
-
-    const load = async () => {
-      // Still resolving whether there's a session at all — auth.getSession()
-      // is async, so on every fresh page load userId briefly reads as null
-      // before it does. Deciding "guest" here was the bug behind progress
-      // silently not reaching the account: a round finished (and saved
-      // locally) in that window before userId flipped to signed-in never
-      // gets picked up by the account row, which then looks stuck to a
-      // user who's actually signed in the whole time. Same hazard
-      // UserContext's refresh effect guards against for stats/cosmetics.
-      if (authLoading) return;
-
-      setLoading(true);
-
-      if (userId && supabase) {
-        const { data } = await supabase.from('learn_progress').select('*').eq('user_id', userId).maybeSingle();
-        if (cancelled) return;
-        // Progress is per-layout — if the saved row is for a different
-        // layout than the one currently selected in Settings, start fresh
-        // for this layout rather than trying to remap letters across it.
-        if (data && data.keyboard_layout === keyboardLayout) {
-          applyStored(data.unlocked_letters as string, data.letter_accuracy as LetterAccuracy, data.total_reps_since_unlock as number);
-        } else {
-          applyFresh();
-        }
-      } else {
-        const stored = loadLocalProgress(keyboardLayout);
-        if (stored) applyStored(stored.unlockedLetters, stored.letterAccuracy, stored.totalRepsSinceUnlock);
-        else applyFresh();
-      }
-
+    if (!loading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPracticeText(generatePracticeText(unlockedLetters));
       setJustUnlocked(null);
-      setLoading(false);
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, keyboardLayout, authLoading]);
-
-  const saveProgress = (nextUnlocked: string[], nextAccuracy: LetterAccuracy, nextReps: number) => {
-    if (userId && supabase) {
-      void supabase.rpc('save_learn_progress', {
-        p_keyboard_layout: keyboardLayout,
-        p_unlocked_letters: nextUnlocked.join(''),
-        p_letter_accuracy: nextAccuracy,
-        p_total_reps_since_unlock: nextReps,
-      });
-    } else {
-      saveLocalProgress(keyboardLayout, {
-        unlockedLetters: nextUnlocked.join(''),
-        letterAccuracy: nextAccuracy,
-        totalRepsSinceUnlock: nextReps,
-      });
+      setRoundKey(k => k + 1);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const handleCharacterResult = (expected: string, _typed: string, correct: boolean) => {
     if (expected === ' ') return;
@@ -180,11 +78,8 @@ export default function Learn() {
       }
     }
 
-    setLetterAccuracy(nextAccuracy);
-    setTotalRepsSinceUnlock(nextReps);
-    setUnlockedLetters(nextUnlocked);
-    setJustUnlocked(unlockedThisRound);
     saveProgress(nextUnlocked, nextAccuracy, nextReps);
+    setJustUnlocked(unlockedThisRound);
     setPracticeText(generatePracticeText(nextUnlocked));
     setRoundKey(k => k + 1);
   };
@@ -200,13 +95,9 @@ export default function Learn() {
   };
 
   const handleReset = () => {
-    const fresh = anchorLetters(keyboardLayout);
-    setUnlockedLetters(fresh);
-    setLetterAccuracy({});
-    setTotalRepsSinceUnlock(0);
+    resetProgress();
     setJustUnlocked(null);
-    saveProgress(fresh, {}, 0);
-    setPracticeText(generatePracticeText(fresh));
+    setPracticeText(generatePracticeText(anchorLetters(keyboardLayout)));
     setRoundKey(k => k + 1);
     setShowResetConfirm(false);
   };
@@ -314,11 +205,11 @@ export default function Learn() {
 
           {!user && (
             <p className="text-xs text-[var(--text-muted)] mt-1">
-              playing as a guest — progress is saved to this browser only.{' '}
+              playing as a guest — progress is saved for this browser session only.{' '}
               <Link to="/profile" className="text-[var(--accent)] hover:underline">
                 sign in
               </Link>{' '}
-              to sync it across devices.
+              to sync it across devices and keep it between visits.
             </p>
           )}
         </div>
