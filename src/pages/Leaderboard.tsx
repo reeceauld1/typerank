@@ -37,6 +37,7 @@ interface RankedUser {
   equippedBorder: string;
   equippedNameColor: string;
   equippedBadge: string | null;
+  discordAvatarUrl: string | null;
   wpm: number;
 }
 
@@ -54,6 +55,7 @@ interface RankedRow {
   equippedBorder: string;
   equippedNameColor: string;
   equippedBadge: string | null;
+  discordAvatarUrl: string | null;
   elo: number;
   rankedGamesPlayed: number;
 }
@@ -115,6 +117,7 @@ export default function Leaderboard() {
             equippedBorder: row.equipped_border as string,
             equippedNameColor: (row.equipped_name_color as string) ?? 'default',
             equippedBadge: (row.equipped_badge as string | null) ?? null,
+            discordAvatarUrl: (row.discord_avatar_url as string | null) ?? null,
             elo: (row.elo as number) ?? 1000,
             rankedGamesPlayed: (row.ranked_games_played as number) ?? 0,
           }))
@@ -136,6 +139,7 @@ export default function Leaderboard() {
         equippedBorder: row.equipped_border as string,
         equippedNameColor: (row.equipped_name_color as string) ?? 'default',
         equippedBadge: (row.equipped_badge as string | null) ?? null,
+        discordAvatarUrl: (row.discord_avatar_url as string | null) ?? null,
         elo: (row.elo as number) ?? 1000,
         rankedGamesPlayed: (row.ranked_games_played as number) ?? 0,
       }));
@@ -167,6 +171,7 @@ export default function Leaderboard() {
             equippedBorder: row.equipped_border as string,
             equippedNameColor: (row.equipped_name_color as string) ?? 'default',
             equippedBadge: (row.equipped_badge as string | null) ?? null,
+            discordAvatarUrl: (row.discord_avatar_url as string | null) ?? null,
             wpm: (row[cat.column] as number) ?? 0,
           }))
         );
@@ -183,6 +188,7 @@ export default function Leaderboard() {
         equippedBorder: row.equipped_border as string,
         equippedNameColor: (row.equipped_name_color as string) ?? 'default',
         equippedBadge: (row.equipped_badge as string | null) ?? null,
+        discordAvatarUrl: (row.discord_avatar_url as string | null) ?? null,
         wpm: (row[cat.column] as number) ?? 0,
       }));
       rows.sort((a, b) => b.wpm - a.wpm);
@@ -341,7 +347,12 @@ export default function Leaderboard() {
                     state={{ from: 'leaderboard' }}
                     className="flex items-center gap-3 flex-1 min-w-0 group"
                   >
-                    <Avatar avatarId={row.equippedAvatar} borderId={row.equippedBorder} size="sm" />
+                    <Avatar
+                      avatarId={row.equippedAvatar}
+                      borderId={row.equippedBorder}
+                      discordAvatarUrl={row.discordAvatarUrl}
+                      size="sm"
+                    />
                     <UsernameText username={row.username} colorId={row.equippedNameColor} className="truncate" />
                     <UsernameBadge badgeId={row.equippedBadge} />
                   </Link>
@@ -397,7 +408,12 @@ export default function Leaderboard() {
                   state={{ from: 'leaderboard' }}
                   className="flex items-center gap-3 flex-1 min-w-0 group"
                 >
-                  <Avatar avatarId={row.equippedAvatar} borderId={row.equippedBorder} size="sm" />
+                  <Avatar
+                    avatarId={row.equippedAvatar}
+                    borderId={row.equippedBorder}
+                    discordAvatarUrl={row.discordAvatarUrl}
+                    size="sm"
+                  />
                   <UsernameText username={row.username} colorId={row.equippedNameColor} className="truncate" />
                   <UsernameBadge badgeId={row.equippedBadge} />
                 </Link>

@@ -132,8 +132,12 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
                       <LockIcon />
                     </span>
                   )}
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--bg-elevated)] text-[var(--text-correct)]">
-                    <Icon className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-[var(--bg-elevated)] text-[var(--text-correct)]">
+                    {avatar.id === 'discord' && stats.discordAvatarUrl ? (
+                      <img src={stats.discordAvatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Icon className="w-5 h-5" />
+                    )}
                   </div>
                   <span className="text-[10px] text-[var(--text-muted)] text-center leading-tight">{avatar.name}</span>
                 </button>

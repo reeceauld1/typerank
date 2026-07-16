@@ -4,6 +4,12 @@ interface AvatarProps {
   avatarId: string;
   borderId: string;
   size?: 'sm' | 'md' | 'lg';
+  // Only meaningful when avatarId === 'discord' — unlike every other avatar,
+  // Discord's picture is per-user data rather than a static catalog icon, so
+  // it's passed in rather than looked up from AVATAR_CATALOG. Callers that
+  // don't fetch this column (or haven't linked Discord) just fall back to
+  // the catalog's generic Discord-logo icon below.
+  discordAvatarUrl?: string | null;
 }
 
 const SIZE_CLASSES: Record<NonNullable<AvatarProps['size']>, string> = {
@@ -18,10 +24,11 @@ const ICON_SIZE_CLASSES: Record<NonNullable<AvatarProps['size']>, string> = {
   lg: 'w-10 h-10',
 };
 
-export default function Avatar({ avatarId, borderId, size = 'md' }: AvatarProps) {
+export default function Avatar({ avatarId, borderId, size = 'md', discordAvatarUrl }: AvatarProps) {
   const avatar = getAvatar(avatarId);
   const border = getBorder(borderId);
   const Icon = avatar.icon;
+  const showDiscordPicture = avatarId === 'discord' && Boolean(discordAvatarUrl);
 
   // Legend's glow lives on this wrapper, not the circle itself — a
   // pseudo-element's negative z-index only controls paint order among its
@@ -32,9 +39,13 @@ export default function Avatar({ avatarId, borderId, size = 'md' }: AvatarProps)
   return (
     <div className={`relative shrink-0 rounded-full ${border.id === 'legend' ? 'legend-glow-wrapper' : ''}`}>
       <div
-        className={`${SIZE_CLASSES[size]} border-2 rounded-full flex items-center justify-center bg-[var(--bg-elevated)] text-[var(--text-correct)] ${border.className}`}
+        className={`${SIZE_CLASSES[size]} border-2 rounded-full flex items-center justify-center overflow-hidden bg-[var(--bg-elevated)] text-[var(--text-correct)] ${border.className}`}
       >
-        <Icon className={ICON_SIZE_CLASSES[size]} />
+        {showDiscordPicture ? (
+          <img src={discordAvatarUrl!} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <Icon className={ICON_SIZE_CLASSES[size]} />
+        )}
       </div>
     </div>
   );

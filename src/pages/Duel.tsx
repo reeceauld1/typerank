@@ -41,6 +41,7 @@ interface InviteSender {
   equippedBorder: string;
   equippedNameColor: string;
   equippedBadge: string | null;
+  discordAvatarUrl: string | null;
 }
 
 function DuelSettingsPicker({
@@ -210,7 +211,7 @@ export default function Duel() {
     if (creatorIds.length === 0) return;
     const { data: senderRows } = await supabase
       .from('user_stats')
-      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color, equipped_badge')
+      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color, equipped_badge, discord_avatar_url')
       .in('user_id', creatorIds);
     setInviteSenders(prev => {
       const next = { ...prev };
@@ -221,6 +222,7 @@ export default function Duel() {
           equippedBorder: row.equipped_border as string,
           equippedNameColor: (row.equipped_name_color as string) ?? 'default',
           equippedBadge: (row.equipped_badge as string | null) ?? null,
+          discordAvatarUrl: (row.discord_avatar_url as string | null) ?? null,
         };
       }
       return next;
@@ -422,7 +424,14 @@ export default function Duel() {
                   className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm hover:border-[var(--accent)] transition-colors"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    {sender && <Avatar avatarId={sender.equippedAvatar} borderId={sender.equippedBorder} size="sm" />}
+                    {sender && (
+                      <Avatar
+                        avatarId={sender.equippedAvatar}
+                        borderId={sender.equippedBorder}
+                        discordAvatarUrl={sender.discordAvatarUrl}
+                        size="sm"
+                      />
+                    )}
                     <div className="flex flex-col min-w-0">
                       {sender && (
                         <div className="flex items-center gap-1.5 min-w-0">
@@ -457,7 +466,12 @@ export default function Duel() {
                 className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <Avatar avatarId={friend.equippedAvatar} borderId={friend.equippedBorder} size="sm" />
+                  <Avatar
+                    avatarId={friend.equippedAvatar}
+                    borderId={friend.equippedBorder}
+                    discordAvatarUrl={friend.discordAvatarUrl}
+                    size="sm"
+                  />
                   <UsernameText username={friend.username} colorId={friend.equippedNameColor} className="text-sm truncate" />
                   <UsernameBadge badgeId={friend.equippedBadge} />
                 </div>

@@ -33,6 +33,7 @@ const defaultStats: UserStats = {
   customAccentHex: null,
   equippedNameColor: 'default',
   equippedBadge: null,
+  discordAvatarUrl: null,
   isFounder: false,
   isSupporter: false,
   isFastTyper: false,

@@ -251,7 +251,12 @@ export default function Profile() {
           <div className="max-w-4xl w-full mx-auto mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
               <div className="flex items-center gap-4">
-                <Avatar avatarId={stats.equippedAvatar} borderId={stats.equippedBorder} size="md" />
+                <Avatar
+                  avatarId={stats.equippedAvatar}
+                  borderId={stats.equippedBorder}
+                  discordAvatarUrl={stats.discordAvatarUrl}
+                  size="md"
+                />
                 <div className="flex items-center gap-2">
                   <p>
                     <UsernameText username={stats.username || 'account'} colorId={stats.equippedNameColor} />

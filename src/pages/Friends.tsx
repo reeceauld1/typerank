@@ -24,7 +24,7 @@ function FriendRow({
   return (
     <div className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-3">
       <Link to={`/u/${entry.username}`} className="flex items-center gap-3 min-w-0 group">
-        <Avatar avatarId={entry.equippedAvatar} borderId={entry.equippedBorder} size="sm" />
+        <Avatar avatarId={entry.equippedAvatar} borderId={entry.equippedBorder} discordAvatarUrl={entry.discordAvatarUrl} size="sm" />
         <UsernameText username={entry.username} colorId={entry.equippedNameColor} className="truncate" />
         <UsernameBadge badgeId={entry.equippedBadge} />
       </Link>
@@ -79,7 +79,7 @@ function FindPeople() {
     setMessage(null);
     const { data, error } = await supabase
       .from('user_stats')
-      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color, equipped_badge')
+      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color, equipped_badge, discord_avatar_url')
       .ilike('username', `%${query.trim()}%`)
       .neq('user_id', user.id)
       .limit(15);
@@ -95,6 +95,7 @@ function FindPeople() {
           equippedBorder: row.equipped_border as string,
           equippedNameColor: (row.equipped_name_color as string) ?? 'default',
           equippedBadge: (row.equipped_badge as string | null) ?? null,
+          discordAvatarUrl: (row.discord_avatar_url as string | null) ?? null,
         }))
       );
       if ((data ?? []).length === 0) setMessage('No users found.');

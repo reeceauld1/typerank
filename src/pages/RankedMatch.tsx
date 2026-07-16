@@ -37,6 +37,7 @@ interface PlayerInfo {
   equippedBorder: string;
   equippedNameColor: string;
   equippedBadge: string | null;
+  discordAvatarUrl: string | null;
 }
 
 function ResultCard({
@@ -61,7 +62,14 @@ function ResultCard({
       }`}
     >
       <div className="flex items-center justify-center gap-2 mb-3 min-w-0">
-        {avatar && <Avatar avatarId={avatar.equippedAvatar} borderId={avatar.equippedBorder} size="sm" />}
+        {avatar && (
+          <Avatar
+            avatarId={avatar.equippedAvatar}
+            borderId={avatar.equippedBorder}
+            discordAvatarUrl={avatar.discordAvatarUrl}
+            size="sm"
+          />
+        )}
         <UsernameText username={name} colorId={avatar?.equippedNameColor ?? 'default'} className="text-sm truncate" />
         <UsernameBadge badgeId={avatar?.equippedBadge} />
         {winner && <span className="text-xs font-semibold text-[var(--accent)]">winner</span>}
@@ -106,7 +114,7 @@ export default function RankedMatch() {
     if (!supabase || ids.length === 0) return;
     const { data } = await supabase
       .from('user_stats')
-      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color, equipped_badge')
+      .select('user_id, username, equipped_avatar, equipped_border, equipped_name_color, equipped_badge, discord_avatar_url')
       .in('user_id', ids);
     if (!data) return;
     setPlayers(prev => {
@@ -118,6 +126,7 @@ export default function RankedMatch() {
           equippedBorder: row.equipped_border as string,
           equippedNameColor: (row.equipped_name_color as string) ?? 'default',
           equippedBadge: (row.equipped_badge as string | null) ?? null,
+          discordAvatarUrl: (row.discord_avatar_url as string | null) ?? null,
         };
       }
       return next;

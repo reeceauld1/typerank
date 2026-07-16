@@ -280,6 +280,25 @@ export const AVATAR_CATALOG: AvatarDef[] = [
       </>
     ),
   },
+  // Not earned by playing — unlocked the moment a Discord account is
+  // linked (see schema_035's sync_discord_avatar trigger), which is also
+  // what actually sets discordAvatarUrl that Avatar.tsx renders in place of
+  // this icon. This is only what shows before that URL is available (a
+  // brand-new/unlinked account, or a render site that doesn't fetch the
+  // column) — a fill icon rather than the stroke style above since it's a
+  // recognizable logo, not a line-art glyph.
+  {
+    id: 'discord',
+    name: 'Discord',
+    description: 'Link your Discord account to use your Discord profile picture.',
+    isUnlocked: stats => Boolean(stats.discordAvatarUrl),
+    progress: stats => (stats.discordAvatarUrl ? 1 : 0),
+    icon: ({ className }) => (
+      <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M20.3 5.4A18.3 18.3 0 0 0 15.7 4a12.9 12.9 0 0 0-.6 1.2 17 17 0 0 0-5.1 0A12.9 12.9 0 0 0 9.4 4a18.2 18.2 0 0 0-4.6 1.4C2 9.8 1.3 14 1.6 18.2a18.4 18.4 0 0 0 5.5 2.7c.4-.6.8-1.3 1.1-2a12 12 0 0 1-1.8-.8l.4-.3a13 13 0 0 0 10.4 0l.4.3a12 12 0 0 1-1.8.8c.3.7.7 1.4 1.1 2a18.3 18.3 0 0 0 5.5-2.7c.4-4.9-.8-9-3.1-12.8ZM9 15.7c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z" />
+      </svg>
+    ),
+  },
 ];
 
 export const BORDER_CATALOG: BorderDef[] = [

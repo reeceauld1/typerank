@@ -52,6 +52,7 @@ export interface UserStats {
   customAccentHex: string | null;
   equippedNameColor: string;
   equippedBadge: string | null;
+  discordAvatarUrl: string | null;
   isFounder: boolean;
   isSupporter: boolean;
   isFastTyper: boolean;
@@ -83,6 +84,7 @@ export interface FriendEntry {
   equippedBorder: string;
   equippedNameColor: string;
   equippedBadge: string | null;
+  discordAvatarUrl: string | null;
 }
 
 export interface LeaderboardEntry {

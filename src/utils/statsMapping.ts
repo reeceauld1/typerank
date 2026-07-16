@@ -26,6 +26,7 @@ export function mapStatsRow(row: Record<string, number | string> | null): Omit<U
     customAccentHex: (row?.custom_accent_hex as string | undefined) ?? null,
     equippedNameColor: (row?.equipped_name_color as string) ?? 'default',
     equippedBadge: (row?.equipped_badge as string | null | undefined) ?? null,
+    discordAvatarUrl: (row?.discord_avatar_url as string | undefined) ?? null,
     isFounder: Boolean(row?.is_founder),
     isSupporter: Boolean(row?.is_supporter),
     isFastTyper: Boolean(row?.is_fast_typer),
