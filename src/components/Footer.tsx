@@ -27,6 +27,15 @@ function TwitterIcon() {
   );
 }
 
+function YouTubeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <rect x="2.5" y="5.5" width="19" height="13" rx="4" />
+      <path d="M10.5 9.5v5l4.5-2.5-4.5-2.5Z" />
+    </svg>
+  );
+}
+
 function TikTokIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -81,6 +90,10 @@ export default function Footer() {
         <a href="https://tiktok.com/@typeladder" target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
           <TikTokIcon />
           tiktok
+        </a>
+        <a href="https://www.youtube.com/@typeladder" target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
+          <YouTubeIcon />
+          youtube
         </a>
         <Link to="/contact" className={LINK_CLASS}>
           <EmailIcon />
