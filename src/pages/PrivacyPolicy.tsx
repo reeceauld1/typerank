@@ -4,7 +4,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 const LAST_UPDATED = 'July 15, 2026';
 
 export default function PrivacyPolicy() {
-  useDocumentTitle('privacy policy');
+  useDocumentTitle('privacy policy', "typeladder's privacy policy — what data we collect, why, and how it's used.");
   const location = useLocation();
   // Reached from the footer/cookie banner on almost any page — go back to
   // wherever that actually was instead of always assuming settings.

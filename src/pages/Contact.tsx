@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 export default function Contact() {
-  useDocumentTitle('contact');
+  useDocumentTitle('contact', 'Contact typeladder to report a bug or request a new feature.');
   const { user } = useAuth();
   const [message, setMessage] = useState('');
   const [contactEmail, setContactEmail] = useState('');
