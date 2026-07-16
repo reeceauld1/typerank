@@ -11,7 +11,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 const PREVIEW_SIZE = 'w-10 h-10';
 
 export default function Challenges() {
-  useDocumentTitle('challenges');
+  useDocumentTitle('challenges', 'Complete daily and weekly typing challenges on typeladder for bonus XP as you improve your typing speed.');
   const { user, loading } = useAuth();
   const { stats } = useUser();
   const admin = isAdminEmail(user?.email);

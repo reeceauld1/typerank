@@ -80,7 +80,7 @@ function RankBadge({ rank }: { rank: number }) {
 }
 
 export default function Leaderboard() {
-  useDocumentTitle('leaderboard');
+  useDocumentTitle('leaderboard', "See the fastest typists on typeladder's global typing leaderboard, ranked by WPM across every typing test mode.");
   const { user, isConfigured } = useAuth();
   const { friends } = useFriends();
   const [scope, setScope] = useState<Scope>('global');

@@ -91,7 +91,7 @@ function ResultCard({
 }
 
 export default function DuelMatch() {
-  useDocumentTitle('duel');
+  useDocumentTitle('duel', 'Race a friend live in a typing duel on typeladder and see who types faster and more accurately.');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();

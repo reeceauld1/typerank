@@ -51,7 +51,7 @@ function saveLocalProgress(layout: string, progress: StoredProgress) {
 }
 
 export default function Learn() {
-  useDocumentTitle('learn');
+  useDocumentTitle('learn', 'Learn to type from scratch on typeladder with a keybr-style lesson mode — start on the home row and unlock new letters as your accuracy improves.');
   const { user } = useAuth();
   // Supabase hands back a brand new `user` object on every token refresh
   // (a routine background event, not just sign-in/out) — depending the load

@@ -82,7 +82,7 @@ function ResultCard({
 }
 
 export default function RankedMatch() {
-  useDocumentTitle('ranked');
+  useDocumentTitle('ranked', 'Race live in a ranked typing match on typeladder and climb the competitive elo ladder.');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isConfigured } = useAuth();

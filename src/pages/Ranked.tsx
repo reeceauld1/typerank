@@ -21,7 +21,7 @@ interface MatchResult {
 }
 
 export default function Ranked() {
-  useDocumentTitle('ranked');
+  useDocumentTitle('ranked', 'Compete in ranked typing races against real players on typeladder. Climb the elo ladder from Bronze to Grandmaster in this competitive typing game.');
   const navigate = useNavigate();
   const { user, isConfigured } = useAuth();
   const { stats } = useUser();

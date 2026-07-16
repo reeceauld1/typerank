@@ -150,7 +150,7 @@ function FindPeople() {
 }
 
 export default function Friends() {
-  useDocumentTitle('friends');
+  useDocumentTitle('friends', 'Add friends, compare typing stats, and type with friends in real-time typing duels on typeladder.');
   const { user, isConfigured } = useAuth();
   const { friends, incomingRequests, outgoingRequests, acceptRequest, declineRequest, removeFriend } = useFriends();
   const [tab, setTab] = useState<Tab>('friends');

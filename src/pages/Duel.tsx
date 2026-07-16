@@ -163,7 +163,7 @@ function LinkPopup({
 }
 
 export default function Duel() {
-  useDocumentTitle('duel');
+  useDocumentTitle('duel', 'Challenge a friend to a real-time typing duel on typeladder — race head-to-head and see who types faster and more accurately, live.');
   const { user, isConfigured } = useAuth();
   const { friends } = useFriends();
   const navigate = useNavigate();
