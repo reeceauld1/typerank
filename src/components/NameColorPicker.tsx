@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useUser } from '../hooks/useUser.js';
-import { useAuth } from '../hooks/useAuth.js';
-import { NAME_COLOR_CATALOG, isAdminEmail } from '../utils/cosmetics.js';
+import { NAME_COLOR_CATALOG, isAdminUsername } from '../utils/cosmetics.js';
 import Tooltip from './Tooltip.js';
 
 function LockIcon() {
@@ -31,8 +30,7 @@ interface NameColorPickerProps {
 
 export default function NameColorPicker({ onClose, readOnly = false }: NameColorPickerProps) {
   const { stats, setEquippedNameColor } = useUser();
-  const { user } = useAuth();
-  const admin = !readOnly && isAdminEmail(user?.email);
+  const admin = !readOnly && isAdminUsername(stats.username);
   const [error, setError] = useState<string | null>(null);
 
   const handleEquip = async (id: string) => {

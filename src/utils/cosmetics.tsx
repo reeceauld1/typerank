@@ -2,12 +2,15 @@ import type { UserStats } from '../types/index.js';
 import { RANK_TIERS, PLACEMENT_GAMES } from './rank.js';
 import ShineIcon from '../components/ShineIcon.js';
 
-// Bypasses every unlock condition below — every avatar/border shows as
-// unlocked for this account. Cosmetic-only, no other admin privileges.
-const ADMIN_EMAILS = ['yvernxyz@gmail.com'];
+// Bypasses every unlock condition below — every avatar/border/name color
+// shows as unlocked for these accounts. Cosmetic-only, no other admin
+// privileges. Keyed by username rather than email: usernames are already
+// public (profiles, leaderboards), so this list is safe to ship in the
+// client bundle, unlike an email would be.
+const ADMIN_USERNAMES = ['yvern', 'lol'];
 
-export function isAdminEmail(email?: string | null): boolean {
-  return Boolean(email) && ADMIN_EMAILS.includes(email!.toLowerCase());
+export function isAdminUsername(username?: string | null): boolean {
+  return Boolean(username) && ADMIN_USERNAMES.includes(username!.toLowerCase());
 }
 
 export interface AvatarDef {

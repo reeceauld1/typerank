@@ -4,7 +4,7 @@ import WeeklyChallenge from '../components/WeeklyChallenge.js';
 import CosmeticProgressSection from '../components/CosmeticProgressSection.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useUser } from '../hooks/useUser.js';
-import { AVATAR_CATALOG, BORDER_CATALOG, isAdminEmail } from '../utils/cosmetics.js';
+import { AVATAR_CATALOG, BORDER_CATALOG, isAdminUsername } from '../utils/cosmetics.js';
 import { ACCENT_COLOR_CATALOG } from '../utils/accentColors.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
@@ -14,7 +14,7 @@ export default function Challenges() {
   useDocumentTitle('challenges', 'Complete daily and weekly typing challenges on typeladder for bonus XP as you improve your typing speed.');
   const { user, loading } = useAuth();
   const { stats } = useUser();
-  const admin = isAdminEmail(user?.email);
+  const admin = isAdminUsername(stats.username);
 
   if (!loading && !user) {
     return <Navigate to="/profile" replace />;

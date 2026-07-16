@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { UserStats } from '../types/index.js';
 import { useUser } from '../hooks/useUser.js';
-import { useAuth } from '../hooks/useAuth.js';
-import { AVATAR_CATALOG, BORDER_CATALOG, NAME_COLOR_CATALOG, isAdminEmail } from '../utils/cosmetics.js';
+import { AVATAR_CATALOG, BORDER_CATALOG, NAME_COLOR_CATALOG, isAdminUsername } from '../utils/cosmetics.js';
 import { ACCENT_COLOR_CATALOG } from '../utils/accentColors.js';
 import Tooltip from './Tooltip.js';
 
@@ -32,9 +31,8 @@ interface CosmeticsPickerProps {
 
 export default function CosmeticsPicker({ statsOverride, readOnly = false }: CosmeticsPickerProps = {}) {
   const { stats: ownStats, setEquippedCosmetics, setEquippedAccentColor, setEquippedNameColor } = useUser();
-  const { user } = useAuth();
   const stats = statsOverride ?? ownStats;
-  const admin = !readOnly && isAdminEmail(user?.email);
+  const admin = !readOnly && isAdminUsername(stats.username);
   const [error, setError] = useState<string | null>(null);
   const [pendingCustomHex, setPendingCustomHex] = useState<string | null>(null);
   const confirmBarRef = useRef<HTMLDivElement>(null);
