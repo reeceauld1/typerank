@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import type { TestConfig } from '../types/index.js';
-import { generateText } from '../utils/words.js';
+import { generateText, EXTRA_TEXT_CHARS } from '../utils/words.js';
 import { isRankedValue } from '../utils/xp.js';
 import { useUser } from '../hooks/useUser.js';
 import { useSettings } from '../hooks/useSettings.js';
@@ -80,7 +80,8 @@ export default function TypingTest({
   disableRestartShortcut,
 }: TypingTestProps) {
   const { addTestResult, stats: userStats, isAccountSynced } = useUser();
-  const { keyboardLayout, spaceStyle, wordListSize, soundEnabled, soundVolume } = useSettings();
+  const { keyboardLayout, spaceStyle, wordListSize, soundEnabled, soundVolume, punctuation, numbers } = useSettings();
+  const textExtras = { punctuation, numbers };
   const isInfinite = config.mode === 'time' && config.value === 'infinite';
   // Ranked = one of the fixed preset values (10/25/50 words, 10/30/60s) —
   // anything else (a custom count/duration, or infinite) is unranked
@@ -96,7 +97,7 @@ export default function TypingTest({
   // Home.tsx remounts this component (via a `key` bump) on every config
   // change, so `config` is effectively fixed for this instance's lifetime —
   // safe to seed the initial text lazily instead of via a mount effect.
-  const [text, setText] = useState(() => fixedText ?? generateText(config.mode === 'words' ? config.value : 100, wordListSize));
+  const [text, setText] = useState(() => fixedText ?? generateText(config.mode === 'words' ? config.value : 100, wordListSize, textExtras));
   const [input, setInput] = useState('');
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isActive, setIsActive] = useState(false);
@@ -140,7 +141,7 @@ export default function TypingTest({
   // it. Restarting from the end screen ("try again", or Tab/Escape once
   // already finished) passes false so the fresh test's caret shows right away.
   const resetTest = (suppressCaret: boolean) => {
-    setText(fixedText ?? generateText(config.mode === 'words' ? config.value : 100, wordListSize));
+    setText(fixedText ?? generateText(config.mode === 'words' ? config.value : 100, wordListSize, textExtras));
     setInput('');
     setStartTime(null);
     setIsActive(false);
@@ -255,14 +256,36 @@ export default function TypingTest({
     }
 
     const base = KEYBOARD_LAYOUTS[keyboardLayout][e.code];
-    if (!base || !/^[a-z]$/.test(base)) return; // key produces punctuation in this layout — nothing to type
-    e.preventDefault();
-    // Caps lock always forces lowercase (matching the qwerty path's
-    // deliberate override below) instead of the real-keyboard XOR with
-    // shift — otherwise leaving caps lock on made every letter come out
-    // uppercase and mismatch the lowercase target text.
-    const letter = capsLockRef.current ? base : e.shiftKey ? base.toUpperCase() : base;
-    appendChar(letter);
+    if (base !== undefined) {
+      if (/^[a-z]$/.test(base)) {
+        e.preventDefault();
+        // Caps lock always forces lowercase (matching the qwerty path's
+        // deliberate override below) instead of the real-keyboard XOR with
+        // shift — otherwise leaving caps lock on made every letter come out
+        // uppercase and mismatch the lowercase target text.
+        const letter = capsLockRef.current ? base : e.shiftKey ? base.toUpperCase() : base;
+        appendChar(letter);
+        return;
+      }
+      if (EXTRA_TEXT_CHARS.has(base)) {
+        // A punctuation-position key this layout does remap (comma/period/
+        // apostrophe move around between qwerty/colemak/dvorak) — type the
+        // remapped character itself.
+        e.preventDefault();
+        appendChar(base);
+        return;
+      }
+      return; // mapped to punctuation practice text never generates (e.g. '[', '-') — nothing to type
+    }
+    // Not in the remap table at all: the digit row and its shifted symbols
+    // ('!', '?', ...) aren't touched by Colemak/Dvorak in real life — only
+    // the letter zone moves — so accept the browser's own native output for
+    // those directly instead of treating them as dead keys.
+    if (/^[0-9]$/.test(e.key) || EXTRA_TEXT_CHARS.has(e.key)) {
+      e.preventDefault();
+      appendChar(e.key);
+      return;
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -485,9 +508,9 @@ export default function TypingTest({
     if (fixedText || config.mode !== 'time' || !isActive) return;
     if (words.length - currentWordIndex < 30) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setText(prev => `${prev} ${generateText(60, wordListSize)}`);
+      setText(prev => `${prev} ${generateText(60, wordListSize, { punctuation, numbers })}`);
     }
-  }, [fixedText, config.mode, isActive, currentWordIndex, words.length, wordListSize]);
+  }, [fixedText, config.mode, isActive, currentWordIndex, words.length, wordListSize, punctuation, numbers]);
 
   useEffect(() => {
     if (disableRestartShortcut) return;

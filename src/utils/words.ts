@@ -426,12 +426,103 @@ function buildWordList(count: number, pool: readonly string[], random: () => num
   return words;
 }
 
-export function generateWords(count: number, size: WordListSize): string[] {
-  return buildWordList(count, getWordPool(size), Math.random);
+// Optional punctuation/numbers sprinkled into generated text - solo test
+// only (TypingTest reads these straight from settings when it generates its
+// own text). Ranked/duel/challenge word lists never pass these: those need
+// byte-identical text across clients or a fixed mode/value-keyed pool, and
+// piling per-user text options on top would break either guarantee.
+export interface TextExtras {
+  punctuation?: boolean;
+  numbers?: boolean;
 }
 
-export function generateText(wordCount: number, size: WordListSize): string {
-  return generateWords(wordCount, size).join(' ');
+// The only non-letter characters generateText ever produces. Exported so
+// TypingTest's alternate-keyboard-layout input handling knows these are
+// live characters to accept even though Colemak/Dvorak's own remap table
+// (src/utils/keyboardLayouts.ts) doesn't cover them.
+export const EXTRA_TEXT_CHARS = new Set(['.', ',', '!', '?', "'", ';']);
+
+// 's contractions for a handful of common pool words - purely a visual/
+// realism touch when punctuation is on, not a grammar engine.
+const CONTRACTION_WORDS: Record<string, string> = {
+  it: "it's",
+  there: "there's",
+  that: "that's",
+  what: "what's",
+  who: "who's",
+  he: "he's",
+  she: "she's",
+};
+const CONTRACTION_CHANCE = 0.45;
+const TRAILING_MARK_CHANCE = 0.22;
+// Weighted so a comma (mid-sentence) is most common, ';' and '.' next, and
+// '!'/'?' rarer still.
+const TRAILING_MARKS = [',', ',', ',', ',', ';', ';', '.', '.', '.', '!', '?'];
+const MIN_GAP_BETWEEN_MARKS = 1; // words between one punctuated word and the next
+
+// Scatters trailing punctuation (and the occasional 's contraction) across
+// a copy of `words`, sparsely and never on consecutive words - "add
+// punctuation to real words", not a wall of comma-spliced text.
+function applyPunctuation(words: string[], random: () => number): string[] {
+  const result = [...words];
+  let sinceLastMark = MIN_GAP_BETWEEN_MARKS;
+  for (let i = 0; i < result.length; i++) {
+    sinceLastMark++;
+    if (sinceLastMark <= MIN_GAP_BETWEEN_MARKS) continue;
+
+    const contraction = CONTRACTION_WORDS[result[i]];
+    if (contraction && random() < CONTRACTION_CHANCE) {
+      result[i] = contraction;
+      sinceLastMark = 0;
+      continue;
+    }
+
+    // Never mark the very last word - nothing meaningfully follows a
+    // trailing '.'/'!'/'?' at the end of the test anyway.
+    if (i < result.length - 1 && random() < TRAILING_MARK_CHANCE) {
+      result[i] = result[i] + TRAILING_MARKS[Math.floor(random() * TRAILING_MARKS.length)];
+      sinceLastMark = 0;
+    }
+  }
+  return result;
+}
+
+const NUMBER_CHANCE = 0.1;
+const MIN_GAP_BETWEEN_NUMBERS = 2;
+
+function randomNumberToken(random: () => number): string {
+  const digits = 2 + Math.floor(random() * 3); // 2-4 digits
+  let token = String(1 + Math.floor(random() * 9)); // no leading zero
+  for (let i = 1; i < digits; i++) token += String(Math.floor(random() * 10));
+  return token;
+}
+
+// Replaces the occasional word outright with a standalone number token
+// (never embedded inside a word, e.g. never "c7at") - keeps the same total
+// word count, just swaps a slot.
+function applyNumbers(words: string[], random: () => number): string[] {
+  const result = [...words];
+  let sinceLastNumber = MIN_GAP_BETWEEN_NUMBERS;
+  for (let i = 0; i < result.length; i++) {
+    sinceLastNumber++;
+    if (sinceLastNumber <= MIN_GAP_BETWEEN_NUMBERS) continue;
+    if (random() < NUMBER_CHANCE) {
+      result[i] = randomNumberToken(random);
+      sinceLastNumber = 0;
+    }
+  }
+  return result;
+}
+
+export function generateWords(count: number, size: WordListSize, extras?: TextExtras): string[] {
+  let words = buildWordList(count, getWordPool(size), Math.random);
+  if (extras?.numbers) words = applyNumbers(words, Math.random);
+  if (extras?.punctuation) words = applyPunctuation(words, Math.random);
+  return words;
+}
+
+export function generateText(wordCount: number, size: WordListSize, extras?: TextExtras): string {
+  return generateWords(wordCount, size, extras).join(' ');
 }
 
 // A small deterministic PRNG (mulberry32) — ranked matches need both

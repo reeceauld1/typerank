@@ -5,6 +5,10 @@ import {
   ROW1_EXTRA,
   ROW2_EXTRA,
   ROW3_EXTRA,
+  ROW1_PUNCTUATION_EXTRA,
+  ROW2_PUNCTUATION_EXTRA,
+  ROW3_PUNCTUATION_EXTRA,
+  DIGIT_ROW_CODES,
   FINGER_COLORS,
   FINGER_LABELS,
   FINGER_ORDER,
@@ -23,11 +27,43 @@ const BASE_CODES = getLayoutRowCodes('qwerty'); // no per-layout extras, just th
 const ALL_ROW1_EXTRA_CODES = Object.values(ROW1_EXTRA).flat();
 const ALL_ROW2_EXTRA_CODES = Object.values(ROW2_EXTRA).flat();
 const ALL_ROW3_EXTRA_CODES = Object.values(ROW3_EXTRA).flat();
+const ALL_PUNCTUATION_EXTRA_CODES = [
+  ...Object.values(ROW1_PUNCTUATION_EXTRA).flat(),
+  ...Object.values(ROW2_PUNCTUATION_EXTRA).flat(),
+  ...Object.values(ROW3_PUNCTUATION_EXTRA).flat(),
+];
 const TRACKED_CODES = new Set([
   ...BASE_CODES.top, ...BASE_CODES.home, ...BASE_CODES.bottom,
   ...ALL_ROW1_EXTRA_CODES, ...ALL_ROW2_EXTRA_CODES, ...ALL_ROW3_EXTRA_CODES,
-  'Space',
+  ...ALL_PUNCTUATION_EXTRA_CODES, ...DIGIT_ROW_CODES,
+  'Space', 'Backspace',
 ]);
+// Real keyboards stagger each row further right going down (number row
+// furthest left, then qwerty row, then home row, then bottom row) - the
+// digit row being new/optional is the only one that needs an explicit
+// offset here, since row1/row2/row3's own existing margins already encode
+// that stagger relative to *each other*. Shifts row1 (and everything below
+// it, which is itself offset from row1) right by half a key so "1"'s
+// middle sits above-left of "Q", matching a real board - and leaves
+// everything at its original position when the digit row isn't shown.
+function numberRowOffset(showNumberRow: boolean): number {
+  return showNumberRow ? UNIT / 2 : 0;
+}
+
+// Shifted form of each unshifted symbol a US keyboard produces - keyed by
+// the character a layout already puts at a position (not by physical code),
+// since the shift pairing belongs to the symbol itself and holds regardless
+// of which physical key a layout happens to remap it to (e.g. Dvorak's
+// apostrophe still shifts to '"' wherever it lives). Letters aren't listed
+// here - the on-screen keyboard's labels are always rendered uppercase via
+// CSS already, so there's no visual shift state to add for them.
+const SHIFT_CHAR_MAP: Record<string, string> = {
+  '1': '!', '2': '@', '3': '#', '4': '$', '5': '%', '6': '^', '7': '&', '8': '*', '9': '(', '0': ')',
+  '-': '_', '=': '+',
+  '[': '{', ']': '}',
+  ';': ':', "'": '"',
+  ',': '<', '.': '>', '/': '?',
+};
 
 // Red (bad) to green (good) — hue 0 at 0% accuracy, hue 120 at 100%.
 function accuracyOverlayColor(accuracy: number): string {
@@ -107,6 +143,15 @@ interface KeyboardDisplayProps {
   // 'finger' (flash the pressed key's assigned finger color) rather than
   // exposing it in Settings. Defaults to 'press' (physical press only).
   pressStyle?: KeyboardPressStyle | 'finger';
+  // Shows the ]'/ punctuation keys and the digit row - only relevant to the
+  // plain on-screen keyboard, which reflects the Home page's punctuation/
+  // numbers text options. Learn mode never passes these (it has no such
+  // options), so both default off.
+  showPunctuationKeys?: boolean;
+  showNumberRow?: boolean;
+  // A separate knob from showPunctuationKeys/showNumberRow so callers can
+  // control it independently if their criteria for showing it ever differ.
+  showBackspace?: boolean;
 }
 
 // Row offsets (24px/48px) were tuned to center each qwerty row under row 1
@@ -115,8 +160,18 @@ interface KeyboardDisplayProps {
 // trailing keys get added, so those offsets stay correct in both cases.
 // Labels come from the selected layout, not the physical code, so this
 // keyboard always shows what a key currently types.
-export default function KeyboardDisplay({ keyboardLayout, dimmedCodes, accuracyByCode, keyColors = 'default', pressStyle = 'press' }: KeyboardDisplayProps) {
+export default function KeyboardDisplay({
+  keyboardLayout,
+  dimmedCodes,
+  accuracyByCode,
+  keyColors = 'default',
+  pressStyle = 'press',
+  showPunctuationKeys = false,
+  showNumberRow = false,
+  showBackspace = false,
+}: KeyboardDisplayProps) {
   const [pressed, setPressed] = useState<Set<string>>(new Set());
+  const [shiftHeld, setShiftHeld] = useState(false);
   const showFingerColors = keyColors !== 'default';
   const showLegend = keyColors === 'colors-and-text';
   // When finger colors are on, "accent" press style flashes each key's own
@@ -124,11 +179,15 @@ export default function KeyboardDisplay({ keyboardLayout, dimmedCodes, accuracyB
   // colors is per-key distinction, which a single accent flash would erase.
   const effectivePressStyle = pressStyle === 'accent' && showFingerColors ? 'finger' : pressStyle;
   const codeToChar = KEYBOARD_LAYOUTS[keyboardLayout];
-  const { top: row1, home: row2, bottom: row3 } = getLayoutRowCodes(keyboardLayout);
+  const { top: row1, home: row2, bottom: row3 } = getLayoutRowCodes(keyboardLayout, showPunctuationKeys);
   // Spans from the center of the first bottom-row key to the center of the
   // last one, so it resizes automatically as that row's key count changes
   // per layout instead of using a fixed width.
   const spacebarWidth = (row3.length - 1) * UNIT;
+  const keyLabel = (code: string): string => {
+    const base = codeToChar[code] ?? '';
+    return shiftHeld ? (SHIFT_CHAR_MAP[base] ?? base) : base;
+  };
 
   useEffect(() => {
     const codeFor = (e: KeyboardEvent): string | null => {
@@ -137,12 +196,14 @@ export default function KeyboardDisplay({ keyboardLayout, dimmedCodes, accuracyB
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') setShiftHeld(true);
       const code = codeFor(e);
       if (!code) return;
       setPressed(prev => (prev.has(code) ? prev : new Set(prev).add(code)));
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') setShiftHeld(false);
       const code = codeFor(e);
       if (!code) return;
       setPressed(prev => {
@@ -153,7 +214,10 @@ export default function KeyboardDisplay({ keyboardLayout, dimmedCodes, accuracyB
       });
     };
 
-    const handleBlur = () => setPressed(new Set());
+    const handleBlur = () => {
+      setPressed(new Set());
+      setShiftHeld(false);
+    };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -165,14 +229,36 @@ export default function KeyboardDisplay({ keyboardLayout, dimmedCodes, accuracyB
     };
   }, []);
 
+  const numRowOffset = numberRowOffset(showNumberRow);
+
   return (
     <div className="flex flex-col items-center select-none">
       <div className="flex flex-col items-start gap-2">
-        <div className="flex gap-2">
+        {showNumberRow && (
+          <div className="flex gap-2">
+            {DIGIT_ROW_CODES.map(code => (
+              <Key
+                key={code}
+                label={keyLabel(code)}
+                active={pressed.has(code)}
+                dimmed={dimmedCodes?.has(code)}
+                accuracy={accuracyByCode?.[code]}
+                // No finger chart covers the digit row, so the finger-color
+                // setting's usual accent->finger downgrade would otherwise
+                // leave these keys with no press feedback at all - always
+                // flash accent (or whatever the raw press-style setting
+                // says) here regardless of that setting.
+                pressStyle={pressStyle}
+              />
+            ))}
+            {showBackspace && <Key label="←" active={pressed.has('Backspace')} pressStyle={pressStyle} />}
+          </div>
+        )}
+        <div className="flex gap-2" style={{ marginLeft: numRowOffset }}>
           {row1.map(code => (
             <Key
               key={code}
-              label={codeToChar[code] ?? ''}
+              label={keyLabel(code)}
               active={pressed.has(code)}
               dimmed={dimmedCodes?.has(code)}
               accuracy={accuracyByCode?.[code]}
@@ -181,11 +267,11 @@ export default function KeyboardDisplay({ keyboardLayout, dimmedCodes, accuracyB
             />
           ))}
         </div>
-        <div className="flex gap-2 ml-[24px]">
+        <div className="flex gap-2" style={{ marginLeft: 24 + numRowOffset }}>
           {row2.map(code => (
             <Key
               key={code}
-              label={codeToChar[code] ?? ''}
+              label={keyLabel(code)}
               active={pressed.has(code)}
               dimmed={dimmedCodes?.has(code)}
               bump={isBumpCode(code)}
@@ -195,11 +281,11 @@ export default function KeyboardDisplay({ keyboardLayout, dimmedCodes, accuracyB
             />
           ))}
         </div>
-        <div className="flex gap-2" style={{ marginLeft: ROW3_OFFSET }}>
+        <div className="flex gap-2" style={{ marginLeft: ROW3_OFFSET + numRowOffset }}>
           {row3.map(code => (
             <Key
               key={code}
-              label={codeToChar[code] ?? ''}
+              label={keyLabel(code)}
               active={pressed.has(code)}
               dimmed={dimmedCodes?.has(code)}
               accuracy={accuracyByCode?.[code]}
@@ -208,7 +294,7 @@ export default function KeyboardDisplay({ keyboardLayout, dimmedCodes, accuracyB
             />
           ))}
         </div>
-        <div className="flex gap-2 mt-1" style={{ marginLeft: ROW3_OFFSET + KEY_SIZE / 2 }}>
+        <div className="flex gap-2 mt-1" style={{ marginLeft: ROW3_OFFSET + KEY_SIZE / 2 + numRowOffset }}>
           <Key
             label=""
             active={pressed.has('Space')}

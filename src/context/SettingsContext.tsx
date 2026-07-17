@@ -15,6 +15,8 @@ const SPACE_STYLE_KEY = 'spaceStyle';
 const WORD_LIST_SIZE_KEY = 'wordListSize';
 const SOUND_ENABLED_KEY = 'soundEnabled';
 const SOUND_VOLUME_KEY = 'soundVolume';
+const PUNCTUATION_KEY = 'punctuation';
+const NUMBERS_KEY = 'numbers';
 
 function loadShowKeyboard(): boolean {
   try {
@@ -115,6 +117,22 @@ function loadSoundVolume(): number {
   return 25;
 }
 
+function loadPunctuation(): boolean {
+  try {
+    return localStorage.getItem(PUNCTUATION_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function loadNumbers(): boolean {
+  try {
+    return localStorage.getItem(NUMBERS_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 function systemPrefersLight(): boolean {
   try {
     return window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -138,6 +156,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [wordListSize, setWordListSize] = useState<WordListSize>(loadWordListSize);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(loadSoundEnabled);
   const [soundVolume, setSoundVolume] = useState<number>(loadSoundVolume);
+  const [punctuation, setPunctuation] = useState<boolean>(loadPunctuation);
+  const [numbers, setNumbers] = useState<boolean>(loadNumbers);
 
   useEffect(() => {
     localStorage.setItem(SHOW_KEYBOARD_KEY, String(showKeyboard));
@@ -181,6 +201,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [soundVolume]);
 
   useEffect(() => {
+    localStorage.setItem(PUNCTUATION_KEY, String(punctuation));
+  }, [punctuation]);
+
+  useEffect(() => {
+    localStorage.setItem(NUMBERS_KEY, String(numbers));
+  }, [numbers]);
+
+  useEffect(() => {
     const apply = () => {
       if (resolveTheme(theme) === 'light') document.documentElement.dataset.theme = 'light';
       else delete document.documentElement.dataset.theme;
@@ -218,6 +246,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setSoundEnabled,
         soundVolume,
         setSoundVolume,
+        punctuation,
+        setPunctuation,
+        numbers,
+        setNumbers,
       }}
     >
       {children}

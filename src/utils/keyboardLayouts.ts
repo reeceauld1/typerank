@@ -23,20 +23,34 @@ export const KEYBOARD_LAYOUT_OPTIONS: KeyboardLayoutOption[] = [
 // alternate layout without switching your OS" typing test makes. Someone
 // whose OS is already set to Colemak/Dvorak at the system level should
 // leave this on QWERTY.
+// The digit row (plus its flanking -/= keys): identical across all three
+// layouts - Colemak and Dvorak only rearrange the letter zone, never the
+// number row, on real hardware. Distinct physical keys from BracketRight/
+// Quote above (which sit near P/Enter, not after 0) despite Dvorak also
+// using '='/'-' there — no collision.
+const DIGIT_ROW: Record<string, string> = {
+  Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5',
+  Digit6: '6', Digit7: '7', Digit8: '8', Digit9: '9', Digit0: '0',
+  Minus: '-', Equal: '=',
+};
+
 export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, Record<string, string>> = {
   qwerty: {
+    ...DIGIT_ROW,
     KeyQ: 'q', KeyW: 'w', KeyE: 'e', KeyR: 'r', KeyT: 't', KeyY: 'y', KeyU: 'u', KeyI: 'i', KeyO: 'o', KeyP: 'p',
     KeyA: 'a', KeyS: 's', KeyD: 'd', KeyF: 'f', KeyG: 'g', KeyH: 'h', KeyJ: 'j', KeyK: 'k', KeyL: 'l', Semicolon: ';',
     KeyZ: 'z', KeyX: 'x', KeyC: 'c', KeyV: 'v', KeyB: 'b', KeyN: 'n', KeyM: 'm', Comma: ',', Period: '.', Slash: '/',
     BracketLeft: '[', BracketRight: ']', Quote: "'",
   },
   colemak: {
+    ...DIGIT_ROW,
     KeyQ: 'q', KeyW: 'w', KeyE: 'f', KeyR: 'p', KeyT: 'g', KeyY: 'j', KeyU: 'l', KeyI: 'u', KeyO: 'y', KeyP: ';',
     KeyA: 'a', KeyS: 'r', KeyD: 's', KeyF: 't', KeyG: 'd', KeyH: 'h', KeyJ: 'n', KeyK: 'e', KeyL: 'i', Semicolon: 'o',
     KeyZ: 'z', KeyX: 'x', KeyC: 'c', KeyV: 'v', KeyB: 'b', KeyN: 'k', KeyM: 'm', Comma: ',', Period: '.', Slash: '/',
     BracketLeft: '[', BracketRight: ']', Quote: "'",
   },
   dvorak: {
+    ...DIGIT_ROW,
     // Dvorak's own diagram: top row ends "... l / =", home row ends "... s -".
     KeyQ: "'", KeyW: ',', KeyE: '.', KeyR: 'p', KeyT: 'y', KeyY: 'f', KeyU: 'g', KeyI: 'c', KeyO: 'r', KeyP: 'l',
     KeyA: 'a', KeyS: 'o', KeyD: 'e', KeyF: 'u', KeyG: 'i', KeyH: 'd', KeyJ: 'h', KeyK: 't', KeyL: 'n', Semicolon: 's',
@@ -44,6 +58,13 @@ export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, Record<string, string>> 
     BracketLeft: '/', BracketRight: '=', Quote: '-',
   },
 };
+
+// Physical digit-row codes, in left-to-right order - shown on the on-screen
+// keyboard only while the "numbers" text option is on (see OnScreenKeyboard/
+// KeyboardDisplay), since digits otherwise never appear in practice text.
+// Includes the flanking -/= keys; Backspace is rendered separately (see
+// KeyboardDisplay) since it has no character mapping of its own.
+export const DIGIT_ROW_CODES = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal'];
 
 // Physical key groupings, shared between OnScreenKeyboard (which renders
 // every key here, punctuation included) and the learn-mode letter-unlock
@@ -127,6 +148,23 @@ export const ROW3_EXTRA: Partial<Record<KeyboardLayoutId, string[]>> = {
   dvorak: ['Period', 'Slash'],
 };
 
+// The remaining half of each punctuation-key pair (] ' /), shown only while
+// the "punctuation" text option is on - Dvorak already shows all three
+// unconditionally above (its letters spill onto them), so it has nothing to
+// add here.
+export const ROW1_PUNCTUATION_EXTRA: Partial<Record<KeyboardLayoutId, string[]>> = {
+  qwerty: ['BracketRight'],
+  colemak: ['BracketRight'],
+};
+export const ROW2_PUNCTUATION_EXTRA: Partial<Record<KeyboardLayoutId, string[]>> = {
+  qwerty: ['Quote'],
+  colemak: ['Quote'],
+};
+export const ROW3_PUNCTUATION_EXTRA: Partial<Record<KeyboardLayoutId, string[]>> = {
+  qwerty: ['Slash'],
+  colemak: ['Slash'],
+};
+
 export interface LayoutRows<T> {
   top: T[];
   home: T[];
@@ -134,8 +172,17 @@ export interface LayoutRows<T> {
 }
 
 // Raw physical codes per row, layout-aware (includes punctuation-position
-// codes like Comma/Semicolon) — what OnScreenKeyboard renders.
-export function getLayoutRowCodes(layoutId: KeyboardLayoutId): LayoutRows<string> {
+// codes like Comma/Semicolon) — what OnScreenKeyboard renders. Pass
+// includePunctuationExtra to also include the ]'/ keys above while the
+// "punctuation" text option is on.
+export function getLayoutRowCodes(layoutId: KeyboardLayoutId, includePunctuationExtra = false): LayoutRows<string> {
+  if (includePunctuationExtra) {
+    return {
+      top: [...BASE_ROW1, ...(ROW1_EXTRA[layoutId] ?? []), ...(ROW1_PUNCTUATION_EXTRA[layoutId] ?? [])],
+      home: [...BASE_ROW2, ...(ROW2_EXTRA[layoutId] ?? []), ...(ROW2_PUNCTUATION_EXTRA[layoutId] ?? [])],
+      bottom: [...BASE_ROW3, ...(ROW3_EXTRA[layoutId] ?? []), ...(ROW3_PUNCTUATION_EXTRA[layoutId] ?? [])],
+    };
+  }
   return {
     top: [...BASE_ROW1, ...(ROW1_EXTRA[layoutId] ?? [])],
     home: [...BASE_ROW2, ...(ROW2_EXTRA[layoutId] ?? [])],

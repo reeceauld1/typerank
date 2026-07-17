@@ -32,6 +32,10 @@ export interface SettingsContextType {
   setSoundEnabled: (value: boolean) => void;
   soundVolume: number;
   setSoundVolume: (value: number) => void;
+  punctuation: boolean;
+  setPunctuation: (value: boolean) => void;
+  numbers: boolean;
+  setNumbers: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

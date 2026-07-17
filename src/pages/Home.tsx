@@ -18,12 +18,18 @@ function loadConfig(): TestConfig {
   return { mode: 'time', value: 30 };
 }
 
+function pillClass(active: boolean): string {
+  return `px-3 py-1.5 rounded-md text-sm font-bold transition-colors cursor-pointer ${
+    active ? 'text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+  }`;
+}
+
 export default function Home() {
   const [config, setConfig] = useState<TestConfig>(loadConfig);
   const [key, setKey] = useState(0);
   const [typingActive, setTypingActive] = useState(false);
   const [finished, setFinished] = useState(false);
-  const { showKeyboard } = useSettings();
+  const { showKeyboard, punctuation, setPunctuation, numbers, setNumbers } = useSettings();
   // Read by the freshly-mounted TypingTest instance below (set just before
   // each key bump) to tell a manual restart — which should keep the caret
   // hidden until the first keystroke — apart from a config change or the
@@ -37,6 +43,16 @@ export default function Home() {
   const handleConfigChange = (newConfig: TestConfig) => {
     setManualRestart(false);
     setConfig(newConfig);
+    setKey(prev => prev + 1);
+    setFinished(false);
+  };
+
+  // Punctuation/numbers only ever toggle while the toggles themselves are
+  // visible - the parent fades and disables pointer events on them the
+  // moment typing starts (see typingActive below) - so a fresh test never
+  // interrupts one in progress here.
+  const handleTextOptionToggle = () => {
+    setManualRestart(false);
     setKey(prev => prev + 1);
     setFinished(false);
   };
@@ -73,9 +89,31 @@ export default function Home() {
           transition={{ duration: 0.2 }}
           aria-hidden={typingActive}
           inert={typingActive}
-          className={`flex justify-center mb-6 ${typingActive ? 'pointer-events-none' : ''}`}
+          className={`flex flex-wrap justify-center gap-2 mb-6 ${typingActive ? 'pointer-events-none' : ''}`}
         >
           <ModeSelector config={config} onChange={handleConfigChange} />
+          <div className="flex items-center justify-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-2 py-2 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setPunctuation(!punctuation);
+                handleTextOptionToggle();
+              }}
+              className={pillClass(punctuation)}
+            >
+              punctuation
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setNumbers(!numbers);
+                handleTextOptionToggle();
+              }}
+              className={pillClass(numbers)}
+            >
+              numbers
+            </button>
+          </div>
         </motion.div>
 
         <TypingTest
