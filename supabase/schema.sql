@@ -87,6 +87,17 @@ create policy "select own claims" on public.daily_challenge_claims
 create policy "insert own claims" on public.daily_challenge_claims
   for insert with check (auth.uid() = user_id);
 
+-- Level from total_xp, mirroring calculateLevel in src/utils/xp.ts — every
+-- level costs a flat 2500 xp, so this has a closed form instead of that
+-- function's loop. Used by the cosmetic-unlock checks further down.
+create or replace function public.user_level(p_total_xp integer)
+returns integer
+language sql
+immutable
+as $$
+  select 1 + floor(greatest(0, p_total_xp) / 2500.0)::integer;
+$$;
+
 -- Records a finished test: appends to history and atomically updates the
 -- running totals + per-mode best WPM. Called from the client via
 -- supabase.rpc('record_test_result', {...}) instead of doing a
@@ -94,6 +105,16 @@ create policy "insert own claims" on public.daily_challenge_claims
 -- best_wpm_* updates require >=40% accuracy (see schema_033) so a mashed-
 -- keys/low-effort run can't buy a leaderboard spot on raw speed alone —
 -- everything else about the run (history, xp, totals) still records.
+--
+-- wpm, raw_wpm, and xp_earned are recomputed here from
+-- p_correct_chars/p_incorrect_chars/p_time_elapsed (mirroring
+-- TypingTest.tsx's wpm/rawWpm formulas and xp.ts's
+-- calculateXP/checkChallengeMilestone) rather than trusted from the client
+-- directly — this used to just store whatever numbers the caller sent,
+-- which is how an account ended up with 999999 wpm on every leaderboard
+-- category via a direct RPC call (see schema_039). accuracy can't be
+-- recomputed the same way (it's derived from raw keystrokes, which aren't
+-- sent here), so it's only bounds-checked, not recalculated.
 create or replace function public.record_test_result(
   p_mode text,
   p_value integer,
@@ -111,39 +132,90 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
+  v_wpm integer;
+  v_raw_wpm integer;
+  v_accuracy integer;
+  v_is_ranked boolean;
+  v_difficulty numeric;
+  v_multiplier numeric;
+  v_xp integer;
+  v_milestone_bonus integer := 0;
 begin
   if v_user_id is null then
     raise exception 'not authenticated';
   end if;
 
+  if p_time_elapsed is null or p_time_elapsed <= 0 or p_time_elapsed > 660 then
+    raise exception 'implausible time_elapsed';
+  end if;
+  if p_correct_chars is null or p_correct_chars < 0 or p_incorrect_chars is null or p_incorrect_chars < 0 then
+    raise exception 'invalid character counts';
+  end if;
+
+  v_accuracy := greatest(0, least(100, coalesce(p_accuracy, 0)));
+
+  v_wpm := round(p_correct_chars / 5.0 / (p_time_elapsed / 60.0));
+  v_raw_wpm := round((p_correct_chars + p_incorrect_chars) / 5.0 / (p_time_elapsed / 60.0));
+
+  -- Well beyond any legitimate human result (competitive records top out
+  -- around 200-250 wpm even on short bursts) — just far enough above real
+  -- scores that no genuine run is ever rejected.
+  if v_wpm > 400 or v_raw_wpm > 400 then
+    raise exception 'implausible wpm';
+  end if;
+
+  v_is_ranked := (p_mode = 'time' and p_value in (10, 30, 60)) or (p_mode = 'words' and p_value in (10, 25, 50));
+  v_multiplier := case when v_is_ranked then 1.0 else 0.5 end;
+  v_difficulty := case
+    when p_mode = 'time' and p_value = 60 then 1.25
+    when p_mode = 'time' and p_value = 30 then 1.1
+    when p_mode = 'words' and p_value = 50 then 1.25
+    when p_mode = 'words' and p_value = 25 then 1.1
+    else 1.0
+  end;
+  v_xp := floor(floor(v_wpm * v_accuracy / 100.0) * v_difficulty * v_multiplier);
+
+  if v_accuracy >= 95 then
+    v_milestone_bonus := case
+      when p_mode = 'time' and p_value = 10 and v_wpm >= 100 then 100
+      when p_mode = 'time' and p_value = 30 and v_wpm >= 80 then 150
+      when p_mode = 'time' and p_value = 60 and v_wpm >= 70 then 200
+      when p_mode = 'words' and p_value = 10 and v_wpm >= 100 then 100
+      when p_mode = 'words' and p_value = 25 and v_wpm >= 90 then 150
+      when p_mode = 'words' and p_value = 50 and v_wpm >= 80 then 200
+      else 0
+    end;
+  end if;
+  v_xp := v_xp + v_milestone_bonus;
+
   insert into public.test_history (
     user_id, mode, value, wpm, accuracy, raw_wpm,
     correct_chars, incorrect_chars, time_elapsed, xp_earned
   ) values (
-    v_user_id, p_mode, p_value, p_wpm, p_accuracy, p_raw_wpm,
-    p_correct_chars, p_incorrect_chars, p_time_elapsed, p_xp_earned
+    v_user_id, p_mode, p_value, v_wpm, v_accuracy, v_raw_wpm,
+    p_correct_chars, p_incorrect_chars, p_time_elapsed, v_xp
   );
 
   -- No upsert needed here: the user_stats row (with its required username)
   -- is always created at signup by the handle_new_user trigger below.
   update public.user_stats set
     total_tests = total_tests + 1,
-    total_xp = total_xp + p_xp_earned,
+    total_xp = total_xp + v_xp,
     total_time_typed = total_time_typed + p_time_elapsed,
-    total_accuracy_sum = total_accuracy_sum + p_accuracy,
-    total_wpm_sum = total_wpm_sum + p_wpm,
-    best_wpm_time10 = case when p_mode = 'time' and p_value = 10 and p_accuracy >= 40
-      then greatest(best_wpm_time10, p_wpm) else best_wpm_time10 end,
-    best_wpm_time30 = case when p_mode = 'time' and p_value = 30 and p_accuracy >= 40
-      then greatest(best_wpm_time30, p_wpm) else best_wpm_time30 end,
-    best_wpm_time60 = case when p_mode = 'time' and p_value = 60 and p_accuracy >= 40
-      then greatest(best_wpm_time60, p_wpm) else best_wpm_time60 end,
-    best_wpm_words10 = case when p_mode = 'words' and p_value = 10 and p_accuracy >= 40
-      then greatest(best_wpm_words10, p_wpm) else best_wpm_words10 end,
-    best_wpm_words25 = case when p_mode = 'words' and p_value = 25 and p_accuracy >= 40
-      then greatest(best_wpm_words25, p_wpm) else best_wpm_words25 end,
-    best_wpm_words50 = case when p_mode = 'words' and p_value = 50 and p_accuracy >= 40
-      then greatest(best_wpm_words50, p_wpm) else best_wpm_words50 end,
+    total_accuracy_sum = total_accuracy_sum + v_accuracy,
+    total_wpm_sum = total_wpm_sum + v_wpm,
+    best_wpm_time10 = case when p_mode = 'time' and p_value = 10 and v_accuracy >= 40
+      then greatest(best_wpm_time10, v_wpm) else best_wpm_time10 end,
+    best_wpm_time30 = case when p_mode = 'time' and p_value = 30 and v_accuracy >= 40
+      then greatest(best_wpm_time30, v_wpm) else best_wpm_time30 end,
+    best_wpm_time60 = case when p_mode = 'time' and p_value = 60 and v_accuracy >= 40
+      then greatest(best_wpm_time60, v_wpm) else best_wpm_time60 end,
+    best_wpm_words10 = case when p_mode = 'words' and p_value = 10 and v_accuracy >= 40
+      then greatest(best_wpm_words10, v_wpm) else best_wpm_words10 end,
+    best_wpm_words25 = case when p_mode = 'words' and p_value = 25 and v_accuracy >= 40
+      then greatest(best_wpm_words25, v_wpm) else best_wpm_words25 end,
+    best_wpm_words50 = case when p_mode = 'words' and p_value = 50 and v_accuracy >= 40
+      then greatest(best_wpm_words50, v_wpm) else best_wpm_words50 end,
     updated_at = now()
   where user_id = v_user_id;
 end;
@@ -259,6 +331,14 @@ grant execute on function public.is_username_available to anon, authenticated;
 -- Claims today's daily challenge and awards its XP bonus exactly once.
 -- Returns true if this call was the one that claimed it, false if it was
 -- already claimed today (so the client knows not to show the bonus twice).
+--
+-- p_tests_target/p_xp_bonus must match one of the real pool entries
+-- (src/utils/dailyChallenge.ts — the exact combo rotated to this identity/
+-- day isn't re-derived here, just that the claimed combo is a real,
+-- legitimately-difficulty-matched one), and test_history is queried
+-- directly to confirm the caller actually has that many qualifying tests
+-- today — this used to trust both numbers outright, which let a direct RPC
+-- call grant arbitrary xp with zero tests ever taken (see schema_041).
 create or replace function public.claim_daily_challenge(
   p_mode text,
   p_value integer,
@@ -271,9 +351,30 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
+  v_count integer;
 begin
   if v_user_id is null then
     raise exception 'not authenticated';
+  end if;
+
+  if p_xp_bonus <> 2500 then
+    raise exception 'invalid xp bonus';
+  end if;
+  if not (
+    (p_mode = 'time' and p_value = 10 and p_tests_target = 15) or
+    (p_mode = 'time' and p_value = 30 and p_tests_target = 5) or
+    (p_mode = 'time' and p_value = 60 and p_tests_target = 3) or
+    (p_mode = 'words' and p_value = 10 and p_tests_target = 15) or
+    (p_mode = 'words' and p_value = 25 and p_tests_target = 5) or
+    (p_mode = 'words' and p_value = 50 and p_tests_target = 3)
+  ) then
+    raise exception 'invalid challenge parameters';
+  end if;
+
+  select count(*) into v_count from public.test_history
+  where user_id = v_user_id and mode = p_mode and value = p_value and created_at::date = current_date;
+  if v_count < p_tests_target then
+    raise exception 'not enough tests completed';
   end if;
 
   insert into public.daily_challenge_claims (user_id, challenge_date, mode, value, tests_target, xp_bonus)
@@ -315,6 +416,8 @@ create policy "select own hourly claims" on public.hourly_challenge_claims
 create policy "insert own hourly claims" on public.hourly_challenge_claims
   for insert with check (auth.uid() = user_id);
 
+-- Same validation as claim_daily_challenge above, pool values from
+-- src/utils/hourlyChallenge.ts.
 create or replace function public.claim_hourly_challenge(
   p_mode text,
   p_value integer,
@@ -327,9 +430,30 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
+  v_count integer;
 begin
   if v_user_id is null then
     raise exception 'not authenticated';
+  end if;
+
+  if p_xp_bonus <> 500 then
+    raise exception 'invalid xp bonus';
+  end if;
+  if not (
+    (p_mode = 'time' and p_value = 10 and p_tests_target = 3) or
+    (p_mode = 'time' and p_value = 30 and p_tests_target = 1) or
+    (p_mode = 'time' and p_value = 60 and p_tests_target = 1) or
+    (p_mode = 'words' and p_value = 10 and p_tests_target = 3) or
+    (p_mode = 'words' and p_value = 25 and p_tests_target = 1) or
+    (p_mode = 'words' and p_value = 50 and p_tests_target = 1)
+  ) then
+    raise exception 'invalid challenge parameters';
+  end if;
+
+  select count(*) into v_count from public.test_history
+  where user_id = v_user_id and mode = p_mode and value = p_value and created_at >= date_trunc('hour', now());
+  if v_count < p_tests_target then
+    raise exception 'not enough tests completed';
   end if;
 
   insert into public.hourly_challenge_claims (user_id, challenge_hour, mode, value, tests_target, xp_bonus)
@@ -368,6 +492,13 @@ create policy "insert own weekly claims" on public.weekly_challenge_claims
 
 -- Claims this week's challenge and awards its XP bonus exactly once,
 -- mirroring claim_daily_challenge but keyed by the Monday-start week.
+-- Weekly has a single fixed target/bonus (no rotating pool) and counts any
+-- test regardless of mode/value — but p_week_start was previously trusted
+-- outright too, letting a caller claim many distinct past/future
+-- week_start dates in a row (the uniqueness constraint only blocks
+-- re-claiming the *same* week_start twice). It must now match the real
+-- current week, and test_history is queried directly to confirm the
+-- caller actually has that many tests this week (see schema_041).
 create or replace function public.claim_weekly_challenge(
   p_week_start date,
   p_tests_target integer,
@@ -379,9 +510,24 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
+  v_week_start date := date_trunc('week', current_date)::date;
+  v_count integer;
 begin
   if v_user_id is null then
     raise exception 'not authenticated';
+  end if;
+
+  if p_week_start <> v_week_start then
+    raise exception 'invalid week';
+  end if;
+  if p_tests_target <> 100 or p_xp_bonus <> 15000 then
+    raise exception 'invalid challenge parameters';
+  end if;
+
+  select count(*) into v_count from public.test_history
+  where user_id = v_user_id and created_at >= v_week_start and created_at < v_week_start + 7;
+  if v_count < p_tests_target then
+    raise exception 'not enough tests completed';
   end if;
 
   insert into public.weekly_challenge_claims (user_id, week_start, tests_target, xp_bonus)
@@ -427,8 +573,13 @@ alter table public.user_stats
   add column discord_avatar_url text;
 
 -- Sets which avatar/border the caller has equipped. The foreign keys above
--- reject an unknown id; actual unlock-eligibility is checked client-side
--- since these are cosmetic-only (no ranking/competitive impact either way).
+-- reject an unknown id; unlock-eligibility (mirroring AVATAR_CATALOG/
+-- BORDER_CATALOG's isUnlocked in src/utils/cosmetics.tsx) is checked here
+-- too — it used to be client-side only, which meant calling this RPC
+-- directly could equip anything regardless of actual stats (see
+-- schema_039). The two hardcoded admin usernames (isAdminUsername in
+-- cosmetics.tsx) still bypass these checks, same as the client already
+-- does for them.
 create or replace function public.set_equipped_cosmetics(p_avatar_id text, p_border_id text)
 returns void
 language plpgsql
@@ -437,9 +588,58 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
+  s public.user_stats;
+  v_admin boolean;
+  v_level integer;
+  v_avg_accuracy numeric;
+  v_best_wpm integer;
 begin
   if v_user_id is null then
     raise exception 'not authenticated';
+  end if;
+
+  select * into s from public.user_stats where user_id = v_user_id;
+  v_admin := lower(s.username) in ('yvern', 'lol');
+  v_level := public.user_level(s.total_xp);
+  v_avg_accuracy := case when s.total_tests > 0 then s.total_accuracy_sum / s.total_tests else 0 end;
+  v_best_wpm := greatest(s.best_wpm_time10, s.best_wpm_time30, s.best_wpm_time60, s.best_wpm_words10, s.best_wpm_words25, s.best_wpm_words50);
+
+  if not v_admin and not coalesce(case p_avatar_id
+    when 'keyboard' then true
+    when 'feather' then v_level >= 5
+    when 'trophy' then v_level >= 10
+    when 'crown' then v_level >= 25
+    when 'hourglass' then v_level >= 50
+    when 'compass' then s.best_wpm_time10 > 0 and s.best_wpm_time30 > 0 and s.best_wpm_time60 > 0
+      and s.best_wpm_words10 > 0 and s.best_wpm_words25 > 0 and s.best_wpm_words50 > 0
+    when 'flame' then s.total_tests >= 50
+    when 'star' then s.total_tests >= 100
+    when 'mountain' then s.total_tests >= 250
+    when 'anchor' then s.total_tests >= 500
+    when 'bolt' then v_best_wpm >= 60
+    when 'rocket' then v_best_wpm >= 100
+    when 'diamond' then v_best_wpm >= 120
+    when 'target' then s.total_tests >= 20 and v_avg_accuracy >= 95
+    when 'shield' then s.total_tests >= 50 and v_avg_accuracy >= 97
+    when 'medal' then s.total_tests >= 100 and v_avg_accuracy >= 99
+    when 'discord' then s.discord_avatar_url is not null
+    else false
+  end, false) then
+    raise exception 'avatar not unlocked';
+  end if;
+
+  if not v_admin and not coalesce(case p_border_id
+    when 'none' then true
+    when 'bronze' then v_level >= 5
+    when 'silver' then v_level >= 15
+    when 'gold' then v_level >= 30
+    when 'platinum' then v_level >= 40
+    when 'diamond' then v_level >= 50
+    when 'amethyst' then v_level >= 75
+    when 'legend' then v_level >= 100
+    else false
+  end, false) then
+    raise exception 'border not unlocked';
   end if;
 
   update public.user_stats
@@ -701,9 +901,9 @@ alter table public.user_stats
 
 -- Sets the caller's equipped accent color. p_custom_hex is only stored (and
 -- required) when p_color_id = 'custom' — the foreign key above rejects an
--- unknown color id, same pattern as set_equipped_cosmetics. Actual unlock
--- eligibility (time typed) is checked client-side, same rationale as the
--- avatar/border catalogs: cosmetic-only, no ranking impact either way.
+-- unknown color id. Unlock eligibility (mirroring ACCENT_COLOR_CATALOG's
+-- isUnlocked in src/utils/accentColors.ts, gated on total_time_typed) is
+-- checked here too, same reasoning as set_equipped_cosmetics above.
 create or replace function public.set_equipped_accent_color(p_color_id text, p_custom_hex text default null)
 returns void
 language plpgsql
@@ -712,6 +912,8 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
+  s public.user_stats;
+  v_admin boolean;
 begin
   if v_user_id is null then
     raise exception 'not authenticated';
@@ -719,6 +921,23 @@ begin
 
   if p_color_id = 'custom' and (p_custom_hex is null or p_custom_hex !~ '^#[0-9a-fA-F]{6}$') then
     raise exception 'invalid custom color';
+  end if;
+
+  select * into s from public.user_stats where user_id = v_user_id;
+  v_admin := lower(s.username) in ('yvern', 'lol');
+
+  if not v_admin and not coalesce(case p_color_id
+    when 'blue' then true
+    when 'monochrome' then s.total_time_typed >= 900
+    when 'green' then s.total_time_typed >= 1800
+    when 'purple' then s.total_time_typed >= 3600
+    when 'orange' then s.total_time_typed >= 7200
+    when 'magenta' then s.total_time_typed >= 14400
+    when 'gold' then s.total_time_typed >= 28800
+    when 'custom' then s.total_time_typed >= 57600
+    else false
+  end, false) then
+    raise exception 'accent color not unlocked';
   end if;
 
   update public.user_stats
@@ -1013,6 +1232,10 @@ $$;
 
 grant execute on function public.join_guest_duel to anon, authenticated;
 
+-- p_wpm/p_accuracy/p_raw_wpm are bounds-checked before anything else — this
+-- used to store whatever the caller sent with no validation at all, which
+-- meant reporting an absurd wpm directly via the RPC always won the duel
+-- (see schema_040).
 create or replace function public.submit_guest_duel_result(
   p_duel_id uuid,
   p_token uuid,
@@ -1029,6 +1252,18 @@ declare
   v_creator_token uuid;
   v_opponent_token uuid;
 begin
+  if p_wpm is null or p_wpm < 0 or p_wpm > 400
+    or p_raw_wpm is null or p_raw_wpm < 0 or p_raw_wpm > 400
+    or p_wpm > p_raw_wpm then
+    raise exception 'implausible wpm';
+  end if;
+  if p_accuracy is null or p_accuracy < 0 or p_accuracy > 100 then
+    raise exception 'invalid accuracy';
+  end if;
+  if p_time_elapsed is null or p_time_elapsed <= 0 or p_time_elapsed > 200 then
+    raise exception 'implausible time_elapsed';
+  end if;
+
   select creator_token, opponent_token into v_creator_token, v_opponent_token
   from public.duels where id = p_duel_id for update;
 
@@ -1048,6 +1283,7 @@ $$;
 
 grant execute on function public.submit_guest_duel_result to anon, authenticated;
 
+-- Same bounds-check as submit_guest_duel_result above.
 create or replace function public.submit_duel_result(
   p_duel_id uuid,
   p_wpm int,
@@ -1066,6 +1302,18 @@ declare
 begin
   if v_user_id is null then
     raise exception 'not authenticated';
+  end if;
+
+  if p_wpm is null or p_wpm < 0 or p_wpm > 400
+    or p_raw_wpm is null or p_raw_wpm < 0 or p_raw_wpm > 400
+    or p_wpm > p_raw_wpm then
+    raise exception 'implausible wpm';
+  end if;
+  if p_accuracy is null or p_accuracy < 0 or p_accuracy > 100 then
+    raise exception 'invalid accuracy';
+  end if;
+  if p_time_elapsed is null or p_time_elapsed <= 0 or p_time_elapsed > 200 then
+    raise exception 'implausible time_elapsed';
   end if;
 
   select creator_id, opponent_id into v_creator_id, v_opponent_id
@@ -1307,6 +1555,17 @@ alter publication supabase_realtime add table public.ranked_matches;
 -- own overlapping calls (double-click, a slow previous poll still in
 -- flight), which is what actually prevents one user ending up in two
 -- matches at once.
+--
+-- p_elo is kept in the signature so the client's existing call
+-- (supabase.rpc('try_match_ranked', { p_elo: stats.elo })) still matches,
+-- but its value is never trusted — it used to flow straight into
+-- ranked_queue.elo and then player1_elo_before/player2_elo_before, which
+-- are the actual inputs submit_ranked_result's elo-swing formula uses.
+-- Reporting a fake (e.g. artificially low) elo directly via the RPC meant
+-- your *claimed* rating, not your real user_stats.elo, decided how big a
+-- swing a match produced — a single win could buy an enormous, completely
+-- disconnected-from-reality rating jump (see schema_040). The caller's
+-- real elo is looked up here instead.
 create or replace function public.try_match_ranked(p_elo integer)
 returns table(match_id uuid, status text)
 language plpgsql
@@ -1315,6 +1574,7 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
+  v_my_elo integer;
   v_existing uuid;
   v_opp record;
   v_new_id uuid;
@@ -1326,6 +1586,11 @@ begin
     raise exception 'not authenticated';
   end if;
   perform pg_advisory_xact_lock(hashtextextended('ranked_queue:' || v_user_id::text, 0));
+
+  select elo into v_my_elo from public.user_stats where user_id = v_user_id;
+  if v_my_elo is null then
+    raise exception 'stats not found';
+  end if;
 
   delete from public.ranked_queue where last_seen_at < now() - interval '10 seconds';
 
@@ -1344,7 +1609,7 @@ begin
   select rq.user_id, rq.elo into v_opp
   from public.ranked_queue rq
   where rq.user_id <> v_user_id
-    and abs(rq.elo - p_elo) <= least(v_max_band, v_base_band + v_widen_per_sec * extract(epoch from now() - rq.queued_at))
+    and abs(rq.elo - v_my_elo) <= least(v_max_band, v_base_band + v_widen_per_sec * extract(epoch from now() - rq.queued_at))
   order by rq.queued_at asc
   for update skip locked limit 1;
 
@@ -1353,15 +1618,15 @@ begin
     insert into public.ranked_matches (player1_id, player2_id, player1_elo_before, player2_elo_before)
     values (
       least(v_user_id, v_opp.user_id), greatest(v_user_id, v_opp.user_id),
-      case when v_user_id < v_opp.user_id then p_elo else v_opp.elo end,
-      case when v_user_id < v_opp.user_id then v_opp.elo else p_elo end
+      case when v_user_id < v_opp.user_id then v_my_elo else v_opp.elo end,
+      case when v_user_id < v_opp.user_id then v_opp.elo else v_my_elo end
     )
     returning id into v_new_id;
     return query select v_new_id, 'matched'::text;
     return;
   end if;
 
-  insert into public.ranked_queue (user_id, elo) values (v_user_id, p_elo)
+  insert into public.ranked_queue (user_id, elo) values (v_user_id, v_my_elo)
     on conflict (user_id) do update set last_seen_at = now(), elo = excluded.elo;
   return query select null::uuid, 'queued'::text;
 end;
@@ -1391,6 +1656,13 @@ grant execute on function public.leave_ranked_queue to authenticated;
 -- per player so one side being in placements and the other not is still
 -- correct. peak_elo (used to gate rank-tier rewards) only ever increases,
 -- so a later rating dip doesn't strip an already-earned reward.
+--
+-- p_wpm/p_raw_wpm/p_accuracy are bounds-checked before anything else — no
+-- correct_chars/incorrect_chars are sent here, so unlike
+-- record_test_result they can't be recomputed from primitives, only capped.
+-- Elo impact was already bounded by the K-factor formula below regardless
+-- (an absurd wpm just forces a "win", not an arbitrary rating), but there's
+-- no reason to let implausible values through either (see schema_039).
 create or replace function public.submit_ranked_result(
   p_match_id uuid,
   p_wpm int,
@@ -1420,6 +1692,18 @@ declare
 begin
   if v_user_id is null then
     raise exception 'not authenticated';
+  end if;
+
+  if p_wpm is null or p_wpm < 0 or p_wpm > 400
+    or p_raw_wpm is null or p_raw_wpm < 0 or p_raw_wpm > 400
+    or p_wpm > p_raw_wpm then
+    raise exception 'implausible wpm';
+  end if;
+  if p_accuracy is null or p_accuracy < 0 or p_accuracy > 100 then
+    raise exception 'invalid accuracy';
+  end if;
+  if p_time_elapsed is null or p_time_elapsed <= 0 or p_time_elapsed > 60 then
+    raise exception 'implausible time_elapsed';
   end if;
 
   select * into m from public.ranked_matches where id = p_match_id for update;
@@ -1528,8 +1812,10 @@ alter table public.user_stats
   add column equipped_name_color text not null default 'default' references public.name_color_catalog (id);
 
 -- Mirrors set_equipped_accent_color/set_equipped_cosmetics: the foreign key
--- above rejects an unknown id; actual unlock-eligibility (peak_elo) is
--- checked client-side, same as every other cosmetic here.
+-- above rejects an unknown id. Unlock eligibility (mirroring
+-- NAME_COLOR_CATALOG's isUnlocked/reachedRank in src/utils/cosmetics.tsx
+-- and src/utils/rank.ts, gated on peak_elo once placements are done) is
+-- checked here too, same reasoning as the other set_equipped_* functions.
 create or replace function public.set_equipped_name_color(p_color_id text)
 returns void
 language plpgsql
@@ -1538,9 +1824,29 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
+  s public.user_stats;
+  v_admin boolean;
 begin
   if v_user_id is null then
     raise exception 'not authenticated';
+  end if;
+
+  select * into s from public.user_stats where user_id = v_user_id;
+  v_admin := lower(s.username) in ('yvern', 'lol');
+
+  if not v_admin and p_color_id <> 'default' and not (
+    s.ranked_games_played >= 5 and s.peak_elo >= case p_color_id
+      when 'bronze' then 0
+      when 'silver' then 900
+      when 'gold' then 1050
+      when 'platinum' then 1200
+      when 'diamond' then 1350
+      when 'amethyst' then 1500
+      when 'legend' then 1700
+      else 999999999
+    end
+  ) then
+    raise exception 'name color not unlocked';
   end if;
 
   update public.user_stats
