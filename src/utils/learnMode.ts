@@ -14,8 +14,17 @@ const RECENT_LETTER_BOOST = 2; // how many extra times a recent-letter word is d
 const MIN_REPS_PER_LETTER = 3;
 export const ROUND_WORD_COUNT = 20; // deliberately not a WORD_PRESETS value (10/25/50) so isRanked stays false
 const EMA_ALPHA = 0.15;
-const UNLOCK_ACCURACY_THRESHOLD = 0.85;
+// Was 0.85 - with several letters unlocked, requiring EVERY one of them to
+// individually clear the bar at once (see isReadyToUnlock) made late-game
+// progress grind to a near-halt on a single weak letter. Eased per user
+// reports that unlocking new letters felt too hard.
+const UNLOCK_ACCURACY_THRESHOLD = 0.75;
 const UNLOCK_MIN_REPS = 20;
+// Backstop for the accuracy gate above: if a learner hasn't unlocked a new
+// letter after this many completed rounds, unlock the next one anyway
+// regardless of accuracy, so a persistently-weak letter can't stall
+// progress indefinitely.
+export const FORCE_UNLOCK_AFTER_ROUNDS = 10;
 
 export function anchorLetters(layoutId: KeyboardLayoutId): string[] {
   return getAnchorLetters(layoutId);
@@ -95,8 +104,15 @@ export function totalRepsInRound(roundTallies: LetterTally): number {
 
 // Missing letters (never yet typed) count as 0 here — deliberately, so a
 // freshly-unlocked letter must actually be attempted at least once before
-// the next one can unlock.
-export function isReadyToUnlock(unlockedLetters: string[], letterAccuracy: LetterAccuracy, totalRepsSinceUnlock: number): boolean {
+// the next one can unlock. roundsSinceUnlock is the force-unlock backstop:
+// once it reaches FORCE_UNLOCK_AFTER_ROUNDS, unlock regardless of accuracy.
+export function isReadyToUnlock(
+  unlockedLetters: string[],
+  letterAccuracy: LetterAccuracy,
+  totalRepsSinceUnlock: number,
+  roundsSinceUnlock: number
+): boolean {
+  if (roundsSinceUnlock >= FORCE_UNLOCK_AFTER_ROUNDS) return true;
   if (totalRepsSinceUnlock < UNLOCK_MIN_REPS) return false;
   const worst = Math.min(...unlockedLetters.map(letter => letterAccuracy[letter] ?? 0));
   return worst >= UNLOCK_ACCURACY_THRESHOLD;

@@ -508,6 +508,14 @@ create policy "insert own weekly claims" on public.weekly_challenge_claims
 -- current week, and test_history is queried directly to confirm the
 -- caller actually has that many tests this week (see schema_041). Dropped
 -- first for the same reason as claim_daily_challenge above.
+--
+-- The equality check is against v_week_start OR v_week_start - 1: the
+-- client derives its week boundary from LOCAL midnight then serializes it
+-- with .toISOString() (UTC), so for timezones ahead of UTC that lands one
+-- calendar day behind this UTC-computed v_week_start (see schema_042).
+-- No timezone offset exceeds 24h, so that's the only possible drift, and
+-- a given client is deterministic for any real week -- this doesn't open
+-- up double-claims or walking multiple past weeks.
 drop function if exists public.claim_weekly_challenge(date, integer, integer);
 
 create or replace function public.claim_weekly_challenge(
@@ -528,7 +536,7 @@ begin
     raise exception 'not authenticated';
   end if;
 
-  if p_week_start <> v_week_start then
+  if p_week_start <> v_week_start and p_week_start <> v_week_start - 1 then
     raise exception 'invalid week';
   end if;
   if p_tests_target <> 100 or p_xp_bonus <> 15000 then
@@ -536,7 +544,7 @@ begin
   end if;
 
   select count(*) into v_count from public.test_history
-  where user_id = v_user_id and created_at >= v_week_start and created_at < v_week_start + 7;
+  where user_id = v_user_id and created_at >= p_week_start and created_at < p_week_start + 7;
   if v_count < p_tests_target then
     raise exception 'not enough tests completed';
   end if;
@@ -2043,6 +2051,11 @@ create table public.learn_progress (
   unlocked_letters text not null,
   letter_accuracy jsonb not null default '{}'::jsonb,
   total_reps_since_unlock integer not null default 0,
+  -- Rounds completed since the last unlock with no unlock happening -
+  -- once this hits FORCE_UNLOCK_AFTER_ROUNDS (learnMode.ts), the next
+  -- letter unlocks regardless of accuracy, so a persistently-weak letter
+  -- can't stall progress indefinitely.
+  rounds_since_unlock integer not null default 0,
   updated_at timestamptz not null default now()
 );
 
@@ -2061,7 +2074,8 @@ create or replace function public.save_learn_progress(
   p_keyboard_layout text,
   p_unlocked_letters text,
   p_letter_accuracy jsonb,
-  p_total_reps_since_unlock integer
+  p_total_reps_since_unlock integer,
+  p_rounds_since_unlock integer
 )
 returns void
 language plpgsql
@@ -2075,13 +2089,20 @@ begin
     raise exception 'not authenticated';
   end if;
 
-  insert into public.learn_progress (user_id, keyboard_layout, unlocked_letters, letter_accuracy, total_reps_since_unlock, updated_at)
-  values (v_user_id, p_keyboard_layout, p_unlocked_letters, p_letter_accuracy, p_total_reps_since_unlock, now())
+  insert into public.learn_progress (
+    user_id, keyboard_layout, unlocked_letters, letter_accuracy,
+    total_reps_since_unlock, rounds_since_unlock, updated_at
+  )
+  values (
+    v_user_id, p_keyboard_layout, p_unlocked_letters, p_letter_accuracy,
+    p_total_reps_since_unlock, p_rounds_since_unlock, now()
+  )
   on conflict (user_id) do update
   set keyboard_layout = excluded.keyboard_layout,
       unlocked_letters = excluded.unlocked_letters,
       letter_accuracy = excluded.letter_accuracy,
       total_reps_since_unlock = excluded.total_reps_since_unlock,
+      rounds_since_unlock = excluded.rounds_since_unlock,
       updated_at = now();
 end;
 $$;

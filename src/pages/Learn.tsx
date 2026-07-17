@@ -24,7 +24,7 @@ export default function Learn() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { keyboardLayout } = useSettings();
-  const { unlockedLetters, letterAccuracy, totalRepsSinceUnlock, loading, saveProgress, resetProgress } = useLearnProgress();
+  const { unlockedLetters, letterAccuracy, totalRepsSinceUnlock, roundsSinceUnlock, loading, saveProgress, resetProgress } = useLearnProgress();
   // Independent from the main typing page's on-screen-keyboard settings —
   // this page's keyboard is either fully on (colors + finger labels, since
   // that's the whole point here) or fully off, a local toggle rather than
@@ -67,19 +67,21 @@ export default function Learn() {
 
     const nextAccuracy = mergeLetterAccuracy(letterAccuracy, tallies);
     let nextReps = totalRepsSinceUnlock + totalRepsInRound(tallies);
+    let nextRounds = roundsSinceUnlock + 1;
     let nextUnlocked = unlockedLetters;
     let unlockedThisRound: string | null = null;
 
-    if (isReadyToUnlock(unlockedLetters, nextAccuracy, nextReps)) {
+    if (isReadyToUnlock(unlockedLetters, nextAccuracy, nextReps, nextRounds)) {
       const next = getNextLetterToUnlock(keyboardLayout, unlockedLetters);
       if (next) {
         nextUnlocked = [...unlockedLetters, next];
         nextReps = 0;
+        nextRounds = 0;
         unlockedThisRound = next;
       }
     }
 
-    saveProgress(nextUnlocked, nextAccuracy, nextReps);
+    saveProgress(nextUnlocked, nextAccuracy, nextReps, nextRounds);
     setJustUnlocked(unlockedThisRound);
     setPracticeText(generatePracticeText(nextUnlocked));
     setRoundKey(k => k + 1);

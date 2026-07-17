@@ -14,6 +14,7 @@ interface StoredProgress {
   unlockedLetters: string;
   letterAccuracy: LetterAccuracy;
   totalRepsSinceUnlock: number;
+  roundsSinceUnlock: number;
 }
 
 function loadSessionProgress(layout: string): StoredProgress | null {
@@ -48,6 +49,7 @@ export function LearnProgressProvider({ children }: { children: React.ReactNode 
   const [unlockedLetters, setUnlockedLetters] = useState<string[]>([]);
   const [letterAccuracy, setLetterAccuracy] = useState<LetterAccuracy>({});
   const [totalRepsSinceUnlock, setTotalRepsSinceUnlock] = useState(0);
+  const [roundsSinceUnlock, setRoundsSinceUnlock] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,12 +59,14 @@ export function LearnProgressProvider({ children }: { children: React.ReactNode 
       setUnlockedLetters(fresh);
       setLetterAccuracy({});
       setTotalRepsSinceUnlock(0);
+      setRoundsSinceUnlock(0);
     };
 
-    const applyStored = (unlocked: string, letterAcc: LetterAccuracy, reps: number) => {
+    const applyStored = (unlocked: string, letterAcc: LetterAccuracy, reps: number, rounds: number) => {
       setUnlockedLetters(unlocked.split(''));
       setLetterAccuracy(letterAcc ?? {});
       setTotalRepsSinceUnlock(reps ?? 0);
+      setRoundsSinceUnlock(rounds ?? 0);
     };
 
     const load = async () => {
@@ -80,13 +84,18 @@ export function LearnProgressProvider({ children }: { children: React.ReactNode 
         // layout than the one currently selected in Settings, start fresh
         // for this layout rather than trying to remap letters across it.
         if (data && data.keyboard_layout === keyboardLayout) {
-          applyStored(data.unlocked_letters as string, data.letter_accuracy as LetterAccuracy, data.total_reps_since_unlock as number);
+          applyStored(
+            data.unlocked_letters as string,
+            data.letter_accuracy as LetterAccuracy,
+            data.total_reps_since_unlock as number,
+            (data.rounds_since_unlock as number | null) ?? 0
+          );
         } else {
           applyFresh();
         }
       } else {
         const stored = loadSessionProgress(keyboardLayout);
-        if (stored) applyStored(stored.unlockedLetters, stored.letterAccuracy, stored.totalRepsSinceUnlock);
+        if (stored) applyStored(stored.unlockedLetters, stored.letterAccuracy, stored.totalRepsSinceUnlock, stored.roundsSinceUnlock ?? 0);
         else applyFresh();
       }
 
@@ -100,10 +109,11 @@ export function LearnProgressProvider({ children }: { children: React.ReactNode 
     };
   }, [userId, keyboardLayout, authLoading]);
 
-  const saveProgress = (nextUnlocked: string[], nextAccuracy: LetterAccuracy, nextReps: number) => {
+  const saveProgress = (nextUnlocked: string[], nextAccuracy: LetterAccuracy, nextReps: number, nextRounds: number) => {
     setUnlockedLetters(nextUnlocked);
     setLetterAccuracy(nextAccuracy);
     setTotalRepsSinceUnlock(nextReps);
+    setRoundsSinceUnlock(nextRounds);
 
     if (userId && supabase) {
       void supabase
@@ -112,6 +122,7 @@ export function LearnProgressProvider({ children }: { children: React.ReactNode 
           p_unlocked_letters: nextUnlocked.join(''),
           p_letter_accuracy: nextAccuracy,
           p_total_reps_since_unlock: nextReps,
+          p_rounds_since_unlock: nextRounds,
         })
         .then(({ error }) => {
           if (error) console.error('save_learn_progress failed:', error.message);
@@ -121,17 +132,18 @@ export function LearnProgressProvider({ children }: { children: React.ReactNode 
         unlockedLetters: nextUnlocked.join(''),
         letterAccuracy: nextAccuracy,
         totalRepsSinceUnlock: nextReps,
+        roundsSinceUnlock: nextRounds,
       });
     }
   };
 
   const resetProgress = () => {
-    saveProgress(anchorLetters(keyboardLayout), {}, 0);
+    saveProgress(anchorLetters(keyboardLayout), {}, 0, 0);
   };
 
   return (
     <LearnProgressContext.Provider
-      value={{ unlockedLetters, letterAccuracy, totalRepsSinceUnlock, loading, saveProgress, resetProgress }}
+      value={{ unlockedLetters, letterAccuracy, totalRepsSinceUnlock, roundsSinceUnlock, loading, saveProgress, resetProgress }}
     >
       {children}
     </LearnProgressContext.Provider>
