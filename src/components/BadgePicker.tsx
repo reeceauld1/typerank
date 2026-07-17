@@ -26,7 +26,7 @@ export default function BadgePicker({ onClose }: { onClose: () => void }) {
     if (id === stats.equippedBadge) return;
     setError(null);
     const ok = await setEquippedBadge(id);
-    if (!ok) setError("Couldn't equip that badge — try again.");
+    if (!ok) setError("Couldn't equip that badge - try again.");
   };
 
   return (
@@ -51,7 +51,7 @@ export default function BadgePicker({ onClose }: { onClose: () => void }) {
             const equipped = stats.equippedBadge === badge.id;
             const Icon = badge.icon;
             return (
-              <Tooltip key={badge.id} content={unlocked ? `${badge.name} — Unlocked: ${badge.description}` : `${badge.name} — ${badge.description}`}>
+              <Tooltip key={badge.id} content={unlocked ? `${badge.name} - Unlocked: ${badge.description}` : `${badge.name} - ${badge.description}`}>
                 <button
                   type="button"
                   disabled={!unlocked}

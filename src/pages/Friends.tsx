@@ -248,7 +248,7 @@ export default function Friends() {
 
         {tab === 'friends' &&
           (friends.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No friends yet — find people to add.</p>
+            <p className="text-sm text-[var(--text-muted)]">No friends yet - find people to add.</p>
           ) : (
             <div className="flex flex-col gap-2">
               {friends.map(entry => (

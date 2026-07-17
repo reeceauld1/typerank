@@ -162,7 +162,7 @@ export default function Settings() {
         <div className="hidden sm:block bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
           <p className="text-[var(--text-correct)] font-medium">keyboard layout</p>
           <p className="text-[var(--text-muted)] text-sm mt-0.5 mb-4">
-            changes what letter each physical key types — practice an alternate layout without changing your OS's own
+            changes what letter each physical key types - practice an alternate layout without changing your OS's own
             keyboard settings.
           </p>
           <div className="flex flex-wrap items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
@@ -207,7 +207,7 @@ export default function Settings() {
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-6 py-4">
           <p className="text-[var(--text-correct)] font-medium">word list</p>
           <p className="text-[var(--text-muted)] text-sm mt-0.5 mb-4">
-            how many distinct words to draw from during tests — a larger list means more variety and fewer repeats.
+            how many distinct words to draw from during tests - a larger list means more variety and fewer repeats.
           </p>
           <div className="flex flex-wrap items-center gap-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-1 text-sm w-fit">
             {WORD_LIST_OPTIONS.map(option => (

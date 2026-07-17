@@ -734,10 +734,10 @@ export default function TypingTest({
                   </div>
                 </div>
                 {isRanked && !skipStatsSave && lowAccuracy && (
-                  <p className="text-center text-xs text-[var(--text-incorrect)] mb-4">accuracy too low — not added to leaderboard</p>
+                  <p className="text-center text-xs text-[var(--text-incorrect)] mb-4">accuracy too low - not added to leaderboard</p>
                 )}
                 {!isRanked && !hidePracticeCaption && (
-                  <p className="text-center text-xs text-[var(--text-muted)] mb-4">practice mode — half xp, not ranked</p>
+                  <p className="text-center text-xs text-[var(--text-muted)] mb-4">practice mode - half xp, not ranked</p>
                 )}
                 <button
                   onClick={() => {
@@ -844,10 +844,10 @@ export default function TypingTest({
       {!isFinished && (
         <p className="hidden sm:block text-xs text-[var(--text-muted)] mt-8 tracking-wide">
           {disableRestartShortcut
-            ? 'esc / tab twice — forfeit'
+            ? 'esc / tab twice - forfeit'
             : isInfinite && isActive
-              ? 'esc — restart · tab — finish'
-              : 'esc / tab — restart'}
+              ? 'esc - restart · tab - finish'
+              : 'esc / tab - restart'}
         </p>
       )}
     </div>

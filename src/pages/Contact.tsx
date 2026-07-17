@@ -20,7 +20,7 @@ export default function Contact() {
       contactEmail.trim() ? `Reply-to: ${contactEmail.trim()}` : null,
       `Page: ${window.location.href}`,
     ].filter((line): line is string => line !== null);
-    const subject = encodeURIComponent('Contact — typeladder');
+    const subject = encodeURIComponent('Contact - typeladder');
     const body = encodeURIComponent(bodyLines.join('\n'));
     window.location.href = `mailto:contact@typeladder.com?subject=${subject}&body=${body}`;
   };
@@ -45,7 +45,7 @@ export default function Contact() {
     setSubmitting(false);
 
     if (insertError) {
-      setError("Couldn't submit that — try again, or email contact@typeladder.com directly.");
+      setError("Couldn't submit that - try again, or email contact@typeladder.com directly.");
       return;
     }
     setDone(true);
@@ -65,11 +65,11 @@ export default function Contact() {
 
       <div className="max-w-2xl w-full mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
         {done ? (
-          <p className="text-[var(--accent)] text-sm">Thanks — your message was sent.</p>
+          <p className="text-[var(--accent)] text-sm">Thanks - your message was sent.</p>
         ) : (
           <>
             <p className="text-[var(--text-muted)] text-sm mb-6">
-              Questions, feedback, or a feature you'd like to see? Send it below — no email client needed. Found
+              Questions, feedback, or a feature you'd like to see? Send it below - no email client needed. Found
               something broken instead?{' '}
               <Link to="/report-bug" className="text-[var(--accent)] hover:underline">
                 report a bug

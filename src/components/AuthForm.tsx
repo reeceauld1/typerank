@@ -70,7 +70,7 @@ export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {})
         // Rare race: someone else claimed the username between the check
         // above and this call. The DB rejects it, but Auth only surfaces a
         // generic failure, so map it to something the user can act on.
-        setError(/database error/i.test(signUpError) ? 'That username was just taken — try another.' : signUpError);
+        setError(/database error/i.test(signUpError) ? 'That username was just taken - try another.' : signUpError);
         setSubmitting(false);
         return;
       }

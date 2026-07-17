@@ -20,7 +20,7 @@ import {
 } from '../utils/learnMode.js';
 
 export default function Learn() {
-  useDocumentTitle('learn', 'Learn to type from scratch on typeladder with a keybr-style lesson mode — start on the home row and unlock new letters as your accuracy improves.');
+  useDocumentTitle('learn', 'Learn to type from scratch on typeladder with a keybr-style lesson mode - start on the home row and unlock new letters as your accuracy improves.');
   const { user } = useAuth();
   const { keyboardLayout } = useSettings();
   const { unlockedLetters, letterAccuracy, totalRepsSinceUnlock, loading, saveProgress, resetProgress } = useLearnProgress();
@@ -166,7 +166,7 @@ export default function Learn() {
       <div className="sm:hidden flex-1 flex flex-col items-center justify-center text-center gap-2 px-6 pb-16">
         <p className="text-[var(--text-correct)] font-semibold">Learn mode needs a physical keyboard</p>
         <p className="text-[var(--text-muted)] text-sm max-w-sm">
-          Finger placement practice doesn't translate to a touchscreen — open this page on a laptop or desktop
+          Finger placement practice doesn't translate to a touchscreen - open this page on a laptop or desktop
           instead.
         </p>
       </div>
@@ -199,13 +199,13 @@ export default function Learn() {
             </button>
           </div>
 
-          <p className="text-xs text-[var(--text-muted)] mt-1">symbols shown on the keyboard are for reference only — they're never used in practice text.</p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">symbols shown on the keyboard are for reference only - they're never used in practice text.</p>
 
           {justUnlocked && <p className="text-sm text-[var(--accent)] font-semibold mt-1">new letter unlocked: {justUnlocked}</p>}
 
           {!user && (
             <p className="text-xs text-[var(--text-muted)] mt-1">
-              playing as a guest — progress is saved for this browser session only.{' '}
+              playing as a guest - progress is saved for this browser session only.{' '}
               <Link to="/profile" className="text-[var(--accent)] hover:underline">
                 sign in
               </Link>{' '}

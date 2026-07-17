@@ -52,7 +52,7 @@ export default function Ranked() {
     if (!supabase) return;
     const { data, error: rpcError } = await supabase.rpc('try_match_ranked', { p_elo: stats.elo }).single();
     if (rpcError || !data) {
-      setError("Couldn't reach matchmaking — try again.");
+      setError("Couldn't reach matchmaking - try again.");
       setSearching(false);
       return;
     }
@@ -106,7 +106,7 @@ export default function Ranked() {
       <div className="flex-1 flex flex-col items-center justify-center gap-4 pb-16 px-6 text-center">
         <p className="text-[var(--text-correct)] font-semibold">Sign in to play ranked.</p>
         <p className="text-[var(--text-muted)] text-sm max-w-sm">
-          Ranked elo needs an account to persist — unlike duels, there's no guest option here.
+          Ranked elo needs an account to persist - unlike duels, there's no guest option here.
         </p>
         <AuthForm />
       </div>
@@ -160,7 +160,7 @@ export default function Ranked() {
         )}
 
         <p className="text-[var(--text-muted)] text-xs max-w-sm">
-          30-second time test, one fixed format for everyone. Win to gain elo, lose to drop — closer opponents move
+          30-second time test, one fixed format for everyone. Win to gain elo, lose to drop - closer opponents move
           your rating more than lopsided matches.
         </p>
 

@@ -58,28 +58,28 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
     if (readOnly || id === stats.equippedAvatar) return;
     setError(null);
     const ok = await setEquippedCosmetics(id, stats.equippedBorder);
-    if (!ok) setError("Couldn't equip that avatar — try again.");
+    if (!ok) setError("Couldn't equip that avatar - try again.");
   };
 
   const handleEquipBorder = async (id: string) => {
     if (readOnly || id === stats.equippedBorder) return;
     setError(null);
     const ok = await setEquippedCosmetics(stats.equippedAvatar, id);
-    if (!ok) setError("Couldn't equip that border — try again.");
+    if (!ok) setError("Couldn't equip that border - try again.");
   };
 
   const handleEquipColor = async (id: string) => {
     if (readOnly || id === stats.equippedAccentColor) return;
     setError(null);
     const ok = await setEquippedAccentColor(id);
-    if (!ok) setError("Couldn't equip that color — try again.");
+    if (!ok) setError("Couldn't equip that color - try again.");
   };
 
   const handleEquipNameColor = async (id: string) => {
     if (readOnly || id === stats.equippedNameColor) return;
     setError(null);
     const ok = await setEquippedNameColor(id);
-    if (!ok) setError("Couldn't equip that name color — try again.");
+    if (!ok) setError("Couldn't equip that name color - try again.");
   };
 
   // Picking is local-only until confirmed — the native color input fires
@@ -92,7 +92,7 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
     if (readOnly || !pendingCustomHex) return;
     setError(null);
     const ok = await setEquippedAccentColor('custom', pendingCustomHex);
-    if (!ok) setError("Couldn't equip that color — try again.");
+    if (!ok) setError("Couldn't equip that color - try again.");
     setPendingCustomHex(null);
   };
 
@@ -120,7 +120,7 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
             const equipped = stats.equippedAvatar === avatar.id;
             const Icon = avatar.icon;
             return (
-              <Tooltip key={avatar.id} content={unlocked ? `${avatar.name} — Unlocked: ${avatar.description}` : `${avatar.name} — ${avatar.description}`}>
+              <Tooltip key={avatar.id} content={unlocked ? `${avatar.name} - Unlocked: ${avatar.description}` : `${avatar.name} - ${avatar.description}`}>
                 <button
                   type="button"
                   disabled={!unlocked || readOnly}
@@ -159,7 +159,7 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
             const unlocked = admin || border.isUnlocked(stats);
             const equipped = stats.equippedBorder === border.id;
             return (
-              <Tooltip key={border.id} content={unlocked ? `${border.name} — Unlocked: ${border.description}` : `${border.name} — ${border.description}`}>
+              <Tooltip key={border.id} content={unlocked ? `${border.name} - Unlocked: ${border.description}` : `${border.name} - ${border.description}`}>
                 <button
                   type="button"
                   disabled={!unlocked || readOnly}
@@ -194,7 +194,7 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
             const unlocked = admin || color.isUnlocked(stats);
             const equipped = stats.equippedNameColor === color.id;
             return (
-              <Tooltip key={color.id} content={unlocked ? `${color.name} — Unlocked: ${color.description}` : `${color.name} — ${color.description}`}>
+              <Tooltip key={color.id} content={unlocked ? `${color.name} - Unlocked: ${color.description}` : `${color.name} - ${color.description}`}>
                 <button
                   type="button"
                   disabled={!unlocked || readOnly}
@@ -229,8 +229,8 @@ export default function CosmeticsPicker({ statsOverride, readOnly = false }: Cos
             const unlocked = admin || color.isUnlocked(stats);
             const equipped = stats.equippedAccentColor === color.id;
             const tooltipContent = unlocked
-              ? `${color.name} — Unlocked: ${color.description}`
-              : `${color.name} — ${color.description}`;
+              ? `${color.name} - Unlocked: ${color.description}`
+              : `${color.name} - ${color.description}`;
 
             if (color.id === 'custom') {
               const swatchHex = pendingCustomHex ?? stats.customAccentHex ?? color.hex;

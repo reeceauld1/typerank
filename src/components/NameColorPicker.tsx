@@ -37,7 +37,7 @@ export default function NameColorPicker({ onClose, readOnly = false }: NameColor
     if (readOnly || id === stats.equippedNameColor) return;
     setError(null);
     const ok = await setEquippedNameColor(id);
-    if (!ok) setError("Couldn't equip that color — try again.");
+    if (!ok) setError("Couldn't equip that color - try again.");
   };
 
   return (
@@ -55,10 +55,10 @@ export default function NameColorPicker({ onClose, readOnly = false }: NameColor
                 key={color.id}
                 content={
                   readOnly
-                    ? `${color.name} — ${color.description}`
+                    ? `${color.name} - ${color.description}`
                     : unlocked
-                      ? `${color.name} — Unlocked: ${color.description}`
-                      : `${color.name} — ${color.description}`
+                      ? `${color.name} - Unlocked: ${color.description}`
+                      : `${color.name} - ${color.description}`
                 }
               >
                 <button

@@ -32,7 +32,7 @@ const ROUTES = [
   {
     path: 'duel',
     title: 'duel',
-    description: 'Challenge a friend to a real-time typing duel on typeladder — race head-to-head and see who types faster and more accurately, live.',
+    description: 'Challenge a friend to a real-time typing duel on typeladder - race head-to-head and see who types faster and more accurately, live.',
   },
   {
     path: 'ranked',
@@ -42,12 +42,12 @@ const ROUTES = [
   {
     path: 'learn',
     title: 'learn',
-    description: 'Learn to type from scratch on typeladder with a keybr-style lesson mode — start on the home row and unlock new letters as your accuracy improves.',
+    description: 'Learn to type from scratch on typeladder with a keybr-style lesson mode - start on the home row and unlock new letters as your accuracy improves.',
   },
   {
     path: 'privacy',
     title: 'privacy policy',
-    description: "typeladder's privacy policy — what data we collect, why, and how it's used.",
+    description: "typeladder's privacy policy - what data we collect, why, and how it's used.",
   },
   {
     path: 'contact',

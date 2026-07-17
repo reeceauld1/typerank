@@ -312,7 +312,7 @@ export default function DuelMatch() {
     const { error } = await supabase.rpc('join_duel', { p_duel_id: id });
     setResponding(false);
     if (error) {
-      setRespondError(error.message.includes('opponent') ? 'Someone already joined this duel.' : "Couldn't join — try again.");
+      setRespondError(error.message.includes('opponent') ? 'Someone already joined this duel.' : "Couldn't join - try again.");
       return;
     }
     await loadDuel();
@@ -326,7 +326,7 @@ export default function DuelMatch() {
     const { data, error } = await supabase.rpc('join_guest_duel', { p_duel_id: id, p_name: name });
     setResponding(false);
     if (error || !data) {
-      setRespondError("Couldn't join — try again.");
+      setRespondError("Couldn't join - try again.");
       return;
     }
     try {
@@ -345,7 +345,7 @@ export default function DuelMatch() {
     const { error } = await supabase.rpc('accept_duel_invite', { p_duel_id: id });
     setResponding(false);
     if (error) {
-      setRespondError("Couldn't accept — try again.");
+      setRespondError("Couldn't accept - try again.");
       return;
     }
     await loadDuel();
@@ -791,7 +791,7 @@ export default function DuelMatch() {
         >
           start
         </button>
-        <p className="text-xs text-[var(--text-muted)] tracking-wide">tab — start</p>
+        <p className="text-xs text-[var(--text-muted)] tracking-wide">tab - start</p>
       </div>
     );
   }
@@ -848,7 +848,7 @@ export default function DuelMatch() {
           {Number(duel.creator_rematch) + Number(duel.opponent_rematch)}/2
         </button>
       )}
-      {bothFinished && <p className="text-xs text-[var(--text-muted)] tracking-wide">tab — rematch · esc — back to duels</p>}
+      {bothFinished && <p className="text-xs text-[var(--text-muted)] tracking-wide">tab - rematch · esc - back to duels</p>}
 
       <Link
         to="/duel"

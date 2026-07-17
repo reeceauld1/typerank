@@ -23,7 +23,7 @@ export default function WeeklyChallenge() {
     >
       <div className="flex items-center gap-3 text-sm mb-2.5">
         <span className="text-[var(--text-secondary)] flex-1 min-w-0">
-          weekly challenge — complete <span className="text-[var(--text-correct)] font-semibold tabular-nums">{WEEKLY_TEST_TARGET}</span> tests
+          weekly challenge - complete <span className="text-[var(--text-correct)] font-semibold tabular-nums">{WEEKLY_TEST_TARGET}</span> tests
         </span>
         {weeklyClaimed ? (
           <Tooltip content={`+${WEEKLY_XP_BONUS} xp claimed`}>

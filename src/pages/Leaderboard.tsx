@@ -328,7 +328,7 @@ export default function Leaderboard() {
         ) : isRanked ? (
           rankedRows.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)] text-center py-8">
-              {scope === 'friends' ? 'no ranked friends yet.' : 'no ranked players yet — be the first.'}
+              {scope === 'friends' ? 'no ranked friends yet.' : 'no ranked players yet - be the first.'}
             </p>
           ) : (
             rankedRows.map((row, i) => (
@@ -364,7 +364,7 @@ export default function Leaderboard() {
         ) : scope === 'personal' ? (
           personalRows.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)] text-center py-8">
-              no {category.label} runs yet — go set a score.
+              no {category.label} runs yet - go set a score.
             </p>
           ) : (
             personalRows.map((run, i) => (

@@ -164,7 +164,7 @@ function LinkPopup({
 }
 
 export default function Duel() {
-  useDocumentTitle('duel', 'Challenge a friend to a real-time typing duel on typeladder — race head-to-head and see who types faster and more accurately, live.');
+  useDocumentTitle('duel', 'Challenge a friend to a real-time typing duel on typeladder - race head-to-head and see who types faster and more accurately, live.');
   const { user, isConfigured } = useAuth();
   const { friends } = useFriends();
   const navigate = useNavigate();
@@ -260,7 +260,7 @@ export default function Duel() {
       .single();
     setCreating(false);
     if (insertError || !data) {
-      setError("Couldn't create a duel — try again.");
+      setError("Couldn't create a duel - try again.");
       return;
     }
     const duelId = data.id as string;
@@ -286,7 +286,7 @@ export default function Duel() {
       .single();
     setInvitingId(null);
     if (insertError || !data) {
-      setError("Couldn't send that invite — try again.");
+      setError("Couldn't send that invite - try again.");
       return;
     }
     navigate(`/duel/${data.id as string}`);
@@ -306,7 +306,7 @@ export default function Duel() {
       .single();
     setGuestCreating(false);
     if (rpcError || !data) {
-      setGuestError("Couldn't create a duel — try again.");
+      setGuestError("Couldn't create a duel - try again.");
       return;
     }
     const row = data as { id: string; creator_token: string };

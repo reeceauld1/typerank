@@ -73,7 +73,7 @@ export const ACCENT_COLOR_CATALOG: AccentColorDef[] = [
   {
     id: 'custom',
     name: 'Custom',
-    description: 'Type for 16 hours total — pick any color.',
+    description: 'Type for 16 hours total - pick any color.',
     challengeDescription: 'Type for 16 hours total.',
     hex: '#5b9bd9',
     isUnlocked: stats => stats.totalTimeTyped >= 57600,

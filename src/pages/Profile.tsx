@@ -29,7 +29,7 @@ function DeleteAccountModal({
       <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
         <h2 className="text-lg font-semibold text-[var(--text-correct)] mb-1">delete your account?</h2>
         <p className="text-[var(--text-muted)] text-sm mb-4">
-          This permanently deletes your account and everything tied to it — stats, test history, friends, duels, and
+          This permanently deletes your account and everything tied to it - stats, test history, friends, duels, and
           ranked progress. This can't be undone.
         </p>
         {error && <p className="text-[var(--text-incorrect)] text-sm mb-4">{error}</p>}
@@ -98,7 +98,7 @@ function ChangeUsernameModal({ currentUsername, onClose }: { currentUsername: st
       // Rare race: someone else claimed it between the check above and
       // this call, or the 7-day cooldown kicked in between opening this
       // modal and clicking save (e.g. changed it in another tab).
-      setError("Couldn't change your name — it may have just been taken, try again.");
+      setError("Couldn't change your name - it may have just been taken, try again.");
       return;
     }
     await refreshStats();
@@ -187,7 +187,7 @@ function DiscordLinkSection() {
             type="button"
             onClick={() => void handleUnlink()}
             disabled={submitting || !canUnlink}
-            title={!canUnlink ? "You signed up with Discord — you can't unlink your only sign-in method." : undefined}
+            title={!canUnlink ? "You signed up with Discord - you can't unlink your only sign-in method." : undefined}
             className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-secondary)]"
           >
             {submitting ? '...' : 'unlink'}
@@ -227,7 +227,7 @@ export default function Profile() {
     const { error } = await supabase.rpc('delete_own_account');
     if (error) {
       setDeleting(false);
-      setDeleteError("Couldn't delete your account — try again.");
+      setDeleteError("Couldn't delete your account - try again.");
       return;
     }
     await signOut();

@@ -21,7 +21,7 @@ export default function BugReport() {
       `Page: ${window.location.href}`,
       `Browser: ${navigator.userAgent}`,
     ].filter((line): line is string => line !== null);
-    const subject = encodeURIComponent('Bug report — typeladder');
+    const subject = encodeURIComponent('Bug report - typeladder');
     const body = encodeURIComponent(bodyLines.join('\n'));
     window.location.href = `mailto:contact@typeladder.com?subject=${subject}&body=${body}`;
   };
@@ -46,7 +46,7 @@ export default function BugReport() {
     setSubmitting(false);
 
     if (insertError) {
-      setError("Couldn't submit that — try again, or email contact@typeladder.com directly.");
+      setError("Couldn't submit that - try again, or email contact@typeladder.com directly.");
       return;
     }
     setDone(true);
@@ -66,11 +66,11 @@ export default function BugReport() {
 
       <div className="max-w-2xl w-full mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
         {done ? (
-          <p className="text-[var(--accent)] text-sm">Thanks — your report was submitted.</p>
+          <p className="text-[var(--accent)] text-sm">Thanks - your report was submitted.</p>
         ) : (
           <>
             <p className="text-[var(--text-muted)] text-sm mb-6">
-              Found something broken? Describe what happened below and submit — no email client needed.
+              Found something broken? Describe what happened below and submit - no email client needed.
             </p>
             <form onSubmit={e => void handleSubmit(e)} className="flex flex-col gap-3">
               <textarea

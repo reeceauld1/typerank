@@ -26,7 +26,7 @@ export default function HourlyChallenge() {
     >
       <div className="flex items-center gap-3 text-sm mb-2.5">
         <span className="text-[var(--text-secondary)] flex-1 min-w-0">
-          hourly challenge — complete <span className="text-[var(--text-correct)] font-semibold tabular-nums">{hourlyChallenge.testsTarget}</span>{' '}
+          hourly challenge - complete <span className="text-[var(--text-correct)] font-semibold tabular-nums">{hourlyChallenge.testsTarget}</span>{' '}
           {label} tests
         </span>
         {claimedThisHour ? (
