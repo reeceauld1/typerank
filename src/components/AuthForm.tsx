@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth.js';
 import { supabase } from '../lib/supabase.js';
 import { validateUsername } from '../utils/username.js';
-import DiscordIcon from './DiscordIcon.js';
 
 type Mode = 'signin' | 'signup' | 'forgot';
 
@@ -11,7 +10,7 @@ interface AuthFormProps {
 }
 
 export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {}) {
-  const { signUp, signIn, signInWithDiscord, sendPasswordReset } = useAuth();
+  const { signUp, signIn, sendPasswordReset } = useAuth();
 
   const [mode, setMode] = useState<Mode>(initialMode);
   const [username, setUsername] = useState('');
@@ -21,25 +20,11 @@ export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {})
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [discordSubmitting, setDiscordSubmitting] = useState(false);
 
   const switchMode = (next: Mode) => {
     setMode(next);
     setError(null);
     setInfo(null);
-  };
-
-  const handleDiscord = async () => {
-    setError(null);
-    setInfo(null);
-    setDiscordSubmitting(true);
-    const { error: discordError } = await signInWithDiscord();
-    if (discordError) {
-      setError(discordError);
-      setDiscordSubmitting(false);
-    }
-    // On success the browser navigates away to Discord, so there's nothing
-    // left to reset here — control never returns to this component.
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,25 +99,6 @@ export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {})
             ? "we'll email you a reset link"
             : 'sign in to track your level, unlock cosmetics and badges, add friends, duel or rank up against them, sync your learn-mode progress, and climb the leaderboard'}
       </p>
-
-      {mode !== 'forgot' && (
-        <>
-          <button
-            type="button"
-            onClick={() => void handleDiscord()}
-            disabled={discordSubmitting}
-            className="w-full flex items-center justify-center gap-2 bg-[#5865F2] hover:brightness-110 disabled:opacity-50 text-white px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer mb-4"
-          >
-            <DiscordIcon />
-            {discordSubmitting ? '...' : `${mode === 'signup' ? 'sign up' : 'sign in'} with Discord`}
-          </button>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 h-px bg-[var(--border)]" />
-            <span className="text-xs text-[var(--text-muted)]">or</span>
-            <div className="flex-1 h-px bg-[var(--border)]" />
-          </div>
-        </>
-      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         {mode === 'signup' && (

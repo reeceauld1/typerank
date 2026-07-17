@@ -54,19 +54,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error?.message ?? null };
   };
 
-  const signInWithDiscord = async () => {
-    if (!supabase) return { error: 'Accounts are not configured yet.' };
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'discord',
-      options: { redirectTo: window.location.origin },
-    });
-    return { error: error?.message ?? null };
-  };
-
-  // Links a Discord identity to the currently signed-in account (as opposed
-  // to signInWithDiscord, which starts/continues a session). Requires
-  // "Enable manual linking" turned on in the Supabase dashboard's auth
-  // settings, or this comes back with an error.
+  // Links a Discord identity to the currently signed-in account. There's no
+  // Discord sign-in/signup path at all — this is the only way a Discord
+  // identity ever gets attached, which means it always requires an existing
+  // email/password session first. Requires "Enable manual linking" turned on
+  // in the Supabase dashboard's auth settings, or this comes back with an
+  // error.
   const linkDiscord = async () => {
     if (!supabase) return { error: 'Accounts are not configured yet.' };
     const { error } = await supabase.auth.linkIdentity({
@@ -120,7 +113,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isConfigured: isSupabaseConfigured,
         signUp,
         signIn,
-        signInWithDiscord,
         linkDiscord,
         unlinkDiscord,
         signOut,
