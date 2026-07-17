@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { useLearnProgress } from '../hooks/useLearnProgress.js';
@@ -21,6 +21,7 @@ import {
 
 export default function Learn() {
   useDocumentTitle('learn', 'Learn to type from scratch on typeladder with a keybr-style lesson mode - start on the home row and unlock new letters as your accuracy improves.');
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { keyboardLayout } = useSettings();
   const { unlockedLetters, letterAccuracy, totalRepsSinceUnlock, loading, saveProgress, resetProgress } = useLearnProgress();
@@ -142,12 +143,13 @@ export default function Learn() {
     <div className="flex-1 flex flex-col py-10 px-6">
       <div className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">learn</h1>
-        <Link
-          to="/"
-          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors"
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
         >
-          back to test
-        </Link>
+          back
+        </button>
       </div>
 
       {/* Centered the same way Home.tsx centers TypingTest+OnScreenKeyboard
@@ -158,8 +160,8 @@ export default function Learn() {
           equivalent of Home's items-center-safe (main axis is vertical
           here, not horizontal). The progress row uses the header's own
           max-w-4xl width instead of the narrower typing/keyboard column, so
-          "letters unlocked"/"reset progress" line up with "learn"/"back to
-          test" above. */}
+          "letters unlocked"/"reset progress" line up with "learn"/"back"
+          above. */}
       {/* Learn mode needs a physical keyboard for finger placement to mean
           anything — a touchscreen on-screen keyboard has no fixed key
           positions to build muscle memory around. */}

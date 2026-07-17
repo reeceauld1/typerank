@@ -1,26 +1,22 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 const LAST_UPDATED = 'July 17, 2026';
 
 export default function PrivacyPolicy() {
   useDocumentTitle('privacy policy', "typeladder's privacy policy - what data we collect, why, and how it's used.");
-  const location = useLocation();
-  // Reached from the footer/cookie banner on almost any page — go back to
-  // wherever that actually was instead of always assuming settings.
-  const from = (location.state as { from?: string } | null)?.from;
-  const backTo = from ?? '/settings';
-  const backLabel = from ? 'back' : 'back to settings';
+  const navigate = useNavigate();
   return (
     <div className="flex-1 flex flex-col py-10 px-6">
       <div className="max-w-3xl w-full mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">privacy policy</h1>
-        <Link
-          to={backTo}
-          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors"
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
         >
-          {backLabel}
-        </Link>
+          back
+        </button>
       </div>
 
       <div className="max-w-3xl w-full mx-auto flex flex-col gap-6 text-sm text-[var(--text-secondary)] leading-relaxed">

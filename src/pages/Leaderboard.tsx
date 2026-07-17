@@ -1,5 +1,5 @@
 import { Fragment, useState, useEffect, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useFriends } from '../hooks/useFriends.js';
@@ -83,6 +83,7 @@ function RankBadge({ rank }: { rank: number }) {
 
 export default function Leaderboard() {
   useDocumentTitle('leaderboard', "See the fastest typists on typeladder's global typing leaderboard, ranked by WPM across every typing test mode.");
+  const navigate = useNavigate();
   const { user, isConfigured } = useAuth();
   const { friends } = useFriends();
   const [scope, setScope] = useState<Scope>('global');
@@ -262,12 +263,13 @@ export default function Leaderboard() {
     <div className="flex-1 flex flex-col py-10 px-6">
       <div className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">leaderboard</h1>
-        <Link
-          to="/"
-          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors"
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
         >
-          back to test
-        </Link>
+          back
+        </button>
       </div>
 
       <div className="max-w-4xl w-full mx-auto flex flex-col gap-4 mb-6">
@@ -344,7 +346,6 @@ export default function Leaderboard() {
                   <RankBadge rank={i + 1} />
                   <Link
                     to={`/u/${row.username}`}
-                    state={{ from: 'leaderboard' }}
                     className="flex items-center gap-3 flex-1 min-w-0 group"
                   >
                     <Avatar
@@ -405,7 +406,6 @@ export default function Leaderboard() {
                 <RankBadge rank={i + 1} />
                 <Link
                   to={`/u/${row.username}`}
-                  state={{ from: 'leaderboard' }}
                   className="flex items-center gap-3 flex-1 min-w-0 group"
                 >
                   <Avatar

@@ -116,88 +116,100 @@ export default function Ranked() {
   const tier = getRankTier(stats.elo, stats.rankedGamesPlayed);
 
   return (
-    // relative so the sidebar (absolute on lg+, see below) anchors to this
-    // page rather than the nearest positioned ancestor further up the
-    // tree. Once it's absolute it's out of flow entirely, so it no longer
-    // affects how this flex container centers everything else — the main
-    // column stays centered on the full page, not on the combined width of
-    // itself plus the sidebar.
-    <div className="flex-1 relative flex flex-col items-center justify-center gap-6 py-10 px-6 text-center">
-      <div className="flex flex-col items-center gap-6">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--text-correct)] mb-2">ranked</h1>
-          <RankBadge elo={stats.elo} rankedGamesPlayed={stats.rankedGamesPlayed} className="justify-center" />
-          {!tier && (
-            <p className="text-[var(--text-muted)] text-xs mt-2">
-              {PLACEMENT_GAMES - stats.rankedGamesPlayed} placement {PLACEMENT_GAMES - stats.rankedGamesPlayed === 1 ? 'match' : 'matches'} left
-            </p>
-          )}
-        </div>
-
-        {error && <p className="text-[var(--text-incorrect)] text-sm">{error}</p>}
-
-        {searching ? (
-          <div className="flex flex-col items-center gap-4">
-            <p className="text-[var(--text-secondary)] text-sm">
-              searching for an opponent… <span className="tabular-nums">{elapsed}s</span>
-            </p>
-            <button
-              type="button"
-              onClick={() => void handleCancel()}
-              className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
-            >
-              cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={handleFindMatch}
-            className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
-          >
-            find match
-          </button>
-        )}
-
-        <p className="text-[var(--text-muted)] text-xs max-w-sm">
-          30-second time test, one fixed format for everyone. Win to gain elo, lose to drop - closer opponents move
-          your rating more than lopsided matches.
-        </p>
-
+    <div className="flex-1 flex flex-col py-10 px-6">
+      <div className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">ranked</h1>
         <button
           type="button"
-          onClick={() => setShowRewards(true)}
+          onClick={() => navigate(-1)}
           className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
         >
-          rewards
+          back
         </button>
-
-        {showRewards && <NameColorPicker onClose={() => setShowRewards(false)} readOnly />}
       </div>
 
-      <div className="w-full max-w-xs bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 text-left lg:absolute lg:right-6 lg:top-1/2 lg:-translate-y-1/2">
-        <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">rank thresholds</h2>
-        <div className="flex flex-col gap-2">
-          {[...RANK_TIERS].reverse().map((t, i, arr) => {
-            const nextMin = i > 0 ? arr[i - 1].min : null;
-            const isMine = tier?.id === t.id;
-            return (
-              <div
-                key={t.id}
-                className={`flex items-center justify-between rounded-lg px-3 py-2 ${
-                  isMine ? 'bg-[var(--accent-soft)]' : ''
-                }`}
+      {/* relative so the sidebar (absolute on lg+, see below) anchors to this
+          section rather than the nearest positioned ancestor further up the
+          tree. Once it's absolute it's out of flow entirely, so it no longer
+          affects how this flex container centers everything else — the main
+          column stays centered on the full width, not on the combined width
+          of itself plus the sidebar. */}
+      <div className="flex-1 relative flex flex-col items-center justify-center gap-6 text-center">
+        <div className="flex flex-col items-center gap-6">
+          <div>
+            <RankBadge elo={stats.elo} rankedGamesPlayed={stats.rankedGamesPlayed} className="justify-center" />
+            {!tier && (
+              <p className="text-[var(--text-muted)] text-xs mt-2">
+                {PLACEMENT_GAMES - stats.rankedGamesPlayed} placement {PLACEMENT_GAMES - stats.rankedGamesPlayed === 1 ? 'match' : 'matches'} left
+              </p>
+            )}
+          </div>
+
+          {error && <p className="text-[var(--text-incorrect)] text-sm">{error}</p>}
+
+          {searching ? (
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-[var(--text-secondary)] text-sm">
+                searching for an opponent… <span className="tabular-nums">{elapsed}s</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleCancel()}
+                className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
               >
-                <span className="flex items-center gap-2">
-                  <TierLabel tierId={t.id} tierName={t.name} color={TIER_COLORS[t.id]} className="text-sm" />
-                </span>
-                <span className="text-xs text-[var(--text-muted)] tabular-nums whitespace-nowrap">
-                  {t.min.toLocaleString()}
-                  {nextMin !== null ? `–${(nextMin - 1).toLocaleString()}` : '+'} elo
-                </span>
-              </div>
-            );
-          })}
+                cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleFindMatch}
+              className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+            >
+              find match
+            </button>
+          )}
+
+          <p className="text-[var(--text-muted)] text-xs max-w-sm">
+            30-second time test, one fixed format for everyone. Win to gain elo, lose to drop - closer opponents move
+            your rating more than lopsided matches.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setShowRewards(true)}
+            className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
+          >
+            rewards
+          </button>
+
+          {showRewards && <NameColorPicker onClose={() => setShowRewards(false)} readOnly />}
+        </div>
+
+        <div className="w-full max-w-xs bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 text-left lg:absolute lg:right-6 lg:top-1/2 lg:-translate-y-1/2">
+          <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">rank thresholds</h2>
+          <div className="flex flex-col gap-2">
+            {[...RANK_TIERS].reverse().map((t, i, arr) => {
+              const nextMin = i > 0 ? arr[i - 1].min : null;
+              const isMine = tier?.id === t.id;
+              return (
+                <div
+                  key={t.id}
+                  className={`flex items-center justify-between rounded-lg px-3 py-2 ${
+                    isMine ? 'bg-[var(--accent-soft)]' : ''
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <TierLabel tierId={t.id} tierName={t.name} color={TIER_COLORS[t.id]} className="text-sm" />
+                  </span>
+                  <span className="text-xs text-[var(--text-muted)] tabular-nums whitespace-nowrap">
+                    {t.min.toLocaleString()}
+                    {nextMin !== null ? `–${(nextMin - 1).toLocaleString()}` : '+'} elo
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

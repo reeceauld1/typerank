@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 export default function BugReport() {
   useDocumentTitle('report a bug');
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [description, setDescription] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -56,12 +57,13 @@ export default function BugReport() {
     <div className="flex-1 flex flex-col py-10 px-6">
       <div className="max-w-2xl w-full mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">report a bug</h1>
-        <Link
-          to="/"
-          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors"
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
         >
-          back to test
-        </Link>
+          back
+        </button>
       </div>
 
       <div className="max-w-2xl w-full mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">

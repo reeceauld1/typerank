@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSettings } from '../hooks/useSettings.js';
 import { KEYBOARD_LAYOUT_OPTIONS } from '../utils/keyboardLayouts.js';
 import { FONT_OPTIONS } from '../utils/fonts.js';
@@ -33,6 +33,7 @@ const KEYBOARD_PRESS_STYLE_OPTIONS: { id: KeyboardPressStyle; label: string }[] 
 
 export default function Settings() {
   useDocumentTitle('settings');
+  const navigate = useNavigate();
   const {
     showKeyboard,
     setShowKeyboard,
@@ -60,12 +61,13 @@ export default function Settings() {
     <div className="flex-1 flex flex-col py-10 px-6">
       <div className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">settings</h1>
-        <Link
-          to="/"
-          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors"
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
         >
-          back to test
-        </Link>
+          back
+        </button>
       </div>
 
       <div className="max-w-4xl w-full mx-auto flex flex-col gap-3">

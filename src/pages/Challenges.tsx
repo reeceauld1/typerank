@@ -1,4 +1,4 @@
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import HourlyChallenge from '../components/HourlyChallenge.js';
 import DailyChallenge from '../components/DailyChallenge.js';
 import WeeklyChallenge from '../components/WeeklyChallenge.js';
@@ -13,6 +13,7 @@ const PREVIEW_SIZE = 'w-10 h-10';
 
 export default function Challenges() {
   useDocumentTitle('challenges', 'Complete hourly, daily, and weekly typing challenges on typeladder for bonus XP as you improve your typing speed.');
+  const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { stats } = useUser();
   const admin = isAdminUsername(stats.username);
@@ -25,12 +26,13 @@ export default function Challenges() {
     <div className="flex-1 py-10 px-6">
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">challenges</h1>
-        <Link
-          to="/"
-          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors"
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
         >
-          back to test
-        </Link>
+          back
+        </button>
       </div>
 
       <div className="max-w-4xl mx-auto flex flex-col gap-4">

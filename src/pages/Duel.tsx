@@ -343,164 +343,190 @@ export default function Duel() {
 
   if (!user) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
-        <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
-          <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h1>
-          <p className="text-[var(--text-muted)] text-sm mb-6">
-            {guestStep === 'pick-count' ? 'Pick words or time.' : "What's your name?"}
-          </p>
+      <div className="flex-1 flex flex-col py-10 px-6">
+        <div className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">duel</h1>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
+          >
+            back
+          </button>
+        </div>
 
-          {guestStep === 'pick-count' ? (
-            <>
-              <DuelSettingsPicker mode={mode} value={value} onChange={(m, v) => { setMode(m); setValue(v); }} />
-              <button
-                type="button"
-                onClick={() => setGuestStep('enter-name')}
-                className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
-              >
-                next
-              </button>
-            </>
-          ) : (
-            <>
-              <input
-                type="text"
-                autoFocus
-                maxLength={20}
-                placeholder="your name"
-                value={guestName}
-                onChange={e => setGuestName(e.target.value)}
-                className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] mb-3"
-              />
-              {guestError && <p className="text-[var(--text-incorrect)] text-xs mb-3">{guestError}</p>}
-              <div className="flex items-center gap-2">
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
+            <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h2>
+            <p className="text-[var(--text-muted)] text-sm mb-6">
+              {guestStep === 'pick-count' ? 'Pick words or time.' : "What's your name?"}
+            </p>
+
+            {guestStep === 'pick-count' ? (
+              <>
+                <DuelSettingsPicker mode={mode} value={value} onChange={(m, v) => { setMode(m); setValue(v); }} />
                 <button
                   type="button"
-                  onClick={() => setGuestStep('pick-count')}
-                  className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
+                  onClick={() => setGuestStep('enter-name')}
+                  className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
                 >
-                  back
+                  next
                 </button>
-                <button
-                  type="button"
-                  disabled={guestCreating || !guestName.trim()}
-                  onClick={() => void handleGuestCreate()}
-                  className="flex-1 bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+              </>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  autoFocus
+                  maxLength={20}
+                  placeholder="your name"
+                  value={guestName}
+                  onChange={e => setGuestName(e.target.value)}
+                  className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] mb-3"
+                />
+                {guestError && <p className="text-[var(--text-incorrect)] text-xs mb-3">{guestError}</p>}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGuestStep('pick-count')}
+                    className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
+                  >
+                    back
+                  </button>
+                  <button
+                    type="button"
+                    disabled={guestCreating || !guestName.trim()}
+                    onClick={() => void handleGuestCreate()}
+                    className="flex-1 bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-6 py-2.5 rounded-lg font-semibold transition-all cursor-pointer"
+                  >
+                    {guestCreating ? '...' : 'create duel'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            <p className="text-center text-xs text-[var(--text-muted)] mt-6">
+              have an account?{' '}
+              <Link to="/profile" className="text-[var(--accent)] hover:underline">
+                sign in
+              </Link>{' '}
+              to challenge friends directly.
+            </p>
+          </div>
+
+          {pendingDuelLink && (
+            <LinkPopup link={pendingDuelLink} copied={linkCopied} onCopy={copyPendingLink} onClose={closeLinkPopup} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col py-10 px-6">
+      <div className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-correct)]">duel</h1>
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-4 py-2 rounded-lg transition-colors cursor-pointer"
+        >
+          back
+        </button>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center gap-4">
+        {!invitesLoading && invites.length > 0 && (
+          <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+            <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">duel invites</h2>
+            <div className="flex flex-col gap-2">
+              {invites.map(invite => {
+                const sender = inviteSenders[invite.creatorId];
+                return (
+                  <Link
+                    key={invite.id}
+                    to={`/duel/${invite.id}`}
+                    className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm hover:border-[var(--accent)] transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      {sender && (
+                        <Avatar
+                          avatarId={sender.equippedAvatar}
+                          borderId={sender.equippedBorder}
+                          discordAvatarUrl={sender.discordAvatarUrl}
+                          size="sm"
+                        />
+                      )}
+                      <div className="flex flex-col min-w-0">
+                        {sender && (
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <UsernameText username={sender.username} colorId={sender.equippedNameColor} className="text-xs truncate" />
+                            <UsernameBadge badgeId={sender.equippedBadge} />
+                          </div>
+                        )}
+                        <span className="text-[var(--text-secondary)] truncate">{formatDuelSetting(invite.mode, invite.value)} duel</span>
+                      </div>
+                    </div>
+                    <span className="text-[var(--accent)] text-xs font-semibold shrink-0">respond</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
+          <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h2>
+          <p className="text-[var(--text-muted)] text-sm mb-6">Pick words or time, then challenge a friend or share a link.</p>
+
+          <DuelSettingsPicker mode={mode} value={value} onChange={(m, v) => { setMode(m); setValue(v); }} />
+
+          {error && <p className="text-[var(--text-incorrect)] text-xs mb-3">{error}</p>}
+
+          {friends.length > 0 && (
+            <div className="flex flex-col gap-2 mb-4 max-h-64 overflow-y-auto">
+              {friends.map(friend => (
+                <div
+                  key={friend.userId}
+                  className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2"
                 >
-                  {guestCreating ? '...' : 'create duel'}
-                </button>
-              </div>
-            </>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Avatar
+                      avatarId={friend.equippedAvatar}
+                      borderId={friend.equippedBorder}
+                      discordAvatarUrl={friend.discordAvatarUrl}
+                      size="sm"
+                    />
+                    <UsernameText username={friend.username} colorId={friend.equippedNameColor} className="text-sm truncate" />
+                    <UsernameBadge badgeId={friend.equippedBadge} />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={invitingId === friend.userId}
+                    onClick={() => void handleInviteFriend(friend.userId)}
+                    className="text-xs font-medium px-3 py-1.5 rounded-md border border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-soft)] transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    {invitingId === friend.userId ? '...' : 'duel'}
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
 
-          <p className="text-center text-xs text-[var(--text-muted)] mt-6">
-            have an account?{' '}
-            <Link to="/profile" className="text-[var(--accent)] hover:underline">
-              sign in
-            </Link>{' '}
-            to challenge friends directly.
-          </p>
+          <button
+            type="button"
+            disabled={creating}
+            onClick={() => void handleCreateLink()}
+            className="w-full text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-6 py-2.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {creating ? '...' : 'or create a shareable link'}
+          </button>
         </div>
 
         {pendingDuelLink && (
           <LinkPopup link={pendingDuelLink} copied={linkCopied} onCopy={copyPendingLink} onClose={closeLinkPopup} />
         )}
       </div>
-    );
-  }
-
-  return (
-    <div className="flex-1 flex flex-col items-center py-10 px-6 gap-4">
-      {!invitesLoading && invites.length > 0 && (
-        <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
-          <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">duel invites</h2>
-          <div className="flex flex-col gap-2">
-            {invites.map(invite => {
-              const sender = inviteSenders[invite.creatorId];
-              return (
-                <Link
-                  key={invite.id}
-                  to={`/duel/${invite.id}`}
-                  className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm hover:border-[var(--accent)] transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {sender && (
-                      <Avatar
-                        avatarId={sender.equippedAvatar}
-                        borderId={sender.equippedBorder}
-                        discordAvatarUrl={sender.discordAvatarUrl}
-                        size="sm"
-                      />
-                    )}
-                    <div className="flex flex-col min-w-0">
-                      {sender && (
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <UsernameText username={sender.username} colorId={sender.equippedNameColor} className="text-xs truncate" />
-                          <UsernameBadge badgeId={sender.equippedBadge} />
-                        </div>
-                      )}
-                      <span className="text-[var(--text-secondary)] truncate">{formatDuelSetting(invite.mode, invite.value)} duel</span>
-                    </div>
-                  </div>
-                  <span className="text-[var(--accent)] text-xs font-semibold shrink-0">respond</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <div className="w-full max-w-sm mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8">
-        <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-[var(--text-correct)] mb-1">start a duel</h1>
-        <p className="text-[var(--text-muted)] text-sm mb-6">Pick words or time, then challenge a friend or share a link.</p>
-
-        <DuelSettingsPicker mode={mode} value={value} onChange={(m, v) => { setMode(m); setValue(v); }} />
-
-        {error && <p className="text-[var(--text-incorrect)] text-xs mb-3">{error}</p>}
-
-        {friends.length > 0 && (
-          <div className="flex flex-col gap-2 mb-4 max-h-64 overflow-y-auto">
-            {friends.map(friend => (
-              <div
-                key={friend.userId}
-                className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Avatar
-                    avatarId={friend.equippedAvatar}
-                    borderId={friend.equippedBorder}
-                    discordAvatarUrl={friend.discordAvatarUrl}
-                    size="sm"
-                  />
-                  <UsernameText username={friend.username} colorId={friend.equippedNameColor} className="text-sm truncate" />
-                  <UsernameBadge badgeId={friend.equippedBadge} />
-                </div>
-                <button
-                  type="button"
-                  disabled={invitingId === friend.userId}
-                  onClick={() => void handleInviteFriend(friend.userId)}
-                  className="text-xs font-medium px-3 py-1.5 rounded-md border border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-soft)] transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-                >
-                  {invitingId === friend.userId ? '...' : 'duel'}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <button
-          type="button"
-          disabled={creating}
-          onClick={() => void handleCreateLink()}
-          className="w-full text-sm border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text-secondary)] px-6 py-2.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-        >
-          {creating ? '...' : 'or create a shareable link'}
-        </button>
-      </div>
-
-      {pendingDuelLink && (
-        <LinkPopup link={pendingDuelLink} copied={linkCopied} onCopy={copyPendingLink} onClose={closeLinkPopup} />
-      )}
     </div>
   );
 }
