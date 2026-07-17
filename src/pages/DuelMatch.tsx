@@ -292,7 +292,7 @@ export default function DuelMatch() {
   const matchCancelled = waitingOnRole !== null && opponentEverPresent && opponentPresent === false;
 
   // The sender leaving this page no longer cancels the invite (see
-  // PendingDuelWatcher, mounted at the app root, which keeps their
+  // SentDuelInviteNotifications, mounted at the app root, which keeps their
   // presence alive on this duel's channel regardless of what page they're
   // on) — but if they close the tab or leave the site outright, presence
   // still drops for real. Once the invited player notices that (via

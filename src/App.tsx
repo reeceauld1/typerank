@@ -7,7 +7,7 @@ import { SettingsProvider } from './context/SettingsContext.js';
 import Navbar from './components/Navbar.js';
 import Footer from './components/Footer.js';
 import CookieConsentBanner from './components/CookieConsentBanner.js';
-import PendingDuelWatcher from './components/PendingDuelWatcher.js';
+import NotificationStack from './components/NotificationStack.js';
 import Home from './pages/Home.js';
 import Profile from './pages/Profile.js';
 import Cosmetics from './pages/Cosmetics.js';
@@ -35,7 +35,7 @@ function App() {
             <LearnProgressProvider>
               <FriendsProvider>
                 <div className="min-h-screen flex flex-col">
-                  <PendingDuelWatcher />
+                  <NotificationStack />
                   <Navbar />
                   <Routes>
                     <Route path="/" element={<Home />} />
