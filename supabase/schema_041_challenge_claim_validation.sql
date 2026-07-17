@@ -18,6 +18,32 @@
 -- smaller gap than "no tests required at all"), and test_history is
 -- queried directly to confirm the caller actually has enough qualifying
 -- tests in the period, rather than trusting that they do.
+--
+-- Dropped first rather than a plain CREATE OR REPLACE: production's
+-- parameter names for these three had already drifted from what's tracked
+-- here, and Postgres refuses to rename a parameter via CREATE OR REPLACE —
+-- it has to be dropped and recreated instead.
+drop function if exists public.claim_daily_challenge(text, integer, integer, integer);
+
+-- The drifted parameter name (p_target_wpm) turned out to be a symptom of
+-- something bigger: schema_003_daily_challenge_tests.sql's rename of this
+-- table's own target_wpm column to tests_target apparently never actually
+-- ran against production, even though every later migration assumed it
+-- had. Renaming it here too, guarded so this is safe to run whether or not
+-- that's actually the case.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'daily_challenge_claims' and column_name = 'target_wpm'
+  ) and not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'daily_challenge_claims' and column_name = 'tests_target'
+  ) then
+    alter table public.daily_challenge_claims rename column target_wpm to tests_target;
+  end if;
+end $$;
+
 create or replace function public.claim_daily_challenge(
   p_mode text,
   p_value integer,
@@ -72,7 +98,10 @@ end;
 $$;
 
 -- Same fix as claim_daily_challenge above, pool values from
--- src/utils/hourlyChallenge.ts.
+-- src/utils/hourlyChallenge.ts. Dropped first for the same reason (see
+-- claim_daily_challenge above) in case this one drifted in production too.
+drop function if exists public.claim_hourly_challenge(text, integer, integer, integer);
+
 create or replace function public.claim_hourly_challenge(
   p_mode text,
   p_value integer,
@@ -131,7 +160,10 @@ $$;
 -- p_week_start was previously trusted outright too, letting a caller claim
 -- many distinct past/future week_start dates in a row (the uniqueness
 -- constraint only blocks re-claiming the *same* week_start twice). It must
--- now match the real current week.
+-- now match the real current week. Dropped first for the same reason (see
+-- claim_daily_challenge above) in case this one drifted in production too.
+drop function if exists public.claim_weekly_challenge(date, integer, integer);
+
 create or replace function public.claim_weekly_challenge(
   p_week_start date,
   p_tests_target integer,

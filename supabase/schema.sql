@@ -339,6 +339,11 @@ grant execute on function public.is_username_available to anon, authenticated;
 -- directly to confirm the caller actually has that many qualifying tests
 -- today — this used to trust both numbers outright, which let a direct RPC
 -- call grant arbitrary xp with zero tests ever taken (see schema_041).
+-- Dropped first since a hand-edit at some point left production with a
+-- differently-named parameter, and Postgres refuses to rename a parameter
+-- via CREATE OR REPLACE.
+drop function if exists public.claim_daily_challenge(text, integer, integer, integer);
+
 create or replace function public.claim_daily_challenge(
   p_mode text,
   p_value integer,
@@ -417,7 +422,10 @@ create policy "insert own hourly claims" on public.hourly_challenge_claims
   for insert with check (auth.uid() = user_id);
 
 -- Same validation as claim_daily_challenge above, pool values from
--- src/utils/hourlyChallenge.ts.
+-- src/utils/hourlyChallenge.ts. Dropped first for the same reason as
+-- claim_daily_challenge above.
+drop function if exists public.claim_hourly_challenge(text, integer, integer, integer);
+
 create or replace function public.claim_hourly_challenge(
   p_mode text,
   p_value integer,
@@ -498,7 +506,10 @@ create policy "insert own weekly claims" on public.weekly_challenge_claims
 -- week_start dates in a row (the uniqueness constraint only blocks
 -- re-claiming the *same* week_start twice). It must now match the real
 -- current week, and test_history is queried directly to confirm the
--- caller actually has that many tests this week (see schema_041).
+-- caller actually has that many tests this week (see schema_041). Dropped
+-- first for the same reason as claim_daily_challenge above.
+drop function if exists public.claim_weekly_challenge(date, integer, integer);
+
 create or replace function public.claim_weekly_challenge(
   p_week_start date,
   p_tests_target integer,
