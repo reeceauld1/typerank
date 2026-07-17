@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useUser } from '../hooks/useUser.js';
 import { nextDailyReset } from '../utils/dailyChallenge.js';
 import ChallengeCountdown from './ChallengeCountdown.js';
+import Tooltip from './Tooltip.js';
 
 export default function DailyChallenge() {
   const { claimedToday, dailyChallenge, dailyChallengeTestsToday, claimDailyChallengeBonus } = useUser();
@@ -28,9 +29,13 @@ export default function DailyChallenge() {
           daily challenge — complete <span className="text-[var(--text-correct)] font-semibold tabular-nums">{dailyChallenge.testsTarget}</span>{' '}
           {label} tests
         </span>
-        <span className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${claimedToday ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>
-          {claimedToday ? 'claimed' : `+${dailyChallenge.xpBonus} xp`}
-        </span>
+        {claimedToday ? (
+          <Tooltip content={`+${dailyChallenge.xpBonus} xp claimed`}>
+            <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-[var(--accent)] cursor-default">claimed</span>
+          </Tooltip>
+        ) : (
+          <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-[var(--text-muted)]">+{dailyChallenge.xpBonus} xp</span>
+        )}
       </div>
       <div className="w-full bg-[var(--bg-elevated)] rounded-full h-1.5 overflow-hidden">
         <div

@@ -272,7 +272,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       p_tests_target: hourlyChallenge.testsTarget,
       p_xp_bonus: hourlyChallenge.xpBonus,
     });
-    if (error || !data) return false;
+    if (error) {
+      console.error('claimHourlyChallengeBonus failed:', error.message);
+      return false;
+    }
+    if (!data) return false;
     await refreshRemoteStats();
     setLastXpGained(hourlyChallenge.xpBonus);
     return true;
@@ -288,7 +292,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       p_tests_target: dailyChallenge.testsTarget,
       p_xp_bonus: dailyChallenge.xpBonus,
     });
-    if (error || !data) return false;
+    if (error) {
+      console.error('claimDailyChallengeBonus failed:', error.message);
+      return false;
+    }
+    if (!data) return false;
     await refreshRemoteStats();
     setLastXpGained(dailyChallenge.xpBonus);
     return true;
@@ -302,7 +310,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       p_tests_target: testsTarget,
       p_xp_bonus: xpBonus,
     });
-    if (error || !data) return false;
+    if (error) {
+      console.error('claimWeeklyChallengeBonus failed:', error.message);
+      return false;
+    }
+    if (!data) return false;
     await refreshRemoteStats();
     setLastXpGained(xpBonus);
     return true;

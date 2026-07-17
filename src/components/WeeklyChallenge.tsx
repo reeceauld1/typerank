@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useUser } from '../hooks/useUser.js';
 import { WEEKLY_TEST_TARGET, WEEKLY_XP_BONUS, weekKey, nextWeeklyReset } from '../utils/weeklyChallenge.js';
 import ChallengeCountdown from './ChallengeCountdown.js';
+import Tooltip from './Tooltip.js';
 
 export default function WeeklyChallenge() {
   const { testsThisWeek, weeklyClaimed, claimWeeklyChallengeBonus } = useUser();
@@ -24,9 +25,13 @@ export default function WeeklyChallenge() {
         <span className="text-[var(--text-secondary)] flex-1 min-w-0">
           weekly challenge — complete <span className="text-[var(--text-correct)] font-semibold tabular-nums">{WEEKLY_TEST_TARGET}</span> tests
         </span>
-        <span className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${weeklyClaimed ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>
-          {weeklyClaimed ? 'claimed' : `+${WEEKLY_XP_BONUS} xp`}
-        </span>
+        {weeklyClaimed ? (
+          <Tooltip content={`+${WEEKLY_XP_BONUS} xp claimed`}>
+            <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-[var(--accent)] cursor-default">claimed</span>
+          </Tooltip>
+        ) : (
+          <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-[var(--text-muted)]">+{WEEKLY_XP_BONUS} xp</span>
+        )}
       </div>
       <div className="w-full bg-[var(--bg-elevated)] rounded-full h-1.5 overflow-hidden">
         <div

@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useUser } from '../hooks/useUser.js';
 import { nextHourlyReset } from '../utils/hourlyChallenge.js';
 import ChallengeCountdown from './ChallengeCountdown.js';
+import Tooltip from './Tooltip.js';
 
 export default function HourlyChallenge() {
   const { claimedThisHour, hourlyChallenge, hourlyChallengeTestsThisHour, claimHourlyChallengeBonus } = useUser();
@@ -28,9 +29,13 @@ export default function HourlyChallenge() {
           hourly challenge — complete <span className="text-[var(--text-correct)] font-semibold tabular-nums">{hourlyChallenge.testsTarget}</span>{' '}
           {label} tests
         </span>
-        <span className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${claimedThisHour ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>
-          {claimedThisHour ? 'claimed' : `+${hourlyChallenge.xpBonus} xp`}
-        </span>
+        {claimedThisHour ? (
+          <Tooltip content={`+${hourlyChallenge.xpBonus} xp claimed`}>
+            <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-[var(--accent)] cursor-default">claimed</span>
+          </Tooltip>
+        ) : (
+          <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-[var(--text-muted)]">+{hourlyChallenge.xpBonus} xp</span>
+        )}
       </div>
       <div className="w-full bg-[var(--bg-elevated)] rounded-full h-1.5 overflow-hidden">
         <div
