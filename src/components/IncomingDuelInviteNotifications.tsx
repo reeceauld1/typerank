@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
-import { formatDuelSetting, type DuelMode } from '../utils/duels.js';
+import { formatDuelSetting, DUEL_NOTIFICATION_TTL_MS, type DuelMode } from '../utils/duels.js';
 import UsernameText from './UsernameText.js';
+import NotificationTimerBar from './NotificationTimerBar.js';
 
 interface IncomingInvite {
   id: string;
   creatorId: string;
   mode: DuelMode;
   value: number;
+  createdAt: string;
 }
 
 interface SenderLabel {
@@ -39,7 +41,7 @@ export default function IncomingDuelInviteNotifications() {
     let cancelled = false;
     void supabase
       .from('duels')
-      .select('id, creator_id, mode, value')
+      .select('id, creator_id, mode, value, created_at')
       .eq('opponent_id', user.id)
       .eq('status', 'pending')
       .then(({ data }) => {
@@ -48,7 +50,13 @@ export default function IncomingDuelInviteNotifications() {
           new Map(
             data.map(row => [
               row.id as string,
-              { id: row.id as string, creatorId: row.creator_id as string, mode: row.mode as DuelMode, value: row.value as number },
+              {
+                id: row.id as string,
+                creatorId: row.creator_id as string,
+                mode: row.mode as DuelMode,
+                value: row.value as number,
+                createdAt: row.created_at as string,
+              },
             ])
           )
         );
@@ -67,11 +75,15 @@ export default function IncomingDuelInviteNotifications() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'duels', filter: `opponent_id=eq.${user.id}` },
         payload => {
-          const row = payload.new as { id: string; status: string; creator_id: string; mode: DuelMode; value: number } | undefined;
+          const row = payload.new as
+            | { id: string; status: string; creator_id: string; mode: DuelMode; value: number; created_at: string }
+            | undefined;
           if (!row) return;
 
           if (row.status === 'pending') {
-            setInvites(prev => new Map(prev).set(row.id, { id: row.id, creatorId: row.creator_id, mode: row.mode, value: row.value }));
+            setInvites(prev =>
+              new Map(prev).set(row.id, { id: row.id, creatorId: row.creator_id, mode: row.mode, value: row.value, createdAt: row.created_at })
+            );
           } else {
             setInvites(prev => {
               if (!prev.has(row.id)) return prev;
@@ -124,6 +136,21 @@ export default function IncomingDuelInviteNotifications() {
     if (accept) navigate(`/duel/${id}`);
   };
 
+  // Unanswered for the full 5 minutes — mark it expired (see
+  // expire_duel_invite's own comment: it's the opponent-side counterpart to
+  // cancel_duel_invite, setting 'cancelled' rather than 'declined' since I
+  // didn't actively decline, the invite just went stale) and drop the card.
+  const expireInvite = async (id: string) => {
+    if (!supabase) return;
+    await supabase.rpc('expire_duel_invite', { p_duel_id: id });
+    setInvites(prev => {
+      if (!prev.has(id)) return prev;
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
   if (invites.size === 0) return null;
 
   return (
@@ -154,6 +181,7 @@ export default function IncomingDuelInviteNotifications() {
                 {respondingId === invite.id ? '...' : 'accept'}
               </button>
             </div>
+            <NotificationTimerBar createdAt={invite.createdAt} durationMs={DUEL_NOTIFICATION_TTL_MS} onExpire={() => void expireInvite(invite.id)} />
           </div>
         );
       })}

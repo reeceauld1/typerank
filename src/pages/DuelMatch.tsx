@@ -254,10 +254,16 @@ export default function DuelMatch() {
   }, [waitingForAccept, opponentSlotOpen, waitingForOpponentToFinish, loadDuel]);
 
   // Presence keyed by role (not user id) so it works the same whether
-  // either side is signed in or a guest.
+  // either side is signed in or a guest. Covers the whole span from
+  // "invited but unanswered" through "accepted but neither has finished" —
+  // not just the two waiting states either side of the actual race — so a
+  // real disconnect *during* the race (as opposed to just navigating to
+  // another page in the SPA, which ActiveDuelPresence.tsx keeps looking
+  // like "still here" for) still gets caught instead of leaving the
+  // remaining player racing against someone who's gone.
   const myRole: 'creator' | 'opponent' | null = isCreator ? 'creator' : isOpponent ? 'opponent' : null;
   const waitingOnRole: 'creator' | 'opponent' | null =
-    waitingForAccept || waitingForOpponentToFinish || waitingForMyDecision
+    duel && (duel.status === 'pending' || (duel.status === 'accepted' && !bothFinished))
       ? (isCreator ? 'opponent' : 'creator')
       : null;
 

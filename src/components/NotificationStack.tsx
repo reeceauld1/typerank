@@ -1,5 +1,6 @@
 import SentDuelInviteNotifications from './SentDuelInviteNotifications.js';
 import IncomingDuelInviteNotifications from './IncomingDuelInviteNotifications.js';
+import ActiveDuelPresence from './ActiveDuelPresence.js';
 import FriendRequestNotifications from './FriendRequestNotifications.js';
 
 // Mounted once at the app root (see App.tsx), outside <Routes> so it
@@ -13,6 +14,7 @@ export default function NotificationStack() {
     <div className="fixed top-4 right-4 left-4 sm:left-auto z-40 flex flex-col items-end gap-2 pointer-events-none">
       <SentDuelInviteNotifications />
       <IncomingDuelInviteNotifications />
+      <ActiveDuelPresence />
       <FriendRequestNotifications />
     </div>
   );

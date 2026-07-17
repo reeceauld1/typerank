@@ -3,8 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../hooks/useAuth.js';
-import { formatDuelSetting, type DuelMode } from '../utils/duels.js';
+import { formatDuelSetting, DUEL_NOTIFICATION_TTL_MS, type DuelMode } from '../utils/duels.js';
 import UsernameText from './UsernameText.js';
+import NotificationTimerBar from './NotificationTimerBar.js';
 
 interface SentInvite {
   id: string;
@@ -12,6 +13,7 @@ interface SentInvite {
   opponentName: string | null; // guest fallback, when opponentId has no account
   mode: DuelMode;
   value: number;
+  createdAt: string;
 }
 
 interface DeclinedInvite {
@@ -59,7 +61,7 @@ export default function SentDuelInviteNotifications() {
     let cancelled = false;
     void supabase
       .from('duels')
-      .select('id, opponent_id, opponent_name, mode, value')
+      .select('id, opponent_id, opponent_name, mode, value, created_at')
       .eq('creator_id', user.id)
       .eq('status', 'pending')
       .then(({ data }) => {
@@ -74,6 +76,7 @@ export default function SentDuelInviteNotifications() {
                 opponentName: row.opponent_name as string | null,
                 mode: row.mode as DuelMode,
                 value: row.value as number,
+                createdAt: row.created_at as string,
               },
             ])
           )
@@ -94,7 +97,15 @@ export default function SentDuelInviteNotifications() {
         { event: '*', schema: 'public', table: 'duels', filter: `creator_id=eq.${user.id}` },
         payload => {
           const row = payload.new as
-            | { id: string; status: string; opponent_id: string | null; opponent_name: string | null; mode: DuelMode; value: number }
+            | {
+                id: string;
+                status: string;
+                opponent_id: string | null;
+                opponent_name: string | null;
+                mode: DuelMode;
+                value: number;
+                created_at: string;
+              }
             | undefined;
           if (!row) return;
 
@@ -106,6 +117,7 @@ export default function SentDuelInviteNotifications() {
                 opponentName: row.opponent_name,
                 mode: row.mode,
                 value: row.value,
+                createdAt: row.created_at,
               })
             );
             return;
@@ -242,6 +254,7 @@ export default function SentDuelInviteNotifications() {
           >
             {cancellingId === invite.id ? '...' : 'cancel'}
           </button>
+          <NotificationTimerBar createdAt={invite.createdAt} durationMs={DUEL_NOTIFICATION_TTL_MS} onExpire={() => void handleCancel(invite.id)} />
         </div>
       ))}
       {declined.map(d => (
