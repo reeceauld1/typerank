@@ -1,3 +1,5 @@
+import RankIcon from './RankIcon.js';
+
 interface TierLabelProps {
   tierId: string;
   tierName: string;
@@ -16,10 +18,7 @@ export default function TierLabel({ tierId, tierName, color, className = '' }: T
   const isLegend = tierId === 'legend';
   return (
     <>
-      <span
-        className={`w-2.5 h-2.5 rounded-full shrink-0 ${isLegend ? 'rank-dot-legend' : 'rank-dot-shine'}`}
-        style={isLegend ? undefined : { backgroundColor: color }}
-      />
+      <RankIcon tierId={tierId} color={color} />
       <span
         className={`relative inline-block font-semibold ${isLegend ? 'rainbow-name' : 'name-shine'} ${className}`}
         style={isLegend ? undefined : { color }}

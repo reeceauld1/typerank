@@ -320,29 +320,54 @@ body.is-typing * {
   }
 }
 
-/* RankBadge's tier dot (see RankBadge.tsx / Ranked.tsx's threshold sidebar)
-   — the same animation family as the name-color rewards above, so the
-   badge itself previews what a player's username does once they reach that
-   tier. Legend's dot reuses legend-spin's rotating conic gradient as its
-   fill directly (no border/ring needed at this size, unlike legend-border);
-   every other unlocked tier gets a shine sweep like name-shine's, just as
-   a plain overlay instead of a text-clip trick since there's no text here. */
-.rank-dot-shine {
-  position: relative;
-  overflow: hidden;
+/* RankBadge/TierLabel's per-tier icon (RankIcon.tsx, see
+   src/assets/rankIcons) — the same animation family as the name-color
+   rewards above, so the badge previews what a player's username does once
+   they reach that tier. Rendered as a CSS mask (--rank-icon-mask, an inline
+   data-URI of the tier's own SVG set per-instance in RankIcon.tsx) rather
+   than an <img>, so these can be recolored/animated in the first place:
+   masking only cares about the icon's silhouette, letting whatever's
+   painted behind it - a solid tier color, or this same shine/rainbow sweep
+   - show through. Legend reuses legend-spin's rotating conic gradient
+   directly as its fill (no border/ring needed at this size, unlike
+   legend-border); every other tier gets a shine sweep like name-shine's, as
+   a masked overlay instead of a text-clip trick since there's no text here. */
+.rank-icon {
+  width: 1.25em;
+  height: 1.25em;
+  -webkit-mask-image: var(--rank-icon-mask);
+  mask-image: var(--rank-icon-mask);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 
-.rank-dot-shine::after {
+.rank-icon-shine {
+  position: relative;
+}
+
+.rank-icon-shine::after {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.85) 48%, rgba(255, 255, 255, 0.85) 52%, transparent 65%);
   background-size: 250% 100%;
   background-repeat: no-repeat;
+  -webkit-mask-image: var(--rank-icon-mask);
+  mask-image: var(--rank-icon-mask);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
   animation: name-shine-sweep 4.5s ease-in-out infinite;
 }
 
-.rank-dot-legend {
+.rank-icon-legend {
   background: conic-gradient(from var(--legend-angle), #ff5f6d, #ffc371, #47e0a0, #5b9bd9, #a55bd9, #ff5f6d);
   animation: legend-spin 4s linear infinite;
 }
