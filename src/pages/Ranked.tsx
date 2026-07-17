@@ -6,6 +6,7 @@ import { useUser } from '../hooks/useUser.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { getRankTier, PLACEMENT_GAMES, RANK_TIERS, TIER_COLORS } from '../utils/rank.js';
 import RankBadge from '../components/RankBadge.js';
+import TierLabel from '../components/TierLabel.js';
 import AuthForm from '../components/AuthForm.js';
 import NameColorPicker from '../components/NameColorPicker.js';
 
@@ -21,7 +22,7 @@ interface MatchResult {
 }
 
 export default function Ranked() {
-  useDocumentTitle('ranked', 'Compete in ranked typing races against real players on typeladder. Climb the elo ladder from Bronze to Grandmaster in this competitive typing game.');
+  useDocumentTitle('ranked', 'Compete in ranked typing races against real players on typeladder. Climb the elo ladder from Bronze to Legend in this competitive typing game.');
   const navigate = useNavigate();
   const { user, isConfigured } = useAuth();
   const { stats } = useUser();
@@ -188,10 +189,7 @@ export default function Ranked() {
                 }`}
               >
                 <span className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: TIER_COLORS[t.id] }} />
-                  <span className="text-sm font-medium" style={{ color: TIER_COLORS[t.id] }}>
-                    {t.name}
-                  </span>
+                  <TierLabel tierId={t.id} tierName={t.name} color={TIER_COLORS[t.id]} className="text-sm" />
                 </span>
                 <span className="text-xs text-[var(--text-muted)] tabular-nums whitespace-nowrap">
                   {t.min.toLocaleString()}

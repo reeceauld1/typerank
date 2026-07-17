@@ -14,6 +14,14 @@
   --accent: #5b9bd9;
   --accent-soft: rgba(91, 155, 217, 0.14);
   --accent-glow: rgba(91, 155, 217, 0.03);
+  /* Activity-chart heat levels (see TestActivityChart.tsx) — four intensity
+     stops of the equipped accent color, kept in sync with --accent the same
+     way --accent-soft/--accent-glow already are (UserContext.tsx's accent
+     effect, or the monochrome rules below when that color's equipped). */
+  --heat-1: rgba(91, 155, 217, 0.25);
+  --heat-2: rgba(91, 155, 217, 0.5);
+  --heat-3: rgba(91, 155, 217, 0.75);
+  --heat-4: rgba(91, 155, 217, 1);
 }
 
 :root[data-theme='light'] {
@@ -30,6 +38,10 @@
   --accent: #3b7dc4;
   --accent-soft: rgba(59, 125, 196, 0.12);
   --accent-glow: rgba(59, 125, 196, 0.03);
+  --heat-1: rgba(59, 125, 196, 0.25);
+  --heat-2: rgba(59, 125, 196, 0.5);
+  --heat-3: rgba(59, 125, 196, 0.75);
+  --heat-4: rgba(59, 125, 196, 1);
 }
 
 /* Monochrome accent color: opposite of the background rather than a fixed
@@ -40,12 +52,20 @@
   --accent: #ffffff;
   --accent-soft: rgba(255, 255, 255, 0.16);
   --accent-glow: rgba(255, 255, 255, 0.03);
+  --heat-1: rgba(255, 255, 255, 0.25);
+  --heat-2: rgba(255, 255, 255, 0.5);
+  --heat-3: rgba(255, 255, 255, 0.75);
+  --heat-4: rgba(255, 255, 255, 1);
 }
 
 :root[data-accent-mono='true'][data-theme='light'] {
   --accent: #000000;
   --accent-soft: rgba(0, 0, 0, 0.08);
   --accent-glow: rgba(0, 0, 0, 0.03);
+  --heat-1: rgba(0, 0, 0, 0.25);
+  --heat-2: rgba(0, 0, 0, 0.5);
+  --heat-3: rgba(0, 0, 0, 0.75);
+  --heat-4: rgba(0, 0, 0, 1);
 }
 
 @layer base {
@@ -175,7 +195,7 @@ body.is-typing * {
 }
 
 /* Metallic shine sweep, applied to every unlocked rank tier except
-   Grandmaster (see UsernameText.tsx — its own rainbow animation already
+   Legend (see UsernameText.tsx — its own rainbow animation already
    reads as "shiny" without this on top). A moving white highlight band
    clipped to a duplicate copy of the username text via a pseudo-element,
    since background-clip:text needs the *element's own* color to be
@@ -211,7 +231,7 @@ body.is-typing * {
   }
 }
 
-/* Grandmaster's animated username color. Same six-stop palette as
+/* Legend's animated username color. Same six-stop palette as
    legend-border above for a consistent "top tier" look. background-clip:
    text paints the gradient only where the text glyphs are, with the text's
    own color made transparent so the gradient shows through — the
@@ -298,5 +318,32 @@ body.is-typing * {
   100% {
     text-shadow: 0 0 8px #ff5f6d80;
   }
+}
+
+/* RankBadge's tier dot (see RankBadge.tsx / Ranked.tsx's threshold sidebar)
+   — the same animation family as the name-color rewards above, so the
+   badge itself previews what a player's username does once they reach that
+   tier. Legend's dot reuses legend-spin's rotating conic gradient as its
+   fill directly (no border/ring needed at this size, unlike legend-border);
+   every other unlocked tier gets a shine sweep like name-shine's, just as
+   a plain overlay instead of a text-clip trick since there's no text here. */
+.rank-dot-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.rank-dot-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.85) 48%, rgba(255, 255, 255, 0.85) 52%, transparent 65%);
+  background-size: 250% 100%;
+  background-repeat: no-repeat;
+  animation: name-shine-sweep 4.5s ease-in-out infinite;
+}
+
+.rank-dot-legend {
+  background: conic-gradient(from var(--legend-angle), #ff5f6d, #ffc371, #47e0a0, #5b9bd9, #a55bd9, #ff5f6d);
+  animation: legend-spin 4s linear infinite;
 }
 

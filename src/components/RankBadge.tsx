@@ -1,4 +1,5 @@
 import { getRankTier, PLACEMENT_GAMES, TIER_COLORS } from '../utils/rank.js';
+import TierLabel from './TierLabel.js';
 
 interface RankBadgeProps {
   elo: number;
@@ -24,10 +25,7 @@ export default function RankBadge({ elo, rankedGamesPlayed, className = '' }: Ra
 
   return (
     <div className={`inline-flex items-center gap-2 ${className}`}>
-      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-      <span className="text-sm font-semibold" style={{ color }}>
-        {tier.name}
-      </span>
+      <TierLabel tierId={tier.id} tierName={tier.name} color={color} className="text-sm" />
       <span className="text-sm text-[var(--text-muted)] tabular-nums">{elo.toLocaleString()} elo</span>
     </div>
   );

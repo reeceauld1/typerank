@@ -1,7 +1,9 @@
 import type { UserStats } from '../types/index.js';
 import { useUser } from '../hooks/useUser.js';
+import { useAuth } from '../hooks/useAuth.js';
 import { getLevelProgress } from '../utils/xp.js';
 import RankBadge from './RankBadge.js';
+import TestActivityChart from './TestActivityChart.js';
 import { motion } from 'framer-motion';
 
 function formatTimeTyped(totalSeconds: number): string {
@@ -16,11 +18,18 @@ function formatTimeTyped(totalSeconds: number): string {
 
 interface ProfileStatsProps {
   stats?: UserStats;
+  // Whose activity chart to load — defaults to the viewer's own account
+  // (used when statsProp is omitted, i.e. this is rendering the signed-in
+  // user's own profile). UserProfile.tsx passes the profile owner's id
+  // explicitly since useAuth().user there would be the viewer, not them.
+  userId?: string;
 }
 
-export default function ProfileStats({ stats: statsProp }: ProfileStatsProps = {}) {
+export default function ProfileStats({ stats: statsProp, userId }: ProfileStatsProps = {}) {
   const { stats: ownStats } = useUser();
+  const { user } = useAuth();
   const stats = statsProp ?? ownStats;
+  const activityUserId = userId ?? user?.id;
   const levelProgress = getLevelProgress(stats.totalXp);
 
   const avgAccuracy = stats.totalTests > 0 ? Math.round(stats.totalAccuracySum / stats.totalTests) : 0;
@@ -80,6 +89,8 @@ export default function ProfileStats({ stats: statsProp }: ProfileStatsProps = {
           </div>
         ))}
       </div>
+
+      {activityUserId && <TestActivityChart userId={activityUserId} />}
 
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
         <h3 className="text-lg font-semibold text-[var(--text-correct)] mb-4">Personal Bests</h3>

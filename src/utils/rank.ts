@@ -14,8 +14,8 @@ export const RANK_TIERS: RankTier[] = [
   { id: 'gold', name: 'Gold', min: 1050 },
   { id: 'platinum', name: 'Platinum', min: 1200 },
   { id: 'diamond', name: 'Diamond', min: 1350 },
-  { id: 'master', name: 'Master', min: 1500 },
-  { id: 'grandmaster', name: 'Grandmaster', min: 1700 },
+  { id: 'amethyst', name: 'Amethyst', min: 1500 },
+  { id: 'legend', name: 'Legend', min: 1700 },
 ];
 
 // Shared across RankBadge, the Ranked page's threshold sidebar, and the
@@ -26,8 +26,8 @@ export const TIER_COLORS: Record<string, string> = {
   gold: '#ffd24a',
   platinum: '#7dd3fc',
   diamond: '#3b9ee0',
-  master: '#b967ff',
-  grandmaster: '#f43f5e',
+  amethyst: '#b967ff',
+  legend: '#f43f5e',
 };
 
 // Placements: the first 5 ranked games are unranked regardless of elo —

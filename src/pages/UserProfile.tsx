@@ -174,7 +174,7 @@ export default function UserProfile() {
         {message && <p className="text-sm text-[var(--text-muted)] mt-2">{message}</p>}
       </div>
 
-      <ProfileStats stats={profile.stats} />
+      <ProfileStats stats={profile.stats} userId={profile.userId} />
       <div className="mt-6">
         <CosmeticsPicker statsOverride={profile.stats} readOnly />
       </div>

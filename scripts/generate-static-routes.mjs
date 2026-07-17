@@ -37,7 +37,7 @@ const ROUTES = [
   {
     path: 'ranked',
     title: 'ranked',
-    description: 'Compete in ranked typing races against real players on typeladder. Climb the elo ladder from Bronze to Grandmaster in this competitive typing game.',
+    description: 'Compete in ranked typing races against real players on typeladder. Climb the elo ladder from Bronze to Legend in this competitive typing game.',
   },
   {
     path: 'learn',

@@ -189,6 +189,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       root.style.removeProperty('--accent');
       root.style.removeProperty('--accent-soft');
       root.style.removeProperty('--accent-glow');
+      root.style.removeProperty('--heat-1');
+      root.style.removeProperty('--heat-2');
+      root.style.removeProperty('--heat-3');
+      root.style.removeProperty('--heat-4');
       root.dataset.accentMono = 'true';
     } else {
       delete root.dataset.accentMono;
@@ -196,6 +200,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       root.style.setProperty('--accent', hex);
       root.style.setProperty('--accent-soft', hexToRgba(hex, 0.14));
       root.style.setProperty('--accent-glow', hexToRgba(hex, 0.03));
+      root.style.setProperty('--heat-1', hexToRgba(hex, 0.25));
+      root.style.setProperty('--heat-2', hexToRgba(hex, 0.5));
+      root.style.setProperty('--heat-3', hexToRgba(hex, 0.75));
+      root.style.setProperty('--heat-4', hexToRgba(hex, 1));
     }
     // Only the two fields actually read above should retrigger this — not
     // every stats refresh, which would just reapply the same value.

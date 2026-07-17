@@ -151,6 +151,32 @@ $$;
 
 grant execute on function public.record_test_result to authenticated;
 
+-- Backs the GitHub-style activity chart on the profile page (see
+-- TestActivityChart.tsx): one row per day with at least one completed test,
+-- for the last 371 days (53 weeks — a full GitHub-style grid). test_history
+-- itself is owner-only (see "select own history"), but daily test counts are
+-- as public as every other stat already shown on a profile (total_tests,
+-- best_wpm, elo, ...), so this is security definer and callable by anyone —
+-- p_user_id lets it read another user's activity the same way user_stats
+-- already can (see "select any stats anon"), defaulting to the caller's own
+-- when omitted.
+create or replace function public.get_daily_test_counts(p_user_id uuid default null)
+returns table (test_date date, test_count integer)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select created_at::date as test_date, count(*)::integer as test_count
+  from public.test_history
+  where user_id = coalesce(p_user_id, auth.uid())
+    and created_at >= now() - interval '371 days'
+  group by test_date
+  order by test_date;
+$$;
+
+grant execute on function public.get_daily_test_counts to anon, authenticated;
+
 -- Creates the user_stats row (with username) the moment an account is
 -- created, using the username captured at signup time
 -- (supabase.auth.signUp({ options: { data: { username } } })). If it's
@@ -1440,7 +1466,7 @@ grant execute on function public.delete_own_account to authenticated;
 create table public.name_color_catalog (id text primary key);
 
 insert into public.name_color_catalog (id) values
-  ('default'), ('bronze'), ('silver'), ('gold'), ('platinum'), ('diamond'), ('master'), ('grandmaster');
+  ('default'), ('bronze'), ('silver'), ('gold'), ('platinum'), ('diamond'), ('amethyst'), ('legend');
 
 alter table public.user_stats
   add column equipped_name_color text not null default 'default' references public.name_color_catalog (id);
