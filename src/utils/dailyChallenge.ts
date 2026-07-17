@@ -1,4 +1,5 @@
 import type { TestMode, TimeMode, WordMode } from '../types/index.js';
+import { hashString } from './hashString.js';
 
 export interface DailyChallenge {
   mode: TestMode;
@@ -19,15 +20,7 @@ const DAILY_CHALLENGE_POOL: Omit<DailyChallenge, 'xpBonus'>[] = [
   { mode: 'words', value: 50, testsTarget: 3 },
 ];
 
-export const DAILY_CHALLENGE_XP_BONUS = 1000;
-
-function hashString(input: string): number {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    hash = (Math.imul(31, hash) + input.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash);
-}
+export const DAILY_CHALLENGE_XP_BONUS = 2500;
 
 export function todayKey(date: Date = new Date()): string {
   return date.toISOString().slice(0, 10);
@@ -40,4 +33,15 @@ export function getDailyChallenge(identity: string, date: Date = new Date()): Da
   const seed = hashString(`${identity}:${todayKey(date)}`);
   const pick = DAILY_CHALLENGE_POOL[seed % DAILY_CHALLENGE_POOL.length];
   return { ...pick, xpBonus: DAILY_CHALLENGE_XP_BONUS };
+}
+
+// The challenge resets at local midnight — the same boundary
+// UserContext.tsx's dailyChallengeTestsToday count query uses
+// (startOfTodayIso), so this always matches what actually zeroes the
+// progress bar rather than todayKey()'s UTC date (which only decides which
+// challenge is picked, a subtly different boundary).
+export function nextDailyReset(date: Date = new Date()): Date {
+  const d = new Date(date);
+  d.setHours(24, 0, 0, 0);
+  return d;
 }

@@ -1,9 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useUser } from '../hooks/useUser.js';
-import { WEEKLY_TEST_TARGET, WEEKLY_XP_BONUS, weekKey } from '../utils/weeklyChallenge.js';
+import { WEEKLY_TEST_TARGET, WEEKLY_XP_BONUS, weekKey, nextWeeklyReset } from '../utils/weeklyChallenge.js';
+import ChallengeCountdown from './ChallengeCountdown.js';
 
 export default function WeeklyChallenge() {
   const { testsThisWeek, weeklyClaimed, claimWeeklyChallengeBonus } = useUser();
+  const resetAt = useMemo(() => nextWeeklyReset(), []);
 
   useEffect(() => {
     if (weeklyClaimed || testsThisWeek < WEEKLY_TEST_TARGET) return;
@@ -32,9 +34,12 @@ export default function WeeklyChallenge() {
           style={{ width: `${progress}%` }}
         />
       </div>
-      <p className="text-xs text-[var(--text-muted)] mt-1.5 tabular-nums">
-        {Math.min(testsThisWeek, WEEKLY_TEST_TARGET)} / {WEEKLY_TEST_TARGET} this week
-      </p>
+      <div className="flex items-center justify-between mt-1.5">
+        <p className="text-xs text-[var(--text-muted)] tabular-nums">
+          {Math.min(testsThisWeek, WEEKLY_TEST_TARGET)} / {WEEKLY_TEST_TARGET} this week
+        </p>
+        <ChallengeCountdown resetAt={resetAt} />
+      </div>
     </div>
   );
 }

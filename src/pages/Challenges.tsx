@@ -1,4 +1,5 @@
 import { Link, Navigate } from 'react-router-dom';
+import HourlyChallenge from '../components/HourlyChallenge.js';
 import DailyChallenge from '../components/DailyChallenge.js';
 import WeeklyChallenge from '../components/WeeklyChallenge.js';
 import CosmeticProgressSection from '../components/CosmeticProgressSection.js';
@@ -11,7 +12,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 const PREVIEW_SIZE = 'w-10 h-10';
 
 export default function Challenges() {
-  useDocumentTitle('challenges', 'Complete daily and weekly typing challenges on typeladder for bonus XP as you improve your typing speed.');
+  useDocumentTitle('challenges', 'Complete hourly, daily, and weekly typing challenges on typeladder for bonus XP as you improve your typing speed.');
   const { user, loading } = useAuth();
   const { stats } = useUser();
   const admin = isAdminUsername(stats.username);
@@ -33,6 +34,7 @@ export default function Challenges() {
       </div>
 
       <div className="max-w-4xl mx-auto flex flex-col gap-4">
+        <HourlyChallenge />
         <DailyChallenge />
         <WeeklyChallenge />
         <CosmeticProgressSection

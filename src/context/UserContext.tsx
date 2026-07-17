@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { UserStats, TestResult, TestMode } from '../types/index.js';
 import { calculateXP, checkChallengeMilestone } from '../utils/xp.js';
 import { getDailyChallenge, todayKey, type DailyChallenge } from '../utils/dailyChallenge.js';
+import { getHourlyChallenge, hourStart, type HourlyChallenge } from '../utils/hourlyChallenge.js';
 import { weekKey, getWeekStart } from '../utils/weeklyChallenge.js';
 import { mapStatsRow } from '../utils/statsMapping.js';
 import { resolveAccentHex, hexToRgba, isMonochromeAccent } from '../utils/accentColors.js';
@@ -88,11 +89,14 @@ function loadInitialStats(): UserStats {
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const isAccountSynced = Boolean(user && supabase);
+  const hourlyChallenge: HourlyChallenge | null = user ? getHourlyChallenge(user.id) : null;
   const dailyChallenge: DailyChallenge | null = user ? getDailyChallenge(user.id) : null;
 
   const [remoteStats, setRemoteStats] = useState<UserStats>(loadInitialStats);
   const [loading, setLoading] = useState(false);
   const [lastXpGained, setLastXpGained] = useState<number | null>(null);
+  const [claimedThisHour, setClaimedThisHour] = useState(false);
+  const [hourlyChallengeTestsThisHour, setHourlyChallengeTestsThisHour] = useState(0);
   const [claimedToday, setClaimedToday] = useState(false);
   const [dailyChallengeTestsToday, setDailyChallengeTestsToday] = useState(0);
   const [weeklyClaimed, setWeeklyClaimed] = useState(false);
@@ -103,48 +107,65 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     const weekStartIso = getWeekStart().toISOString();
     const todayStartIso = startOfTodayIso();
-    const challenge = getDailyChallenge(user.id);
+    const hourStartIso = hourStart().toISOString();
+    const daily = getDailyChallenge(user.id);
+    const hourly = getHourlyChallenge(user.id);
 
-    const [statsRes, historyRes, claimRes, weeklyClaimRes, weekCountRes, dailyCountRes] = await Promise.all([
-      supabase.from('user_stats').select('*').eq('user_id', user.id).maybeSingle(),
-      supabase
-        .from('test_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(100),
-      supabase
-        .from('daily_challenge_claims')
-        .select('challenge_date')
-        .eq('challenge_date', todayKey())
-        .maybeSingle(),
-      supabase
-        .from('weekly_challenge_claims')
-        .select('week_start')
-        .eq('week_start', weekKey())
-        .maybeSingle(),
-      supabase
-        .from('test_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('created_at', weekStartIso),
-      supabase
-        .from('test_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('mode', challenge.mode)
-        .eq('value', challenge.value)
-        .gte('created_at', todayStartIso),
-    ]);
+    const [statsRes, historyRes, hourClaimRes, claimRes, weeklyClaimRes, weekCountRes, dailyCountRes, hourCountRes] =
+      await Promise.all([
+        supabase.from('user_stats').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase
+          .from('test_history')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(100),
+        supabase
+          .from('hourly_challenge_claims')
+          .select('challenge_hour')
+          .eq('challenge_hour', hourStartIso)
+          .maybeSingle(),
+        supabase
+          .from('daily_challenge_claims')
+          .select('challenge_date')
+          .eq('challenge_date', todayKey())
+          .maybeSingle(),
+        supabase
+          .from('weekly_challenge_claims')
+          .select('week_start')
+          .eq('week_start', weekKey())
+          .maybeSingle(),
+        supabase
+          .from('test_history')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .gte('created_at', weekStartIso),
+        supabase
+          .from('test_history')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('mode', daily.mode)
+          .eq('value', daily.value)
+          .gte('created_at', todayStartIso),
+        supabase
+          .from('test_history')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('mode', hourly.mode)
+          .eq('value', hourly.value)
+          .gte('created_at', hourStartIso),
+      ]);
 
     setRemoteStats({
       ...mapStatsRow(statsRes.data as Record<string, number | string> | null),
       testHistory: (historyRes.data ?? []).map(row => mapHistoryRow(row as Record<string, string | number>)),
     });
+    setClaimedThisHour(Boolean(hourClaimRes.data));
     setClaimedToday(Boolean(claimRes.data));
     setWeeklyClaimed(Boolean(weeklyClaimRes.data));
     setRemoteTestsThisWeek(weekCountRes.count ?? 0);
     setDailyChallengeTestsToday(dailyCountRes.count ?? 0);
+    setHourlyChallengeTestsThisHour(hourCountRes.count ?? 0);
   }, [user]);
 
   useEffect(() => {
@@ -158,6 +179,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // reset to a clean slate rather than showing stale/guest data.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setRemoteStats(defaultStats);
+      setClaimedThisHour(false);
+      setHourlyChallengeTestsThisHour(0);
       setClaimedToday(false);
       setDailyChallengeTestsToday(0);
       setWeeklyClaimed(false);
@@ -238,6 +261,22 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   const clearLastXpGained = () => setLastXpGained(null);
+
+  const claimHourlyChallengeBonus = async (): Promise<boolean> => {
+    if (!isAccountSynced || !user || !supabase || !hourlyChallenge || claimedThisHour) return false;
+    if (hourlyChallengeTestsThisHour < hourlyChallenge.testsTarget) return false;
+
+    const { data, error } = await supabase.rpc('claim_hourly_challenge', {
+      p_mode: hourlyChallenge.mode,
+      p_value: hourlyChallenge.value,
+      p_tests_target: hourlyChallenge.testsTarget,
+      p_xp_bonus: hourlyChallenge.xpBonus,
+    });
+    if (error || !data) return false;
+    await refreshRemoteStats();
+    setLastXpGained(hourlyChallenge.xpBonus);
+    return true;
+  };
 
   const claimDailyChallengeBonus = async (): Promise<boolean> => {
     if (!isAccountSynced || !user || !supabase || !dailyChallenge || claimedToday) return false;
@@ -330,6 +369,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         loading,
         lastXpGained,
         isAccountSynced,
+        claimedThisHour,
+        hourlyChallenge,
+        hourlyChallengeTestsThisHour,
         claimedToday,
         dailyChallenge,
         dailyChallengeTestsToday,
@@ -337,6 +379,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         weeklyClaimed,
         addTestResult,
         clearLastXpGained,
+        claimHourlyChallengeBonus,
         claimDailyChallengeBonus,
         claimWeeklyChallengeBonus,
         setEquippedCosmetics,

@@ -1,8 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useUser } from '../hooks/useUser.js';
+import { nextDailyReset } from '../utils/dailyChallenge.js';
+import ChallengeCountdown from './ChallengeCountdown.js';
 
 export default function DailyChallenge() {
   const { claimedToday, dailyChallenge, dailyChallengeTestsToday, claimDailyChallengeBonus } = useUser();
+  const resetAt = useMemo(() => nextDailyReset(), []);
 
   useEffect(() => {
     if (!dailyChallenge || claimedToday || dailyChallengeTestsToday < dailyChallenge.testsTarget) return;
@@ -35,9 +38,12 @@ export default function DailyChallenge() {
           style={{ width: `${progress}%` }}
         />
       </div>
-      <p className="text-xs text-[var(--text-muted)] mt-1.5 tabular-nums">
-        {Math.min(dailyChallengeTestsToday, dailyChallenge.testsTarget)} / {dailyChallenge.testsTarget} today
-      </p>
+      <div className="flex items-center justify-between mt-1.5">
+        <p className="text-xs text-[var(--text-muted)] tabular-nums">
+          {Math.min(dailyChallengeTestsToday, dailyChallenge.testsTarget)} / {dailyChallenge.testsTarget} today
+        </p>
+        <ChallengeCountdown resetAt={resetAt} />
+      </div>
     </div>
   );
 }

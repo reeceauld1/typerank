@@ -1,12 +1,16 @@
 import { createContext } from 'react';
 import type { UserStats, TestResult } from '../types/index.js';
 import type { DailyChallenge } from '../utils/dailyChallenge.js';
+import type { HourlyChallenge } from '../utils/hourlyChallenge.js';
 
 export interface UserContextType {
   stats: UserStats;
   loading: boolean;
   lastXpGained: number | null;
   isAccountSynced: boolean;
+  claimedThisHour: boolean;
+  hourlyChallenge: HourlyChallenge | null;
+  hourlyChallengeTestsThisHour: number;
   claimedToday: boolean;
   dailyChallenge: DailyChallenge | null;
   dailyChallengeTestsToday: number;
@@ -14,6 +18,7 @@ export interface UserContextType {
   weeklyClaimed: boolean;
   addTestResult: (result: Omit<TestResult, 'id' | 'timestamp' | 'xpEarned'>, xpMultiplier?: number) => Promise<number>;
   clearLastXpGained: () => void;
+  claimHourlyChallengeBonus: () => Promise<boolean>;
   claimDailyChallengeBonus: () => Promise<boolean>;
   claimWeeklyChallengeBonus: (weekStart: string, testsTarget: number, xpBonus: number) => Promise<boolean>;
   setEquippedCosmetics: (avatarId: string, borderId: string) => Promise<boolean>;
