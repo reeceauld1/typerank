@@ -39,6 +39,7 @@ const defaultStats: UserStats = {
   isSupporter: false,
   isFastTyper: false,
   isGoat: false,
+  isBugFixer: false,
   elo: 1000,
   peakElo: 1000,
   rankedGamesPlayed: 0,

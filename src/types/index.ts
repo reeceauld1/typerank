@@ -57,6 +57,7 @@ export interface UserStats {
   isSupporter: boolean;
   isFastTyper: boolean;
   isGoat: boolean;
+  isBugFixer: boolean;
   elo: number;
   peakElo: number;
   rankedGamesPlayed: number;

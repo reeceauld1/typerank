@@ -578,6 +578,30 @@ export const BADGE_CATALOG: BadgeDef[] = [
     // instead of a username check since it isn't a single hardcoded account.
     isUnlocked: stats => stats.isGoat,
   },
+  {
+    id: 'bug_fixer',
+    name: 'Bug Fixer',
+    description: 'Reported a bug that helped fix typeladder.',
+    icon: ({ className }) => (
+      <ShineIcon
+        className={className}
+        variant="stroke"
+        color="#4ade80"
+        paths={
+          <>
+            <ellipse cx="12" cy="14" rx="5" ry="6.5" />
+            <circle cx="12" cy="6.5" r="2.3" />
+            <path d="M12 8.8v11.7M9.3 3.2l1.3 2.3M14.7 3.2l-1.3 2.3M6.5 11l-3-1.2M17.5 11l3-1.2M6 15h-3M18 15h3M6.5 19l-3 1.2M17.5 19l3 1.2" />
+          </>
+        }
+      />
+    ),
+    color: '#4ade80',
+    // No derivable criteria — granted by hand in the SQL Editor whenever a
+    // reported bug turns out to be real and worth fixing, same one-off
+    // pattern as Supporter/GOAT (see schema_044).
+    isUnlocked: stats => stats.isBugFixer,
+  },
 ];
 
 export function getBadge(id: string): BadgeDef | null {

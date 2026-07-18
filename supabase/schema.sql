@@ -1935,13 +1935,14 @@ grant execute on function public.change_username to authenticated;
 -- boolean here instead of a client-side isUnlocked(stats) check.
 create table public.badge_catalog (id text primary key);
 
-insert into public.badge_catalog (id) values ('founder'), ('supporter'), ('fast_typer'), ('dev'), ('goat');
+insert into public.badge_catalog (id) values ('founder'), ('supporter'), ('fast_typer'), ('dev'), ('goat'), ('bug_fixer');
 
 alter table public.user_stats
   add column is_founder boolean not null default false,
   add column is_supporter boolean not null default false,
   add column is_fast_typer boolean not null default false,
   add column is_goat boolean not null default false,
+  add column is_bug_fixer boolean not null default false,
   add column equipped_badge text references public.badge_catalog (id);
 
 -- Backfill Founder for accounts that already existed before this migration
@@ -2004,6 +2005,10 @@ update public.user_stats set is_fast_typer = public.is_fast_typer_user(user_id);
 -- donation is verified, e.g.:
 --   update public.user_stats set is_supporter = true where username = 'someusername';
 
+-- Bug Fixer has no automatic criteria either — toggled by hand whenever a
+-- reported bug turns out to be real and worth fixing, same pattern as
+-- Supporter/GOAT (see schema_044).
+
 create or replace function public.set_equipped_badge(p_badge_id text)
 returns void
 language plpgsql
@@ -2019,7 +2024,7 @@ begin
   end if;
 
   if p_badge_id is not null then
-    if p_badge_id not in ('founder', 'supporter', 'fast_typer', 'dev', 'goat') then
+    if p_badge_id not in ('founder', 'supporter', 'fast_typer', 'dev', 'goat', 'bug_fixer') then
       raise exception 'unknown badge';
     end if;
 
@@ -2028,7 +2033,8 @@ begin
       or (p_badge_id = 'supporter' and not v_row.is_supporter)
       or (p_badge_id = 'fast_typer' and not v_row.is_fast_typer)
       or (p_badge_id = 'dev' and lower(v_row.username) <> 'yvern')
-      or (p_badge_id = 'goat' and not v_row.is_goat) then
+      or (p_badge_id = 'goat' and not v_row.is_goat)
+      or (p_badge_id = 'bug_fixer' and not v_row.is_bug_fixer) then
       raise exception 'badge not unlocked';
     end if;
   end if;
