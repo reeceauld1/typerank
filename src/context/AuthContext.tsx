@@ -37,18 +37,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Supabase's password-grant API only accepts an email (or phone) — there's
   // no username-based sign-in at that level — so a non-email identifier is
-  // resolved to its email via get_email_for_username first.
-  const resolveEmail = async (identifier: string): Promise<string | null> => {
+  // resolved to its email via resolve_login_email first. That RPC requires
+  // the password too (verified server-side against the account's own
+  // bcrypt hash) and only returns the email on a match — usernames are
+  // public (every profile/leaderboard shows one), so a lookup that didn't
+  // require the password would let anyone harvest every user's real email
+  // by just calling it once per known username.
+  const resolveEmail = async (identifier: string, password: string): Promise<string | null> => {
     if (!supabase) return null;
     if (identifier.includes('@')) return identifier;
-    const { data, error } = await supabase.rpc('get_email_for_username', { p_username: identifier });
+    const { data, error } = await supabase.rpc('resolve_login_email', { p_username: identifier, p_password: password });
     if (error || !data) return null;
     return data as string;
   };
 
   const signIn = async (identifier: string, password: string) => {
     if (!supabase) return { error: 'Accounts are not configured yet.' };
-    const email = await resolveEmail(identifier);
+    const email = await resolveEmail(identifier, password);
     if (!email) return { error: 'Invalid email/username or password.' };
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error?.message ?? null };
@@ -84,17 +89,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  // Requires an actual email rather than accepting a username too — a
+  // username-to-email resolver here would have no password to gate on the
+  // way resolveEmail's sign-in path does, reopening the same
+  // email-harvesting hole that used to exist (see schema_046): usernames
+  // are public, so a free "give me this username's email" lookup lets
+  // anyone enumerate every account's real email.
   const sendPasswordReset = async (identifier: string) => {
     if (!supabase) return { error: 'Accounts are not configured yet.' };
-    const email = await resolveEmail(identifier);
+    if (!identifier.includes('@')) return { error: 'Enter your account email to reset your password.' };
     // Deliberately doesn't distinguish "no such account" from "sent" — the
     // caller shows one message regardless, so this can't be used to
-    // enumerate which usernames/emails have accounts.
-    if (email) {
-      await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-    }
+    // enumerate which emails have accounts.
+    await supabase.auth.resetPasswordForEmail(identifier, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     return { error: null };
   };
 

@@ -124,9 +124,9 @@ export default function AuthForm({ initialMode = 'signin' }: AuthFormProps = {})
           />
         ) : (
           <input
-            type="text"
+            type={mode === 'forgot' ? 'email' : 'text'}
             required
-            placeholder="email or username"
+            placeholder={mode === 'forgot' ? 'email' : 'email or username'}
             value={identifier}
             onChange={e => setIdentifier(e.target.value)}
             className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-correct)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"

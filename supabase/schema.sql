@@ -899,7 +899,20 @@ grant execute on function public.remove_friend to authenticated;
 -- password-grant API only accepts an email (or phone), so the client
 -- resolves a typed username to its email via this function first. Granted
 -- to anon since sign-in happens before the caller has a session.
-create or replace function public.get_email_for_username(p_username text)
+--
+-- Requires the caller to already know the account's password (verified
+-- here against auth.users' own bcrypt hash via pgcrypto) rather than
+-- returning the email for any username unconditionally — usernames are
+-- public (every profile/leaderboard shows one), so a bare lookup would
+-- let anyone harvest every user's real email by calling this once per
+-- known username (see schema_046). Wrong username and wrong password
+-- both return null, so this still can't be used to check whether a
+-- username exists either. Password-reset-by-username used to share this
+-- same resolver with no password to gate on at all; that flow now
+-- requires an actual email instead (src/context/AuthContext.tsx).
+create extension if not exists pgcrypto with schema extensions;
+
+create or replace function public.resolve_login_email(p_username text, p_password text)
 returns text
 language sql
 stable
@@ -910,10 +923,11 @@ as $$
   from public.user_stats us
   join auth.users au on au.id = us.user_id
   where lower(us.username) = lower(p_username)
+    and au.encrypted_password = extensions.crypt(p_password, au.encrypted_password)
   limit 1;
 $$;
 
-grant execute on function public.get_email_for_username to anon, authenticated;
+grant execute on function public.resolve_login_email to anon, authenticated;
 
 -- Accent color customization: like avatars/borders, unlock conditions live
 -- entirely in the client (src/utils/accentColors.ts) as pure functions of
