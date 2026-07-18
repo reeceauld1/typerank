@@ -41,7 +41,13 @@ export default function UserProfile() {
       setNotFound(true);
       return;
     }
-    const { data } = await supabase.from('user_stats').select('*').ilike('username', targetUsername).maybeSingle();
+    // ilike's pattern wildcards (%, _) aren't valid in a real username
+    // ([A-Za-z0-9]{3,20} only) but the URL segment feeding targetUsername
+    // isn't itself constrained — escaping them keeps this an exact
+    // case-insensitive match instead of an unintended pattern match
+    // (e.g. /u/a% matching every username starting with "a").
+    const escapedUsername = targetUsername.replace(/[\\%_]/g, '\\$&');
+    const { data } = await supabase.from('user_stats').select('*').ilike('username', escapedUsername).maybeSingle();
     if (!data) {
       setNotFound(true);
     } else {

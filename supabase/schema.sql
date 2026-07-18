@@ -72,8 +72,12 @@ alter table public.daily_challenge_claims enable row level security;
 
 create policy "select own stats" on public.user_stats
   for select using (auth.uid() = user_id);
-create policy "insert own stats" on public.user_stats
-  for insert with check (auth.uid() = user_id);
+-- No insert policy either — handle_new_user's own insert runs as the
+-- function owner (security definer) and isn't subject to RLS. A public
+-- insert policy checking ownership only, not column values, would let a
+-- user forge any column (elo, xp, badges) on a freshly-inserted row the
+-- same way the dropped update policy did (schema_045, schema_047).
+--
 -- No update policy: every write goes through record_test_result and the
 -- other security-definer RPCs below (set_equipped_cosmetics,
 -- submit_ranked_result, claim_*_challenge, etc.), which bypass RLS by
@@ -93,8 +97,9 @@ create policy "select own history" on public.test_history
 
 create policy "select own claims" on public.daily_challenge_claims
   for select using (auth.uid() = user_id);
-create policy "insert own claims" on public.daily_challenge_claims
-  for insert with check (auth.uid() = user_id);
+-- No insert policy — same reasoning as user_stats/test_history above,
+-- claim_daily_challenge's own insert runs as the function owner
+-- (schema_047).
 
 -- Level from total_xp, mirroring calculateLevel in src/utils/xp.ts — every
 -- level costs a flat 2500 xp, so this has a closed form instead of that
@@ -293,6 +298,15 @@ begin
 
   v_username := new.raw_user_meta_data ->> 'username';
 
+  -- The two hardcoded admin cosmetics-bypass usernames (isAdminUsername in
+  -- cosmetics.tsx, mirrored in set_equipped_cosmetics/set_equipped_accent_
+  -- color/set_equipped_name_color) unlock every cosmetic regardless of
+  -- actual stats — reserved here so a new signup can't just claim
+  -- whichever of the two isn't already registered (schema_047).
+  if v_username is not null and lower(v_username) in ('yvern', 'lol') then
+    raise exception 'username not available';
+  end if;
+
   if v_username is null then
     v_base := regexp_replace(
       coalesce(new.raw_user_meta_data ->> 'user_name', new.raw_user_meta_data ->> 'full_name', ''),
@@ -430,8 +444,8 @@ alter table public.hourly_challenge_claims enable row level security;
 
 create policy "select own hourly claims" on public.hourly_challenge_claims
   for select using (auth.uid() = user_id);
-create policy "insert own hourly claims" on public.hourly_challenge_claims
-  for insert with check (auth.uid() = user_id);
+-- No insert policy — same reasoning as the daily claims table
+-- (schema_047).
 
 -- Same validation as claim_daily_challenge above, pool values from
 -- src/utils/hourlyChallenge.ts. Dropped first for the same reason as
@@ -507,8 +521,8 @@ alter table public.weekly_challenge_claims enable row level security;
 
 create policy "select own weekly claims" on public.weekly_challenge_claims
   for select using (auth.uid() = user_id);
-create policy "insert own weekly claims" on public.weekly_challenge_claims
-  for insert with check (auth.uid() = user_id);
+-- No insert policy — same reasoning as the daily claims table
+-- (schema_047).
 
 -- Claims this week's challenge and awards its XP bonus exactly once,
 -- mirroring claim_daily_challenge but keyed by the Monday-start week.
@@ -597,6 +611,14 @@ insert into public.avatar_catalog (id) values
 
 insert into public.border_catalog (id) values
   ('none'), ('bronze'), ('silver'), ('gold'), ('platinum'), ('diamond'), ('amethyst'), ('legend');
+
+-- Public read, no client writes (catalog entries only ever change via a
+-- migration) — RLS was missing entirely on this and the other four
+-- cosmetic-catalog tables until schema_047.
+alter table public.avatar_catalog enable row level security;
+alter table public.border_catalog enable row level security;
+create policy "select avatar catalog" on public.avatar_catalog for select to anon, authenticated using (true);
+create policy "select border catalog" on public.border_catalog for select to anon, authenticated using (true);
 
 alter table public.user_stats
   add column equipped_avatar text not null default 'keyboard' references public.avatar_catalog (id),
@@ -940,6 +962,9 @@ insert into public.accent_color_catalog (id) values
 -- schema_009_monochrome_accent.sql) even though the client no longer offers
 -- it as a choice, having renamed that slot to "monochrome".
 
+alter table public.accent_color_catalog enable row level security;
+create policy "select accent color catalog" on public.accent_color_catalog for select to anon, authenticated using (true);
+
 alter table public.user_stats
   add column equipped_accent_color text not null default 'blue' references public.accent_color_catalog (id),
   add column custom_accent_hex text check (custom_accent_hex is null or custom_accent_hex ~ '^#[0-9a-fA-F]{6}$');
@@ -1011,8 +1036,10 @@ create table public.bug_reports (
 
 alter table public.bug_reports enable row level security;
 
+-- Only lets a caller misattribute a report to themselves or leave it
+-- anonymous (user_id null), never to another real user's id (schema_047).
 create policy "insert bug reports" on public.bug_reports
-  for insert to anon, authenticated with check (true);
+  for insert to anon, authenticated with check (user_id is null or user_id = auth.uid());
 
 -- 1v1 duels (see schema_013_duels.sql, schema_014_duel_invites.sql,
 -- schema_015_duel_guests.sql): a shared word list, a link to share, async
@@ -1022,14 +1049,19 @@ create policy "insert bug reports" on public.bug_reports
 -- (friend invited, awaiting response), 'accepted' (ready to play / in
 -- progress), 'declined'. No live opponent progress yet, and no per-friend
 -- win/loss tally yet.
+--
+-- Guest tokens live in the separate public.duel_tokens table below, not
+-- as columns here — this table is publicly readable (any duel link
+-- needs to work for a signed-out visitor) and in the realtime
+-- publication, so a token column here would be broadcast to and
+-- readable by anyone, defeating the only auth a guest participant has
+-- (schema_047).
 create table public.duels (
   id uuid primary key default gen_random_uuid(),
   creator_id uuid references auth.users (id) on delete cascade,
   opponent_id uuid references auth.users (id) on delete cascade,
   creator_name text,
   opponent_name text,
-  creator_token uuid,
-  opponent_token uuid,
   value int not null,
   mode text not null default 'words' check (mode in ('words', 'time')),
   word_list text not null,
@@ -1045,20 +1077,55 @@ create table public.duels (
   creator_rematch boolean not null default false,
   opponent_rematch boolean not null default false,
   rematch_duel_id uuid references public.duels (id),
-  creator_rematch_token uuid,
-  opponent_rematch_token uuid,
   created_at timestamptz not null default now()
 );
 
 alter table public.duels enable row level security;
 
+-- Bounds the columns a client can set at insert time to what the two
+-- legitimate creation paths actually need — a bare "creator_id = you"
+-- check used to let a client insert a duel already 'accepted' with
+-- fabricated results against a real opponent, or target any user id as
+-- opponent_id regardless of friendship (schema_047).
 create policy "insert own duel" on public.duels
-  for insert to authenticated with check (creator_id = auth.uid());
+  for insert to authenticated
+  with check (
+    creator_id = auth.uid()
+    and status in ('open', 'pending')
+    and value between 5 and 300
+    and creator_wpm is null and opponent_wpm is null
+    and creator_rematch = false and opponent_rematch = false
+    and rematch_duel_id is null
+    and (
+      opponent_id is null
+      or exists (
+        select 1 from public.friendships f
+        where f.status = 'accepted'
+          and ((f.requester_id = auth.uid() and f.addressee_id = opponent_id)
+            or (f.addressee_id = auth.uid() and f.requester_id = opponent_id))
+      )
+    )
+  );
 
 create policy "select duels" on public.duels
   for select to anon, authenticated using (true);
 
 alter publication supabase_realtime add table public.duels;
+
+-- RLS enabled, no policies at all — every legitimate read/write happens
+-- inside the security-definer functions below, which bypass RLS by
+-- running as the table owner. Never added to the realtime publication.
+-- See the CRITICAL finding in schema_047 for why this exists as a
+-- separate table instead of columns on duels.
+create table public.duel_tokens (
+  duel_id uuid primary key references public.duels (id) on delete cascade,
+  creator_token uuid,
+  opponent_token uuid,
+  creator_rematch_token uuid,
+  opponent_rematch_token uuid
+);
+
+alter table public.duel_tokens enable row level security;
 
 create or replace function public.join_duel(p_duel_id uuid)
 returns void
@@ -1234,8 +1301,10 @@ begin
     raise exception 'invalid mode';
   end if;
 
-  insert into public.duels (id, mode, value, word_list, creator_name, creator_token, status)
-  values (v_id, p_mode, p_value, p_word_list, trim(p_creator_name), v_token, 'open');
+  insert into public.duels (id, mode, value, word_list, creator_name, status)
+  values (v_id, p_mode, p_value, p_word_list, trim(p_creator_name), 'open');
+
+  insert into public.duel_tokens (duel_id, creator_token) values (v_id, v_token);
 
   return query select v_id, v_token;
 end;
@@ -1268,14 +1337,63 @@ begin
   end if;
 
   update public.duels
-  set opponent_name = trim(p_name), opponent_token = v_token, status = 'accepted'
+  set opponent_name = trim(p_name), status = 'accepted'
   where id = p_duel_id;
+
+  insert into public.duel_tokens (duel_id, opponent_token) values (p_duel_id, v_token)
+  on conflict (duel_id) do update set opponent_token = excluded.opponent_token;
 
   return v_token;
 end;
 $$;
 
 grant execute on function public.join_guest_duel to anon, authenticated;
+
+-- Determines "am I the creator or opponent of this duel" without ever
+-- returning a token value to the client — the caller proves identity by
+-- sending auth.uid() (implicitly) or a token it already holds, and gets
+-- back a role name, not the token itself (schema_047).
+create or replace function public.get_duel_role(p_duel_id uuid, p_token uuid default null)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case
+    when auth.uid() is not null and auth.uid() = (select creator_id from public.duels where id = p_duel_id) then 'creator'
+    when auth.uid() is not null and auth.uid() = (select opponent_id from public.duels where id = p_duel_id) then 'opponent'
+    when p_token is not null and p_token = (select creator_token from public.duel_tokens where duel_id = p_duel_id) then 'creator'
+    when p_token is not null and p_token = (select opponent_token from public.duel_tokens where duel_id = p_duel_id) then 'opponent'
+    else null
+  end;
+$$;
+
+grant execute on function public.get_duel_role to anon, authenticated;
+
+-- The one other place a token needs to reach the client at all: picking
+-- up a guest's token for the *new* duel a rematch just created.
+create or replace function public.get_my_rematch_token(p_duel_id uuid, p_token uuid default null)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case
+    when auth.uid() is not null and auth.uid() = (select creator_id from public.duels where id = p_duel_id)
+      then (select creator_rematch_token from public.duel_tokens where duel_id = p_duel_id)
+    when auth.uid() is not null and auth.uid() = (select opponent_id from public.duels where id = p_duel_id)
+      then (select opponent_rematch_token from public.duel_tokens where duel_id = p_duel_id)
+    when p_token is not null and p_token = (select creator_token from public.duel_tokens where duel_id = p_duel_id)
+      then (select creator_rematch_token from public.duel_tokens where duel_id = p_duel_id)
+    when p_token is not null and p_token = (select opponent_token from public.duel_tokens where duel_id = p_duel_id)
+      then (select opponent_rematch_token from public.duel_tokens where duel_id = p_duel_id)
+    else null
+  end;
+$$;
+
+grant execute on function public.get_my_rematch_token to anon, authenticated;
 
 -- p_wpm/p_accuracy/p_raw_wpm are bounds-checked before anything else — this
 -- used to store whatever the caller sent with no validation at all, which
@@ -1310,7 +1428,7 @@ begin
   end if;
 
   select creator_token, opponent_token into v_creator_token, v_opponent_token
-  from public.duels where id = p_duel_id for update;
+  from public.duel_tokens where duel_id = p_duel_id for update;
 
   if v_creator_token is not null and v_creator_token = p_token then
     update public.duels
@@ -1438,14 +1556,21 @@ begin
     v_new_opponent_token := case when v_opponent_id is null then gen_random_uuid() else null end;
 
     insert into public.duels
-      (creator_id, opponent_id, creator_name, opponent_name, creator_token, opponent_token, mode, value, word_list, status)
+      (creator_id, opponent_id, creator_name, opponent_name, mode, value, word_list, status)
     values
-      (v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_new_creator_token, v_new_opponent_token, v_mode, v_value, p_word_list, 'accepted')
+      (v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_mode, v_value, p_word_list, 'accepted')
     returning id into v_new_id;
 
-    update public.duels
-    set rematch_duel_id = v_new_id, creator_rematch_token = v_new_creator_token, opponent_rematch_token = v_new_opponent_token
-    where id = p_duel_id;
+    insert into public.duel_tokens (duel_id, creator_token, opponent_token)
+    values (v_new_id, v_new_creator_token, v_new_opponent_token);
+
+    update public.duels set rematch_duel_id = v_new_id where id = p_duel_id;
+    insert into public.duel_tokens (duel_id, creator_rematch_token, opponent_rematch_token)
+    values (p_duel_id, v_new_creator_token, v_new_opponent_token)
+    on conflict (duel_id) do update
+    set creator_rematch_token = excluded.creator_rematch_token,
+        opponent_rematch_token = excluded.opponent_rematch_token;
+
     v_rematch_duel_id := v_new_id;
   end if;
 
@@ -1478,11 +1603,13 @@ declare
   v_new_creator_token uuid;
   v_new_opponent_token uuid;
 begin
-  select creator_id, opponent_id, creator_name, opponent_name, creator_token, opponent_token, mode, value,
-         creator_wpm, opponent_wpm, creator_rematch, opponent_rematch, rematch_duel_id
-  into v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_creator_token, v_opponent_token, v_mode, v_value,
-       v_creator_wpm, v_opponent_wpm, v_creator_rematch, v_opponent_rematch, v_rematch_duel_id
-  from public.duels where id = p_duel_id for update;
+  select d.creator_id, d.opponent_id, d.creator_name, d.opponent_name, dt.creator_token, dt.opponent_token,
+         d.mode, d.value, d.creator_wpm, d.opponent_wpm, d.creator_rematch, d.opponent_rematch, d.rematch_duel_id
+  into v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_creator_token, v_opponent_token,
+       v_mode, v_value, v_creator_wpm, v_opponent_wpm, v_creator_rematch, v_opponent_rematch, v_rematch_duel_id
+  from public.duels d
+  left join public.duel_tokens dt on dt.duel_id = d.id
+  where d.id = p_duel_id for update of d;
 
   if not found then
     raise exception 'duel not found';
@@ -1506,14 +1633,21 @@ begin
     v_new_opponent_token := case when v_opponent_id is null then gen_random_uuid() else null end;
 
     insert into public.duels
-      (creator_id, opponent_id, creator_name, opponent_name, creator_token, opponent_token, mode, value, word_list, status)
+      (creator_id, opponent_id, creator_name, opponent_name, mode, value, word_list, status)
     values
-      (v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_new_creator_token, v_new_opponent_token, v_mode, v_value, p_word_list, 'accepted')
+      (v_creator_id, v_opponent_id, v_creator_name, v_opponent_name, v_mode, v_value, p_word_list, 'accepted')
     returning id into v_new_id;
 
-    update public.duels
-    set rematch_duel_id = v_new_id, creator_rematch_token = v_new_creator_token, opponent_rematch_token = v_new_opponent_token
-    where id = p_duel_id;
+    insert into public.duel_tokens (duel_id, creator_token, opponent_token)
+    values (v_new_id, v_new_creator_token, v_new_opponent_token);
+
+    update public.duels set rematch_duel_id = v_new_id where id = p_duel_id;
+    insert into public.duel_tokens (duel_id, creator_rematch_token, opponent_rematch_token)
+    values (p_duel_id, v_new_creator_token, v_new_opponent_token)
+    on conflict (duel_id) do update
+    set creator_rematch_token = excluded.creator_rematch_token,
+        opponent_rematch_token = excluded.opponent_rematch_token;
+
     v_rematch_duel_id := v_new_id;
   end if;
 
@@ -1853,6 +1987,9 @@ create table public.name_color_catalog (id text primary key);
 insert into public.name_color_catalog (id) values
   ('default'), ('bronze'), ('silver'), ('gold'), ('platinum'), ('diamond'), ('amethyst'), ('legend');
 
+alter table public.name_color_catalog enable row level security;
+create policy "select name color catalog" on public.name_color_catalog for select to anon, authenticated using (true);
+
 alter table public.user_stats
   add column equipped_name_color text not null default 'default' references public.name_color_catalog (id);
 
@@ -1926,6 +2063,13 @@ begin
     raise exception 'invalid username';
   end if;
 
+  -- Same reservation as handle_new_user above — otherwise an existing
+  -- account could just rename into the admin cosmetics bypass instead of
+  -- needing to sign up fresh (schema_047).
+  if lower(p_new_username) in ('yvern', 'lol') then
+    raise exception 'username not available';
+  end if;
+
   select username, username_changed_at into v_current_username, v_last_changed
   from public.user_stats where user_id = v_user_id for update;
 
@@ -1962,6 +2106,9 @@ grant execute on function public.change_username to authenticated;
 create table public.badge_catalog (id text primary key);
 
 insert into public.badge_catalog (id) values ('founder'), ('supporter'), ('fast_typer'), ('dev'), ('goat'), ('bug_fixer');
+
+alter table public.badge_catalog enable row level security;
+create policy "select badge catalog" on public.badge_catalog for select to anon, authenticated using (true);
 
 alter table public.user_stats
   add column is_founder boolean not null default false,
@@ -2158,5 +2305,7 @@ create table public.contact_messages (
 
 alter table public.contact_messages enable row level security;
 
+-- Only lets a caller misattribute a message to themselves or leave it
+-- anonymous (user_id null), never to another real user's id (schema_047).
 create policy "insert contact messages" on public.contact_messages
-  for insert to anon, authenticated with check (true);
+  for insert to anon, authenticated with check (user_id is null or user_id = auth.uid());

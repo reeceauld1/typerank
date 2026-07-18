@@ -21,8 +21,6 @@ interface DuelRow {
   opponent_id: string | null;
   creator_name: string | null;
   opponent_name: string | null;
-  creator_token: string | null;
-  opponent_token: string | null;
   mode: DuelMode;
   value: number;
   word_list: string;
@@ -36,8 +34,6 @@ interface DuelRow {
   creator_rematch: boolean;
   opponent_rematch: boolean;
   rematch_duel_id: string | null;
-  creator_rematch_token: string | null;
-  opponent_rematch_token: string | null;
 }
 
 interface PlayerInfo {
@@ -116,6 +112,12 @@ export default function DuelMatch() {
   const [opponentPresent, setOpponentPresent] = useState<boolean | null>(null);
   const [opponentEverPresent, setOpponentEverPresent] = useState(false);
   const [guestToken, setGuestToken] = useState<string | null>(null);
+  // Who I am on this duel — resolved server-side (get_duel_role), never by
+  // comparing a token value client-side, since the row itself no longer
+  // carries token columns at all (see schema_047: they used to be
+  // world-readable, including via realtime, which defeated the only auth
+  // a guest participant has).
+  const [myRole, setMyRole] = useState<'creator' | 'opponent' | null>(null);
   const [joinName, setJoinName] = useState('');
   const [ready, setReady] = useState(false);
   // Set the instant handleComplete fires (before the submit RPC even
@@ -167,15 +169,19 @@ export default function DuelMatch() {
 
   const loadDuel = useCallback(async () => {
     if (!supabase || !id) return;
-    const { data } = await supabase.from('duels').select('*').eq('id', id).maybeSingle();
+    const [{ data }, { data: role }] = await Promise.all([
+      supabase.from('duels').select('*').eq('id', id).maybeSingle(),
+      supabase.rpc('get_duel_role', { p_duel_id: id, p_token: guestToken }),
+    ]);
     if (!data) {
       setNotFound(true);
       return;
     }
     const row = data as DuelRow;
     setDuel(row);
+    setMyRole((role as 'creator' | 'opponent' | null) ?? null);
     void loadPlayers([row.creator_id, row.opponent_id].filter((v): v is string => v !== null));
-  }, [id, loadPlayers]);
+  }, [id, loadPlayers, guestToken]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -214,18 +220,8 @@ export default function DuelMatch() {
     }
   }, [id]);
 
-  // creator_id/creator_token (and opponent_id/opponent_token) are mutually
-  // exclusive by construction — whichever path someone joined through sets
-  // only its own pair — so matching either one directly is sufficient;
-  // gating the token check behind "was this duel guest-created" was the
-  // bug: a guest opponent's token is valid regardless of how the creator
-  // joined.
-  const isCreator = Boolean(
-    duel && ((user && user.id === duel.creator_id) || (guestToken && guestToken === duel.creator_token))
-  );
-  const isOpponent = Boolean(
-    duel && ((user && user.id === duel.opponent_id) || (guestToken && guestToken === duel.opponent_token))
-  );
+  const isCreator = myRole === 'creator';
+  const isOpponent = myRole === 'opponent';
   const waitingForAccept = isCreator && duel?.status === 'pending';
   // The invited player, looking at the still-unanswered invite — tracked
   // separately from waitingForAccept (which is the creator's own side of
@@ -254,14 +250,14 @@ export default function DuelMatch() {
   }, [waitingForAccept, opponentSlotOpen, waitingForOpponentToFinish, loadDuel]);
 
   // Presence keyed by role (not user id) so it works the same whether
-  // either side is signed in or a guest. Covers the whole span from
-  // "invited but unanswered" through "accepted but neither has finished" —
-  // not just the two waiting states either side of the actual race — so a
-  // real disconnect *during* the race (as opposed to just navigating to
-  // another page in the SPA, which ActiveDuelPresence.tsx keeps looking
-  // like "still here" for) still gets caught instead of leaving the
-  // remaining player racing against someone who's gone.
-  const myRole: 'creator' | 'opponent' | null = isCreator ? 'creator' : isOpponent ? 'opponent' : null;
+  // either side is signed in or a guest (myRole is now resolved
+  // server-side, see the state declaration above). Covers the whole span
+  // from "invited but unanswered" through "accepted but neither has
+  // finished" — not just the two waiting states either side of the actual
+  // race — so a real disconnect *during* the race (as opposed to just
+  // navigating to another page in the SPA, which ActiveDuelPresence.tsx
+  // keeps looking like "still here" for) still gets caught instead of
+  // leaving the remaining player racing against someone who's gone.
   const waitingOnRole: 'creator' | 'opponent' | null =
     duel && (duel.status === 'pending' || (duel.status === 'accepted' && !bothFinished))
       ? (isCreator ? 'opponent' : 'creator')
@@ -533,16 +529,24 @@ export default function DuelMatch() {
 
   // Once both sides have requested a rematch, a fresh duel is created and
   // this fires on both clients (via the same Realtime subscription already
-  // watching this row) to send them there together.
+  // watching this row) to send them there together. My token for that new
+  // duel (if I'm a guest) is fetched server-side rather than read off this
+  // row, same reasoning as myRole above.
   useEffect(() => {
-    if (duel?.rematch_duel_id) {
-      const myNewToken = isCreator ? duel.creator_rematch_token : isOpponent ? duel.opponent_rematch_token : null;
-      if (myNewToken) {
-        sessionStorage.setItem(`duel_token_${duel.rematch_duel_id}`, myNewToken);
+    if (!duel?.rematch_duel_id || !supabase || !id) return;
+    let cancelled = false;
+    const rematchDuelId = duel.rematch_duel_id;
+    void supabase.rpc('get_my_rematch_token', { p_duel_id: id, p_token: guestToken }).then(({ data }) => {
+      if (cancelled) return;
+      if (data) {
+        sessionStorage.setItem(`duel_token_${rematchDuelId}`, data as string);
       }
-      navigate(`/duel/${duel.rematch_duel_id}`, { state: { fromRematch: true } });
-    }
-  }, [duel?.rematch_duel_id, duel?.creator_rematch_token, duel?.opponent_rematch_token, isCreator, isOpponent, navigate]);
+      navigate(`/duel/${rematchDuelId}`, { state: { fromRematch: true } });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [duel?.rematch_duel_id, id, guestToken, navigate]);
 
   if (!isConfigured) {
     return (
