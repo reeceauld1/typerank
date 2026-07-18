@@ -74,13 +74,22 @@ create policy "select own stats" on public.user_stats
   for select using (auth.uid() = user_id);
 create policy "insert own stats" on public.user_stats
   for insert with check (auth.uid() = user_id);
-create policy "update own stats" on public.user_stats
-  for update using (auth.uid() = user_id);
+-- No update policy: every write goes through record_test_result and the
+-- other security-definer RPCs below (set_equipped_cosmetics,
+-- submit_ranked_result, claim_*_challenge, etc.), which bypass RLS by
+-- running as the function owner — an "update own row" policy here would
+-- let any authenticated user write any column (wpm, elo, xp, badges,
+-- anything) to any value with none of those RPCs' validation, straight
+-- from devtools (see schema_045).
 
 create policy "select own history" on public.test_history
   for select using (auth.uid() = user_id);
-create policy "insert own history" on public.test_history
-  for insert with check (auth.uid() = user_id);
+-- No insert policy either, same reasoning as user_stats above -
+-- record_test_result's own insert runs as the function owner and isn't
+-- subject to RLS. A public insert policy here would let a user fabricate
+-- test_history rows directly, bypassing every check record_test_result
+-- does and letting fake rows satisfy the challenge-claim RPCs' "do you
+-- actually have N qualifying tests" check without ever typing (schema_045).
 
 create policy "select own claims" on public.daily_challenge_claims
   for select using (auth.uid() = user_id);
@@ -157,10 +166,13 @@ begin
   v_wpm := round(p_correct_chars / 5.0 / (p_time_elapsed / 60.0));
   v_raw_wpm := round((p_correct_chars + p_incorrect_chars) / 5.0 / (p_time_elapsed / 60.0));
 
-  -- Well beyond any legitimate human result (competitive records top out
-  -- around 200-250 wpm even on short bursts) — just far enough above real
-  -- scores that no genuine run is ever rejected.
-  if v_wpm > 400 or v_raw_wpm > 400 then
+  -- The highest wpm ever recorded by a human on a comparable short-burst
+  -- typing-test platform is ~305 wpm (MythicalRocket, Monkeytype/
+  -- TypeRacer-style — ahead of Sean Wrona's 256 wpm competitive record and
+  -- Barbara Blackburn's 212 wpm Guinness-certified peak on sustained
+  -- prose, which measures something different than a 10-second burst).
+  -- +10 headroom for genuine variance = 315 (schema_045; was a round 400).
+  if v_wpm > 315 or v_raw_wpm > 315 then
     raise exception 'implausible wpm';
   end if;
 
@@ -1271,8 +1283,8 @@ declare
   v_creator_token uuid;
   v_opponent_token uuid;
 begin
-  if p_wpm is null or p_wpm < 0 or p_wpm > 400
-    or p_raw_wpm is null or p_raw_wpm < 0 or p_raw_wpm > 400
+  if p_wpm is null or p_wpm < 0 or p_wpm > 315
+    or p_raw_wpm is null or p_raw_wpm < 0 or p_raw_wpm > 315
     or p_wpm > p_raw_wpm then
     raise exception 'implausible wpm';
   end if;
@@ -1323,8 +1335,8 @@ begin
     raise exception 'not authenticated';
   end if;
 
-  if p_wpm is null or p_wpm < 0 or p_wpm > 400
-    or p_raw_wpm is null or p_raw_wpm < 0 or p_raw_wpm > 400
+  if p_wpm is null or p_wpm < 0 or p_wpm > 315
+    or p_raw_wpm is null or p_raw_wpm < 0 or p_raw_wpm > 315
     or p_wpm > p_raw_wpm then
     raise exception 'implausible wpm';
   end if;
@@ -1713,8 +1725,8 @@ begin
     raise exception 'not authenticated';
   end if;
 
-  if p_wpm is null or p_wpm < 0 or p_wpm > 400
-    or p_raw_wpm is null or p_raw_wpm < 0 or p_raw_wpm > 400
+  if p_wpm is null or p_wpm < 0 or p_wpm > 315
+    or p_raw_wpm is null or p_raw_wpm < 0 or p_raw_wpm > 315
     or p_wpm > p_raw_wpm then
     raise exception 'implausible wpm';
   end if;
