@@ -6,6 +6,7 @@ import { useUser } from '../hooks/useUser.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useFriends } from '../hooks/useFriends.js';
 import { useDuelInviteCount } from '../hooks/useDuelInviteCount.js';
+import { useReadyChallenges } from '../hooks/useReadyChallenges.js';
 
 function KeyboardIcon() {
   return (
@@ -137,6 +138,7 @@ export default function Navbar() {
   const { user } = useAuth();
   const { incomingRequests } = useFriends();
   const duelInviteCount = useDuelInviteCount();
+  const { count: readyChallengeCount } = useReadyChallenges();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -251,6 +253,11 @@ export default function Navbar() {
               }`}
             >
               <ChallengeIcon />
+              {readyChallengeCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-semibold leading-none text-[var(--bg)]">
+                  {readyChallengeCount}
+                </span>
+              )}
               {location.pathname === '/challenges' && (
                 <span className="absolute -bottom-[5px] left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full" />
               )}
@@ -453,6 +460,11 @@ export default function Navbar() {
                     {item.to === '/duel' && duelInviteCount > 0 && (
                       <span className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-semibold leading-none text-[var(--bg)]">
                         {duelInviteCount}
+                      </span>
+                    )}
+                    {item.to === '/challenges' && readyChallengeCount > 0 && (
+                      <span className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-semibold leading-none text-[var(--bg)]">
+                        {readyChallengeCount}
                       </span>
                     )}
                   </Link>

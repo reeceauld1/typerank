@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useUser } from '../hooks/useUser.js';
 import { nextHourlyReset } from '../utils/hourlyChallenge.js';
 import ChallengeCountdown from './ChallengeCountdown.js';
@@ -7,21 +7,24 @@ import Tooltip from './Tooltip.js';
 export default function HourlyChallenge() {
   const { claimedThisHour, hourlyChallenge, hourlyChallengeTestsThisHour, claimHourlyChallengeBonus } = useUser();
   const resetAt = useMemo(() => nextHourlyReset(), []);
-
-  useEffect(() => {
-    if (!hourlyChallenge || claimedThisHour || hourlyChallengeTestsThisHour < hourlyChallenge.testsTarget) return;
-    void claimHourlyChallengeBonus();
-  }, [hourlyChallenge, claimedThisHour, hourlyChallengeTestsThisHour, claimHourlyChallengeBonus]);
+  const [claiming, setClaiming] = useState(false);
 
   if (!hourlyChallenge) return null;
 
+  const ready = !claimedThisHour && hourlyChallengeTestsThisHour >= hourlyChallenge.testsTarget;
   const label = hourlyChallenge.mode === 'time' ? `${hourlyChallenge.value}s` : `${hourlyChallenge.value} words`;
   const progress = Math.min(100, (hourlyChallengeTestsThisHour / hourlyChallenge.testsTarget) * 100);
+
+  const handleClaim = async () => {
+    setClaiming(true);
+    await claimHourlyChallengeBonus();
+    setClaiming(false);
+  };
 
   return (
     <div
       className={`rounded-lg border px-4 py-3.5 transition-colors ${
-        claimedThisHour ? 'border-[var(--accent)]/40 bg-[var(--accent-soft)]' : 'border-[var(--border)] bg-[var(--surface)]'
+        claimedThisHour || ready ? 'border-[var(--accent)]/40 bg-[var(--accent-soft)]' : 'border-[var(--border)] bg-[var(--surface)]'
       }`}
     >
       <div className="flex items-center gap-3 text-sm mb-2.5">
@@ -33,6 +36,15 @@ export default function HourlyChallenge() {
           <Tooltip content={`+${hourlyChallenge.xpBonus} xp claimed`}>
             <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-[var(--accent)] cursor-default">claimed</span>
           </Tooltip>
+        ) : ready ? (
+          <button
+            type="button"
+            disabled={claiming}
+            onClick={() => void handleClaim()}
+            className="shrink-0 whitespace-nowrap text-xs bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer"
+          >
+            {claiming ? '...' : `claim +${hourlyChallenge.xpBonus} xp`}
+          </button>
         ) : (
           <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-[var(--text-muted)]">+{hourlyChallenge.xpBonus} xp</span>
         )}

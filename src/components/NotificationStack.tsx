@@ -2,6 +2,7 @@ import SentDuelInviteNotifications from './SentDuelInviteNotifications.js';
 import IncomingDuelInviteNotifications from './IncomingDuelInviteNotifications.js';
 import ActiveDuelPresence from './ActiveDuelPresence.js';
 import FriendRequestNotifications from './FriendRequestNotifications.js';
+import ChallengeClaimNotifications from './ChallengeClaimNotifications.js';
 
 // Mounted once at the app root (see App.tsx), outside <Routes> so it
 // survives route navigation — the whole point is that a sent duel invite,
@@ -16,6 +17,7 @@ export default function NotificationStack() {
       <IncomingDuelInviteNotifications />
       <ActiveDuelPresence />
       <FriendRequestNotifications />
+      <ChallengeClaimNotifications />
     </div>
   );
 }

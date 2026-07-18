@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useUser } from '../hooks/useUser.js';
 import { WEEKLY_TEST_TARGET, WEEKLY_XP_BONUS, weekKey, nextWeeklyReset } from '../utils/weeklyChallenge.js';
 import ChallengeCountdown from './ChallengeCountdown.js';
@@ -7,18 +7,21 @@ import Tooltip from './Tooltip.js';
 export default function WeeklyChallenge() {
   const { testsThisWeek, weeklyClaimed, claimWeeklyChallengeBonus } = useUser();
   const resetAt = useMemo(() => nextWeeklyReset(), []);
+  const [claiming, setClaiming] = useState(false);
 
-  useEffect(() => {
-    if (weeklyClaimed || testsThisWeek < WEEKLY_TEST_TARGET) return;
-    void claimWeeklyChallengeBonus(weekKey(), WEEKLY_TEST_TARGET, WEEKLY_XP_BONUS);
-  }, [testsThisWeek, weeklyClaimed, claimWeeklyChallengeBonus]);
-
+  const ready = !weeklyClaimed && testsThisWeek >= WEEKLY_TEST_TARGET;
   const progress = Math.min(100, (testsThisWeek / WEEKLY_TEST_TARGET) * 100);
+
+  const handleClaim = async () => {
+    setClaiming(true);
+    await claimWeeklyChallengeBonus(weekKey(), WEEKLY_TEST_TARGET, WEEKLY_XP_BONUS);
+    setClaiming(false);
+  };
 
   return (
     <div
       className={`rounded-lg border px-4 py-3.5 transition-colors ${
-        weeklyClaimed ? 'border-[var(--accent)]/40 bg-[var(--accent-soft)]' : 'border-[var(--border)] bg-[var(--surface)]'
+        weeklyClaimed || ready ? 'border-[var(--accent)]/40 bg-[var(--accent-soft)]' : 'border-[var(--border)] bg-[var(--surface)]'
       }`}
     >
       <div className="flex items-center gap-3 text-sm mb-2.5">
@@ -29,6 +32,15 @@ export default function WeeklyChallenge() {
           <Tooltip content={`+${WEEKLY_XP_BONUS} xp claimed`}>
             <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-[var(--accent)] cursor-default">claimed</span>
           </Tooltip>
+        ) : ready ? (
+          <button
+            type="button"
+            disabled={claiming}
+            onClick={() => void handleClaim()}
+            className="shrink-0 whitespace-nowrap text-xs bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--bg)] px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer"
+          >
+            {claiming ? '...' : `claim +${WEEKLY_XP_BONUS} xp`}
+          </button>
         ) : (
           <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-[var(--text-muted)]">+{WEEKLY_XP_BONUS} xp</span>
         )}
