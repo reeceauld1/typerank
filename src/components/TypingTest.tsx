@@ -706,6 +706,8 @@ export default function TypingTest({
           value={input}
           onChange={handleInputChange}
           onKeyDown={handleInputKeyDown}
+          onPaste={e => e.preventDefault()}
+          onDrop={e => e.preventDefault()}
           onFocus={() => setIsFocused(true)}
           onBlur={() => {
             setIsFocused(false);
